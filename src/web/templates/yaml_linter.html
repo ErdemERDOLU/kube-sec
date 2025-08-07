@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}YAML Linter{% endblock %}
+{% block content %}
+<h2>YAML Linter</h2>
+<p>YAML dosyanızı aşağıya yapıştırın ve "Lint Et" butonuna tıklayın. Hatalar anında gösterilecektir.</p>
+<div class="mb-3">
+  <textarea id="yaml-input" class="form-control" rows="12" placeholder="YAML içeriğini buraya yapıştırın..."></textarea>
+</div>
+<button id="lint-btn" class="btn btn-primary">Lint Et</button>
+<div id="lint-result" class="mt-3"></div>
+<script>
+document.getElementById('lint-btn').onclick = function() {
+  const yaml = document.getElementById('yaml-input').value;
+  document.getElementById('lint-result').innerHTML = '<span class="text-secondary">Kontrol ediliyor...</span>';
+  fetch('/yaml-lint-api', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ yaml })
+  })
+  .then(resp => resp.json())
+  .then(data => {
+    if (data.ok) {
+      document.getElementById('lint-result').innerHTML = '<div class="alert alert-success">YAML geçerli!</div>';
+    } else {
+      document.getElementById('lint-result').innerHTML = '<div class="alert alert-danger"><b>Hata:</b> ' + data.error + '</div>';
+    }
+  })
+  .catch(err => {
+    document.getElementById('lint-result').innerHTML = '<div class="alert alert-danger">API hatası: ' + err + '</div>';
+  });
+};
+</script>
+{% endblock %}

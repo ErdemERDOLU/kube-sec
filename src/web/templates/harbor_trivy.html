@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Harbor Trivy Sonuçları{% endblock %}
+{% block content %}
+<h2>Harbor Trivy Sonuçları</h2>
+<p>Harbor URL'sini girin ve son image'ların Trivy bulgularını görüntüleyin.</p>
+<div class="row mb-3">
+  <div class="col-md-3 mb-2">
+    <input type="text" id="harbor-url" class="form-control" placeholder="Örn: https://harbor.example.com" />
+  </div>
+  <div class="col-md-2 mb-2">
+    <input type="text" id="harbor-user" class="form-control" placeholder="Kullanıcı (opsiyonel)" />
+  </div>
+  <div class="col-md-2 mb-2">
+    <input type="password" id="harbor-pass" class="form-control" placeholder="Şifre (opsiyonel)" />
+  </div>
+  <div class="col-md-3 mb-2">
+    <input type="text" id="project-name" class="form-control" placeholder="Proje adı" />
+  </div>
+  <div class="col-md-2 mb-2">
+    <button id="fetch-trivy" class="btn btn-primary">Sonuçları Getir</button>
+  </div>
+</div>
+<div class="mb-3" id="repo-filter-container" style="display:none;">
+  <label for="repo-filter" class="form-label">Repo Filtrele:</label>
+  <select id="repo-filter" class="form-select form-select-sm" style="max-width:300px; display:inline-block;"></select>
+</div>
+<div id="trivy-results">Sonuç bekleniyor...</div>
+<div id="pagination-container" class="mt-2" style="display:none;"></div>
+<script>
+let allResults = [];
+let filteredResults = [];
+let currentPage = 1;
+const pageSize = 10;
+
+function renderTable(page=1) {
+  const start = (page-1)*pageSize;
+  const end = start+pageSize;
+  const pageResults = filteredResults.slice(start, end);
+  let html = '';
+  pageResults.forEach(row => {
+    let cweStr = Array.isArray(row.cwe_ids) ? row.cwe_ids.join(", ") : (row.cwe_ids || '-');
+    html += `<div class="card mb-3"><div class="card-header bg-light"><b>${row.project} / ${row.repo}</b> <span class='text-muted' style='font-size:12px;'>(Tag: ${row.tag || '-'}, Digest: ${row.digest || '-'})</span></div>`;
+    html += `<div class="card-body p-2"><div style='font-size:12px;'><b>Açıklama:</b> ${row.description || '-'}<br><b>CWE:</b> ${cweStr}</div>`;
+    html += `<div class="table-responsive"><table class="table table-bordered table-sm mt-2 mb-0"><thead><tr><th style='width:120px;'>CVE</th><th>Açıklama</th></tr></thead><tbody>`;
+    if (Array.isArray(row.cve_details) && row.cve_details.length > 0) {
+      row.cve_details.forEach(cve => {
+        html += `<tr><td style='font-size:11px;'><b>${cve.id}</b></td><td style='font-size:11px;'>${cve.description || '-'}</td></tr>`;
+      });
+    } else {
+      html += `<tr><td colspan='2' style='font-size:11px;'>CVE bulunamadı.</td></tr>`;
+    }
+    html += `</tbody></table></div></div></div>`;
+  });
+  document.getElementById('trivy-results').innerHTML = html;
+  renderPagination();
+}
+
+function renderPagination() {
+  const total = filteredResults.length;
+  const totalPages = Math.ceil(total/pageSize);
+  if (totalPages <= 1) {
+    document.getElementById('pagination-container').style.display = 'none';
+    return;
+  }
+  let html = '<nav><ul class="pagination pagination-sm">';
+  html += `<li class="page-item${currentPage===1?' disabled':''}"><a class="page-link" href="#" id="prev-page">&laquo;</a></li>`;
+  for (let i=1; i<=totalPages; i++) {
+    html += `<li class="page-item${currentPage===i?' active':''}"><a class="page-link" href="#" data-page="${i}">${i}</a></li>`;
+  }
+  html += `<li class="page-item${currentPage===totalPages?' disabled':''}"><a class="page-link" href="#" id="next-page">&raquo;</a></li>`;
+  html += '</ul></nav>';
+  const pag = document.getElementById('pagination-container');
+  pag.innerHTML = html;
+  pag.style.display = '';
+  // Event binding
+  pag.querySelectorAll('a.page-link[data-page]').forEach(a => {
+    a.onclick = function(e) { e.preventDefault(); currentPage = parseInt(this.dataset.page); renderTable(currentPage); };
+  });
+  const prev = pag.querySelector('#prev-page');
+  if (prev) prev.onclick = function(e) { e.preventDefault(); if (currentPage>1) { currentPage--; renderTable(currentPage); } };
+  const next = pag.querySelector('#next-page');
+  if (next) next.onclick = function(e) { e.preventDefault(); if (currentPage<totalPages) { currentPage++; renderTable(currentPage); } };
+}
+
+function updateRepoFilter() {
+  const repoSet = new Set(allResults.map(r => r.repo));
+  const select = document.getElementById('repo-filter');
+  select.innerHTML = '<option value="">(Tümü)</option>' + Array.from(repoSet).sort().map(r => `<option value="${r}">${r}</option>`).join('');
+  document.getElementById('repo-filter-container').style.display = '';
+}
+
+function applyRepoFilter() {
+  const selected = document.getElementById('repo-filter').value;
+  if (selected) {
+    filteredResults = allResults.filter(r => r.repo === selected);
+  } else {
+    filteredResults = allResults.slice();
+  }
+  currentPage = 1;
+  renderTable(currentPage);
+}
+
+document.getElementById('repo-filter').onchange = applyRepoFilter;
+
+document.getElementById('fetch-trivy').onclick = function() {
+  const url = document.getElementById('harbor-url').value.trim();
+  const username = document.getElementById('harbor-user').value.trim();
+  const password = document.getElementById('harbor-pass').value;
+  const project = document.getElementById('project-name').value.trim();
+  if (!url) {
+    document.getElementById('trivy-results').innerHTML = '<div class="alert alert-warning">Harbor URL giriniz.</div>';
+    document.getElementById('repo-filter-container').style.display = 'none';
+    document.getElementById('pagination-container').style.display = 'none';
+    return;
+  }
+  document.getElementById('trivy-results').innerHTML = 'Yükleniyor...';
+  document.getElementById('repo-filter-container').style.display = 'none';
+  document.getElementById('pagination-container').style.display = 'none';
+  let body = { harbor_url: url, username, password };
+  if (project) {
+    body.project_name = project;
+  }
+  fetch('/harbor-trivy-api', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+  .then(resp => resp.json())
+  .then(data => {
+    if (data.error) {
+      document.getElementById('trivy-results').innerHTML = '<div class="alert alert-danger">' + data.error + '</div>';
+      document.getElementById('repo-filter-container').style.display = 'none';
+      document.getElementById('pagination-container').style.display = 'none';
+      return;
+    }
+    if (data.results && data.results.length > 0) {
+      allResults = data.results;
+      filteredResults = allResults.slice();
+      updateRepoFilter();
+      renderTable(1);
+      return;
+    }
+    if (data.repo_names && data.repo_names.length > 0) {
+      document.getElementById('trivy-results').innerHTML = '<div class="alert alert-info">Taranan repolar: ' + data.repo_names.join(', ') + '<br>Ancak Trivy sonucu bulunamadı veya API erişimi yok.</div>';
+      document.getElementById('repo-filter-container').style.display = 'none';
+      document.getElementById('pagination-container').style.display = 'none';
+      return;
+    }
+    document.getElementById('trivy-results').innerHTML = '<div class="alert alert-info">Hiç sonuç bulunamadı.</div>';
+    document.getElementById('repo-filter-container').style.display = 'none';
+    document.getElementById('pagination-container').style.display = 'none';
+  })
+  .catch(err => {
+    document.getElementById('trivy-results').innerHTML = '<div class="alert alert-danger">API hatası: ' + err + '</div>';
+    document.getElementById('repo-filter-container').style.display = 'none';
+    document.getElementById('pagination-container').style.display = 'none';
+  });
+};
+</script>
+{% endblock %}

@@ -1,0 +1,443 @@
+{% extends "base.html" %}
+{% block title %}Privileged/Root/RBAC Kontrolü{% endblock %}
+{% block content %}
+    <h2 class="mt-5">Aşırı Yetkili RBAC Rolleri</h2>
+    <div id="result-rbac"></div>
+    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+      <table class="table table-bordered mt-3 d-none" id="rbac-table">
+          <thead>
+          <tr>
+              <th>Namespace</th>
+              <th>Role/ClusterRole</th>
+              <th>Type</th>
+              <th>Riskli Kurallar</th>
+          </tr>
+          <tr>
+              <th><select class="form-select form-select-sm" data-col="0"><option value="">Tümü</option></select></th>
+              <th><select class="form-select form-select-sm" data-col="1"><option value="">Tümü</option></select></th>
+              <th><select class="form-select form-select-sm" data-col="2"><option value="">Tümü</option></select></th>
+              <th><select class="form-select form-select-sm" data-col="3"><option value="">Tümü</option></select></th>
+          </tr>
+          </thead>
+          <tbody></tbody>
+      </table>
+    </div>
+    <nav>
+      <ul class="pagination justify-content-center" id="pagination-rbac"></ul>
+    </nav>
+    <h2>Privileged Container Kullanımı</h2>
+    <div id="result"></div>
+    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+      <table class="table table-bordered mt-3 d-none" id="privileged-table">
+          <thead>
+          <tr>
+              <th>Namespace</th>
+              <th>Pod</th>
+              <th>Privileged Durumu</th>
+              <th>Privileged Container(lar)</th>
+          </tr>
+          <tr>
+              <th><select class="form-select form-select-sm" data-col="0"><option value="">Tümü</option></select></th>
+              <th><select class="form-select form-select-sm" data-col="1"><option value="">Tümü</option></select></th>
+              <th><select class="form-select form-select-sm" data-col="2"><option value="">Tümü</option></select></th>
+              <th><select class="form-select form-select-sm" data-col="3"><option value="">Tümü</option></select></th>
+          </tr>
+          </thead>
+          <tbody></tbody>
+      </table>
+    </div>
+    <nav>
+      <ul class="pagination justify-content-center" id="pagination"></ul>
+    </nav>
+    <h2 class="mt-5">runAsUser: 0 veya runAsNonRoot: false Kullanımı</h2>
+    <div id="result-root"></div>
+    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+      <table class="table table-bordered mt-3 d-none" id="root-table">
+          <thead>
+          <tr>
+              <th>Namespace</th>
+              <th>Pod</th>
+              <th>Root Durumu</th>
+              <th>İhlalli Container(lar)</th>
+          </tr>
+          <tr>
+              <th><select class="form-select form-select-sm" data-col="0"><option value="">Tümü</option></select></th>
+              <th><select class="form-select form-select-sm" data-col="1"><option value="">Tümü</option></select></th>
+              <th><select class="form-select form-select-sm" data-col="2"><option value="">Tümü</option></select></th>
+              <th><select class="form-select form-select-sm" data-col="3"><option value="">Tümü</option></select></th>
+          </tr>
+          </thead>
+          <tbody></tbody>
+      </table>
+    </div>
+    <nav>
+      <ul class="pagination justify-content-center" id="pagination-root"></ul>
+    </nav>
+<script>
+// Tüm tablolar için global filtreleme ve dinamik select güncelleme
+const tableDataCache = {};
+const tableIds = ['rbac-table', 'privileged-table', 'root-table'];
+const filterState = {
+  'rbac-table': ['', '', '', ''],
+  'privileged-table': ['', '', '', ''],
+  'root-table': ['', '', '', '']
+};
+
+function getCellValue(tableId, row, col) {
+  if (tableId === 'rbac-table') {
+    if (col === 0) return row.namespace || '-';
+    if (col === 1) return row.name;
+    if (col === 2) return row.type;
+    if (col === 3) return row.rules;
+  } else if (tableId === 'privileged-table') {
+    if (col === 0) return row.namespace;
+    if (col === 1) return row.pod;
+    if (col === 2) return (row.privileged_containers && row.privileged_containers.length > 0) ? 'VAR' : 'YOK';
+    if (col === 3) return (row.privileged_containers && row.privileged_containers.length > 0) ? row.privileged_containers.join(', ') : '-';
+  } else if (tableId === 'root-table') {
+    if (col === 0) return row.namespace;
+    if (col === 1) return row.pod;
+    if (col === 2) return (row.root_containers && row.root_containers.length > 0) ? 'VAR' : 'YOK';
+    if (col === 3) return (row.root_containers && row.root_containers.length > 0) ? row.root_containers.join(', ') : '-';
+  }
+  return '';
+}
+
+function updateAllTableFilters() {
+  tableIds.forEach(tableId => {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const selects = table.querySelectorAll('thead select[data-col]');
+    const dataRows = tableDataCache[tableId] || [];
+    selects.forEach((select, col) => {
+      let values;
+      // Pod select'i, Namespace filtresine göre değişir
+      if ((tableId === 'privileged-table' || tableId === 'root-table') && col === 1 && filterState[tableId][0]) {
+        values = dataRows.filter(row => getCellValue(tableId, row, 0) === filterState[tableId][0])
+          .map(row => getCellValue(tableId, row, 1));
+      } else {
+        values = dataRows.map(row => getCellValue(tableId, row, col));
+      }
+      values = Array.from(new Set(values)).sort();
+      const current = select.value;
+      select.innerHTML = '<option value="">Tümü</option>' + values.map(v => `<option value="${v}">${v}</option>`).join('');
+      // Seçili değer kaybolmasın
+      select.value = current;
+    });
+  });
+}
+
+function applyAllTableFilters() {
+  tableIds.forEach(tableId => {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const selects = table.querySelectorAll('thead select[data-col]');
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+      let show = true;
+      Array.from(row.children).forEach((cell, idx) => {
+        const filterVal = filterState[tableId][idx];
+        if (filterVal && cell.textContent.trim() !== filterVal) {
+          show = false;
+        }
+      });
+      row.style.display = show ? '' : 'none';
+    });
+  });
+}
+
+function setupGlobalTableFilters() {
+  tableIds.forEach(tableId => {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const selects = table.querySelectorAll('thead select[data-col]');
+    selects.forEach((select, col) => {
+      select.addEventListener('change', function() {
+        // Eğer Namespace değiştiyse, tüm filtreleri sıfırla ve sadece Namespace'i uygula
+        if (col === 0) {
+          filterState[tableId] = ['', '', '', ''];
+          filterState[tableId][0] = this.value;
+          updateAllTableFilters();
+          // Pod select'i Namespace'e göre güncellendiği için Pod filtresi de sıfırlanır
+        } else {
+          filterState[tableId][col] = this.value;
+        }
+        applyAllTableFilters();
+        // Eğer Namespace değiştiyse, tabloyu ve sayfalamayı başa al
+        if (col === 0) {
+          if (tableId === 'privileged-table' && typeof window.onPrivilegedNamespaceChange === 'function') {
+            window.onPrivilegedNamespaceChange();
+          }
+          if (tableId === 'root-table' && typeof window.onRootNamespaceChange === 'function') {
+            window.onRootNamespaceChange();
+          }
+        }
+      });
+    });
+  });
+}
+// RBAC Table
+fetch('/rbac-risky-roles')
+  .then(resp => resp.json())
+  .then(data => {
+    const resultDiv = document.getElementById('result-rbac');
+    const table = document.getElementById('rbac-table');
+    const pagination = document.getElementById('pagination-rbac');
+    if (data.error) {
+      resultDiv.innerHTML = `<div class='alert alert-danger'>${data.error}</div>`;
+      table.classList.add('d-none');
+      pagination.innerHTML = '';
+      return;
+    }
+    if (!data.risky_roles || data.risky_roles.length === 0) {
+      resultDiv.innerHTML = `<div class='alert alert-success'>Aşırı yetkili RBAC rolü <b>YOK</b>.</div>`;
+      table.classList.add('d-none');
+      pagination.innerHTML = '';
+      return;
+    }
+    resultDiv.innerHTML = '';
+    table.classList.remove('d-none');
+    // Pagination logic
+    const pageSize = 10;
+    let currentPage = 1;
+    const totalRows = data.risky_roles.length;
+    const totalPages = Math.ceil(totalRows / pageSize);
+    function renderTable(page) {
+      const tbody = table.querySelector('tbody');
+      const start = (page - 1) * pageSize;
+      const end = Math.min(start + pageSize, totalRows);
+      tbody.innerHTML = data.risky_roles.slice(start, end).map(row => {
+        return `<tr class="table-danger"><td>${row.namespace || '-'}</td><td>${row.name}</td><td>${row.type}</td><td><pre style='white-space:pre-wrap;'>${row.rules}</pre></td></tr>`;
+      }).join('');
+    }
+    function renderPagination() {
+      let html = '';
+      for (let i = 1; i <= totalPages; i++) {
+        html += `<li class="page-item${i === currentPage ? ' active' : ''}"><a class="page-link" href="#">${i}</a></li>`;
+      }
+      pagination.innerHTML = html;
+      Array.from(pagination.querySelectorAll('a')).forEach((a, idx) => {
+        a.onclick = function(e) {
+          e.preventDefault();
+          currentPage = idx + 1;
+          renderTable(currentPage);
+          renderPagination();
+        };
+      });
+    }
+    renderTable(currentPage);
+    renderPagination();
+    tableDataCache['rbac-table'] = data.risky_roles;
+    updateAllTableFilters();
+    setupGlobalTableFilters();
+    applyAllTableFilters();
+  })
+  .catch(err => {
+    document.getElementById('result-rbac').innerHTML = `<div class='alert alert-danger'>API hatası: ${err}</div>`;
+    document.getElementById('rbac-table').classList.add('d-none');
+    document.getElementById('pagination-rbac').innerHTML = '';
+  });
+// Privileged Table
+fetch('/privileged-containers?allpods=1')
+  .then(resp => resp.json())
+  .then(data => {
+    const resultDiv = document.getElementById('result');
+    const table = document.getElementById('privileged-table');
+    const pagination = document.getElementById('pagination');
+    if (data.error) {
+      resultDiv.innerHTML = `<div class='alert alert-danger'>${data.error}</div>`;
+      table.classList.add('d-none');
+      pagination.innerHTML = '';
+      return;
+    }
+    if (!data.pods || data.pods.length === 0) {
+      resultDiv.innerHTML = `<div class='alert alert-success'>Hiç pod bulunamadı.</div>`;
+      table.classList.add('d-none');
+      pagination.innerHTML = '';
+      return;
+    }
+    resultDiv.innerHTML = '';
+    table.classList.remove('d-none');
+    // Pagination logic
+    const pageSize = 10;
+    let currentPage = 1;
+    const totalRows = data.pods.length;
+    const totalPages = Math.ceil(totalRows / pageSize);
+    // --- FILTERED PAGINATION LOGIC ---
+    tableDataCache['privileged-table'] = data.pods;
+    let filteredRows = data.pods;
+    function getFilteredRows() {
+      // Uygulanan filtrelere göre tüm satırları döndür
+      const filters = filterState['privileged-table'];
+      return data.pods.filter(row => {
+        for (let i = 0; i < 4; i++) {
+          const val = getCellValue('privileged-table', row, i);
+          if (filters[i] && val !== filters[i]) return false;
+        }
+        return true;
+      });
+    }
+    function renderTable(page) {
+      const tbody = table.querySelector('tbody');
+      filteredRows = getFilteredRows();
+      const start = (page - 1) * pageSize;
+      const end = Math.min(start + pageSize, filteredRows.length);
+      tbody.innerHTML = filteredRows.slice(start, end).map(row => {
+        const isPriv = row.privileged_containers && row.privileged_containers.length > 0;
+        const status = isPriv ? '<span class="badge bg-danger">VAR</span>' : '<span class="badge bg-success">YOK</span>';
+        const containers = isPriv ? row.privileged_containers.join(', ') : '-';
+        return `<tr class="${isPriv ? 'table-danger' : 'table-success'}"><td>${row.namespace}</td><td>${row.pod}</td><td>${status}</td><td>${containers}</td></tr>`;
+      }).join('');
+    }
+    function renderPagination() {
+      filteredRows = getFilteredRows();
+      const totalFiltered = filteredRows.length;
+      const totalPagesFiltered = Math.max(1, Math.ceil(totalFiltered / pageSize));
+      let html = '';
+      for (let i = 1; i <= totalPagesFiltered; i++) {
+        html += `<li class="page-item${i === currentPage ? ' active' : ''}"><a class="page-link" href="#">${i}</a></li>`;
+      }
+      pagination.innerHTML = html;
+      Array.from(pagination.querySelectorAll('a')).forEach((a, idx) => {
+        a.onclick = function(e) {
+          e.preventDefault();
+          currentPage = idx + 1;
+          renderTable(currentPage);
+          renderPagination();
+        };
+      });
+    }
+    // Filtre değiştiğinde tabloyu ve sayfalamayı güncelle
+    function onFilterChange() {
+      currentPage = 1;
+      renderTable(currentPage);
+      renderPagination();
+    }
+    // Namespace değişirse tüm filtreleri sıfırla ve tabloyu güncelle
+    window.onPrivilegedNamespaceChange = function() {
+      currentPage = 1;
+      renderTable(currentPage);
+      renderPagination();
+    };
+    // Filtre eventlerini güncelle
+    function setupPrivilegedTableFilterEvents() {
+      const selects = table.querySelectorAll('thead select[data-col]');
+      selects.forEach((select, col) => {
+        select.addEventListener('change', onFilterChange);
+      });
+    }
+    renderTable(currentPage);
+    renderPagination();
+    updateAllTableFilters();
+    setupGlobalTableFilters();
+    setupPrivilegedTableFilterEvents();
+    applyAllTableFilters();
+  })
+  .catch(err => {
+    document.getElementById('result').innerHTML = `<div class='alert alert-danger'>API hatası: ${err}</div>`;
+    document.getElementById('privileged-table').classList.add('d-none');
+    document.getElementById('pagination').innerHTML = '';
+  });
+// Root Table
+fetch('/privileged-containers?allpods=1&rootcheck=1')
+  .then(resp => resp.json())
+  .then(data => {
+    const resultDiv = document.getElementById('result-root');
+    const table = document.getElementById('root-table');
+    const pagination = document.getElementById('pagination-root');
+    if (data.error) {
+      resultDiv.innerHTML = `<div class='alert alert-danger'>${data.error}</div>`;
+      table.classList.add('d-none');
+      pagination.innerHTML = '';
+      return;
+    }
+    if (!data.pods || data.pods.length === 0) {
+      resultDiv.innerHTML = `<div class='alert alert-success'>Hiç pod bulunamadı.</div>`;
+      table.classList.add('d-none');
+      pagination.innerHTML = '';
+      return;
+    }
+    resultDiv.innerHTML = '';
+    table.classList.remove('d-none');
+    // Pagination logic
+    const pageSize = 10;
+    let currentPage = 1;
+    const totalRows = data.pods.length;
+    const totalPages = Math.ceil(totalRows / pageSize);
+    // --- FILTERED PAGINATION LOGIC ---
+    tableDataCache['root-table'] = data.pods;
+    let filteredRows = data.pods;
+    function getFilteredRows() {
+      // Uygulanan filtrelere göre tüm satırları döndür
+      const filters = filterState['root-table'];
+      return data.pods.filter(row => {
+        for (let i = 0; i < 4; i++) {
+          const val = getCellValue('root-table', row, i);
+          if (filters[i] && val !== filters[i]) return false;
+        }
+        return true;
+      });
+    }
+    function renderTable(page) {
+      const tbody = table.querySelector('tbody');
+      filteredRows = getFilteredRows();
+      const start = (page - 1) * pageSize;
+      const end = Math.min(start + pageSize, filteredRows.length);
+      tbody.innerHTML = filteredRows.slice(start, end).map(row => {
+        const isRoot = row.root_containers && row.root_containers.length > 0;
+        const status = isRoot ? '<span class="badge bg-danger">VAR</span>' : '<span class="badge bg-success">YOK</span>';
+        const containers = isRoot ? row.root_containers.join(', ') : '-';
+        return `<tr class="${isRoot ? 'table-danger' : 'table-success'}"><td>${row.namespace}</td><td>${row.pod}</td><td>${status}</td><td>${containers}</td></tr>`;
+      }).join('');
+    }
+    function renderPagination() {
+      filteredRows = getFilteredRows();
+      const totalFiltered = filteredRows.length;
+      const totalPagesFiltered = Math.max(1, Math.ceil(totalFiltered / pageSize));
+      let html = '';
+      for (let i = 1; i <= totalPagesFiltered; i++) {
+        html += `<li class="page-item${i === currentPage ? ' active' : ''}"><a class="page-link" href="#">${i}</a></li>`;
+      }
+      pagination.innerHTML = html;
+      Array.from(pagination.querySelectorAll('a')).forEach((a, idx) => {
+        a.onclick = function(e) {
+          e.preventDefault();
+          currentPage = idx + 1;
+          renderTable(currentPage);
+          renderPagination();
+        };
+      });
+    }
+    // Filtre değiştiğinde tabloyu ve sayfalamayı güncelle
+    function onFilterChange() {
+      currentPage = 1;
+      renderTable(currentPage);
+      renderPagination();
+    }
+    // Namespace değişirse tüm filtreleri sıfırla ve tabloyu güncelle
+    window.onRootNamespaceChange = function() {
+      currentPage = 1;
+      renderTable(currentPage);
+      renderPagination();
+    };
+    // Filtre eventlerini güncelle
+    function setupRootTableFilterEvents() {
+      const selects = table.querySelectorAll('thead select[data-col]');
+      selects.forEach((select, col) => {
+        select.addEventListener('change', onFilterChange);
+      });
+    }
+    renderTable(currentPage);
+    renderPagination();
+    updateAllTableFilters();
+    setupGlobalTableFilters();
+    setupRootTableFilterEvents();
+    applyAllTableFilters();
+  })
+  .catch(err => {
+    document.getElementById('result-root').innerHTML = `<div class='alert alert-danger'>API hatası: ${err}</div>`;
+    document.getElementById('root-table').classList.add('d-none');
+    document.getElementById('pagination-root').innerHTML = '';
+  });
+</script>
+{% endblock %}

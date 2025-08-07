@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+{% block title %}Mesh Görselleştirme{% endblock %}
+{% block content %}
+<style>
+    .mesh-table { background: #fff; padding: 20px; border-radius: 8px; width: 100%; border-collapse: collapse; }
+    th, td { padding: 8px; border-bottom: 1px solid #eee; }
+    th { background: #f0f0f0; }
+    .svc { color: #0074d9; font-weight: bold; }
+    .pod { color: #b30000; }
+</style>
+<h2>Kubernetes Service Mesh (Pod İletişimi)</h2>
+<div style="margin:30px 0 10px 0;">
+    <b>Network Visualization:</b>
+    <div id="network-graph" style="width:100%;height:400px;background:#fff;border-radius:8px;overflow:hidden;"></div>
+</div>
+<!-- Üstteki Namespace ve Service combobox'ları kaldırıldı -->
+<!-- Tabloyu Küçült butonu kaldırıldı -->
+<div id="mesh-table" style="transition:max-height 0.4s,opacity 0.4s;max-height:400px;overflow:auto;">Yükleniyor...</div>
+<nav>
+  <ul class="pagination justify-content-center" id="mesh-pagination"></ul>
+</nav>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+
+
+let meshData = [];
+let filteredMesh = [];
+let currentPage = 1;
+const pageSize = 10;
+
+fetch('/mesh-data')
+    .then(resp => resp.json())
+    .then(data => {
+        meshData = data.mesh;
+        renderMeshTable();
+        window.renderMeshNetworkGraph = function(nsFilterVal) {
+            // nsFilterVal: null (all) veya string (namespace)
+            let filtered = meshData;
+            if (nsFilterVal) filtered = meshData.filter(row => row.namespace === nsFilterVal);
+            const nodes = [], links = [];
+            const nodeMap = {};
+            filtered.forEach(row => {
+                const svcId = `${row.namespace}:svc:${row.service}`;
+                if (!nodeMap[svcId]) {
+                    nodes.push({id: svcId, label: row.service, group: 'service', namespace: row.namespace});
+                    nodeMap[svcId] = true;
+                }
+                row.pods.forEach((pod, i) => {
+                    const podId = `${row.namespace}:pod:${pod}`;
+                    if (!nodeMap[podId]) {
+                        nodes.push({id: podId, label: pod, group: 'pod', namespace: row.namespace});
+                        nodeMap[podId] = true;
+                    }
+                    links.push({source: svcId, target: podId, type: 'svc-pod'});
+                });
+            });
+            if (data.pod_links) {
+                data.pod_links.forEach(l => {
+                    if (nsFilterVal && l.namespace !== nsFilterVal) return;
+                    const src = `${l.namespace}:pod:${l.source}`;
+                    const tgt = `${l.namespace}:pod:${l.target}`;
+                    if (!nodeMap[src]) {
+                        nodes.push({id: src, label: l.source, group: 'pod', namespace: l.namespace});
+                        nodeMap[src] = true;
+                    }
+                    if (!nodeMap[tgt]) {
+                        nodes.push({id: tgt, label: l.target, group: 'pod', namespace: l.namespace});
+                        nodeMap[tgt] = true;
+                    }
+                    links.push({source: src, target: tgt, type: 'pod-pod'});
+                });
+            }
+            if (data.pod_to_service_links) {
+                data.pod_to_service_links.forEach(l => {
+                    if (nsFilterVal && l.namespace !== nsFilterVal) return;
+                    const src = `${l.namespace}:pod:${l.pod}`;
+                    const tgt = l.target_service.replace(':', ':svc:');
+                    if (!nodeMap[src]) {
+                        nodes.push({id: src, label: l.pod, group: 'pod', namespace: l.namespace});
+                        nodeMap[src] = true;
+                    }
+                    const [tgtNs, tgtSvc] = l.target_service.split(':');
+                    if (!nodeMap[tgt]) {
+                        nodes.push({id: tgt, label: tgtSvc, group: 'service', namespace: tgtNs});
+                        nodeMap[tgt] = true;
+                    }
+                    links.push({source: src, target: tgt, type: 'pod-svc'});
+                    let ownSvc = null;
+                    for (const row of filtered) {
+                        if (row.namespace === l.namespace && row.pods.includes(l.pod)) {
+                            ownSvc = `${row.namespace}:svc:${row.service}`;
+                            break;
+                        }
+                    }
+                    if (ownSvc && ownSvc !== tgt) {
+                        links.push({source: ownSvc, target: tgt, type: 'pod-svc-own'});
+                    }
+                });
+            }
+            drawNetworkGraph(nodes, links, data);
+        };
+        window.renderMeshNetworkGraph(null);
+    })
+    .catch(err => {
+        document.getElementById('mesh-table').innerHTML = 'API hatası: ' + err;
+    });
+
+function renderMeshTable() {
+    // Kolon filtreleri için state
+    if (typeof window.meshColFilters === 'undefined') window.meshColFilters = ['', '', '', '', ''];
+    let meshColFilters = window.meshColFilters;
+    let tableFiltered = meshData.filter(row => {
+        if (meshColFilters[0] && row.namespace !== meshColFilters[0]) return false;
+        if (meshColFilters[1] && row.service !== meshColFilters[1]) return false;
+        if (meshColFilters[2] && (row.service_ip || '-') !== meshColFilters[2]) return false;
+        if (meshColFilters[3] && !row.pods.join(', ').includes(meshColFilters[3])) return false;
+        if (meshColFilters[4] && !row.pod_ips.join(', ').includes(meshColFilters[4])) return false;
+        return true;
+    });
+    let html = '<table class="mesh-table">';
+    html += '<tr><th>Namespace</th><th>Service</th><th>Service IP</th><th>Bağlı Podlar</th><th>Pod IP</th></tr>';
+    html += '<tr>';
+    // Namespace
+    let nsSet = new Set(tableFiltered.map(row => row.namespace));
+    html += `<th><select class="form-select form-select-sm mesh-col-filter" data-col="0"><option value="">Tümü</option>${Array.from(nsSet).sort().map(ns => `<option value="${ns}"${meshColFilters[0]===ns?' selected':''}>${ns}</option>`).join('')}</select></th>`;
+    // Service
+    let svcSet = new Set(tableFiltered.map(row => row.service));
+    html += `<th><select class="form-select form-select-sm mesh-col-filter" data-col="1"><option value="">Tümü</option>${Array.from(svcSet).sort().map(svc => `<option value="${svc}"${meshColFilters[1]===svc?' selected':''}>${svc}</option>`).join('')}</select></th>`;
+    // Service IP
+    let ipSet = new Set(tableFiltered.map(row => row.service_ip || '-'));
+    html += `<th><select class="form-select form-select-sm mesh-col-filter" data-col="2"><option value="">Tümü</option>${Array.from(ipSet).sort().map(ip => `<option value="${ip}"${meshColFilters[2]===ip?' selected':''}>${ip}</option>`).join('')}</select></th>`;
+    // Bağlı Podlar
+    let podSet = new Set();
+    tableFiltered.forEach(row => row.pods.forEach(pod => podSet.add(pod)));
+    html += `<th><select class="form-select form-select-sm mesh-col-filter" data-col="3"><option value="">Tümü</option>${Array.from(podSet).sort().map(pod => `<option value="${pod}"${meshColFilters[3]===pod?' selected':''}>${pod}</option>`).join('')}</select></th>`;
+    // Pod IP
+    let podIpSet = new Set();
+    tableFiltered.forEach(row => row.pod_ips.forEach(ip => podIpSet.add(ip)));
+    html += `<th><select class="form-select form-select-sm mesh-col-filter" data-col="4"><option value="">Tümü</option>${Array.from(podIpSet).sort().map(ip => `<option value="${ip}"${meshColFilters[4]===ip?' selected':''}>${ip}</option>`).join('')}</select></th>`;
+    html += '</tr>';
+    // Satırlar
+    const start = (currentPage - 1) * pageSize;
+    const end = Math.min(start + pageSize, tableFiltered.length);
+    for (let i = start; i < end; i++) {
+        const row = tableFiltered[i];
+        html += `<tr><td>${row.namespace}</td><td class="svc">${row.service}</td><td>${row.service_ip || '-'}</td><td>`;
+        if (row.pods.length === 0) {
+            html += '<span style="color:#888">(yok)</span>';
+        } else {
+            html += row.pods.map((pod, i) => `<span class="pod">&#128230; ${pod}</span>`).join('<br>');
+        }
+        html += '</td><td>';
+        if (row.pod_ips.length === 0) {
+            html += '<span style="color:#888">-</span>';
+        } else {
+            html += row.pod_ips.map(ip => `<span style='color:#333;font-size:13px;'>${ip || '-'}</span>`).join('<br>');
+        }
+        html += '</td></tr>';
+    }
+    html += '</table>';
+    document.getElementById('mesh-table').innerHTML = html;
+    // Kolon filtre eventleri
+    Array.from(document.querySelectorAll('.mesh-col-filter')).forEach(sel => {
+        sel.onchange = function() {
+            meshColFilters[parseInt(this.getAttribute('data-col'))] = this.value;
+            window.meshColFilters = meshColFilters;
+            currentPage = 1;
+            renderMeshTable();
+            // Namespace filtresi değiştiyse network graph'ı da filtrele
+            if (parseInt(this.getAttribute('data-col')) === 0) {
+                window.renderMeshNetworkGraph(this.value || null);
+            }
+        };
+    });
+    renderMeshPagination(tableFiltered.length);
+}
+
+function renderMeshPagination() {
+    const total = filteredMesh.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    let html = '';
+    for (let i = 1; i <= totalPages; i++) {
+        html += `<li class="page-item${i === currentPage ? ' active' : ''}"><a class="page-link" href="#">${i}</a></li>`;
+    }
+    const pag = document.getElementById('mesh-pagination');
+    pag.innerHTML = html;
+    Array.from(pag.querySelectorAll('a')).forEach((a, idx) => {
+        a.onclick = function(e) {
+            e.preventDefault();
+            currentPage = idx + 1;
+            renderMeshTable();
+        };
+    });
+}
+
+function drawNetworkGraph(nodes, links, data) {
+    const width = document.getElementById('network-graph').clientWidth;
+    const height = 400;
+    d3.select('#network-graph').selectAll('*').remove();
+    const svg = d3.select('#network-graph').append('svg')
+        .attr('width', width)
+        .attr('height', height)
+        .call(d3.zoom().scaleExtent([0.3, 2]).on('zoom', (event) => {
+            svg.selectAll('g').attr('transform', event.transform);
+        }));
+    const color = d3.scaleOrdinal().domain(['deployment','service', 'pod']).range(['#ff9800','#0074d9', '#b30000']);
+    const g = svg.append('g');
+    const nodeGroup = g.append('g').attr('class', 'nodes');
+    const link = g.append('g')
+        .selectAll('line')
+        .data(links)
+        .enter().append('line')
+        .attr('stroke-width', 2)
+        .attr('stroke', d => {
+            if (d.type === 'svc-pod') return '#0074d9';
+            if (d.type === 'pod-pod') return '#2ecc40';
+            if (d.type === 'pod-svc') return '#b300b3';
+            if (d.type === 'pod-svc-own') return '#ff9800';
+            return '#aaa';
+        })
+        .attr('stroke-dasharray', d => {
+            if (d.type === 'svc-pod') return '4,2';
+            if (d.type === 'pod-pod') return '2,2';
+            if (d.type === 'pod-svc') return '2,4';
+            if (d.type === 'pod-svc-own') return '6,2';
+            return '';
+        })
+        .attr('marker-end', 'url(#arrow)');
+    svg.append('defs').append('marker')
+        .attr('id', 'arrow')
+        .attr('viewBox', '0 -5 10 10')
+        .attr('refX', 24)
+        .attr('refY', 0)
+        .attr('markerWidth', 6)
+        .attr('markerHeight', 6)
+        .attr('orient', 'auto')
+        .append('path')
+        .attr('d', 'M0,-5L10,0L0,5')
+        .attr('fill', '#888');
+    const node = nodeGroup
+        .selectAll('circle')
+        .data(nodes)
+        .enter().append('circle')
+        .attr('r', 22)
+        .attr('fill', d => color(d.group))
+        .attr('stroke', '#fff')
+        .attr('stroke-width', 2)
+        .call(d3.drag()
+            .on('start', dragstarted)
+            .on('drag', dragged)
+            .on('end', dragended));
+    const label = nodeGroup
+        .selectAll('text')
+        .data(nodes)
+        .enter().append('text')
+        .attr('text-anchor', 'middle')
+        .attr('dy', 5)
+        .attr('font-size', 12)
+        .attr('pointer-events', 'none')
+        .text(d => d.label);
+    function ticked() {
+        link
+            .attr('x1', d => d.source.x)
+            .attr('y1', d => d.source.y)
+            .attr('x2', d => d.target.x)
+            .attr('y2', d => d.target.y);
+        node
+            .attr('cx', d => d.x)
+            .attr('cy', d => d.y);
+        label
+            .attr('x', d => d.x)
+            .attr('y', d => d.y);
+    }
+    const simulation = d3.forceSimulation(nodes)
+        .force('link', d3.forceLink(links).id(d => d.id).distance(80))
+        .force('charge', d3.forceManyBody().strength(-300))
+        .force('center', d3.forceCenter(width / 2, height / 2))
+        .force('collide', d3.forceCollide(35))
+        .on('tick', ticked);
+    function dragstarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3);
+        d.fx = d.x;
+        d.fy = d.y;
+    }
+    function dragged(event, d) {
+        d.fx = event.x;
+        d.fy = event.y;
+    }
+    function dragended(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+    }
+}
+// Tabloyu küçült/büyüt
+const toggleBtn = document.getElementById('toggle-table');
+const meshTable = document.getElementById('mesh-table');
+let collapsed = false;
+toggleBtn.onclick = function() {
+    collapsed = !collapsed;
+    if (collapsed) {
+        meshTable.style.maxHeight = '0px';
+        meshTable.style.opacity = '0';
+        toggleBtn.textContent = 'Tabloyu Büyüt';
+    } else {
+        meshTable.style.maxHeight = '1000px';
+        meshTable.style.opacity = '1';
+        toggleBtn.textContent = 'Tabloyu Küçült';
+    }
+};
+</script>
+{% endblock %}

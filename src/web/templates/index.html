@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Ana Sayfa{% endblock %}
+{% block content %}
+<div class="card mb-4" style="background:#f8f9fa;border:1px solid #e0e0e0;">
+  <div class="card-body">
+    <h3 class="card-title">Kubernetes Security Checker</h3>
+    <p class="card-text">
+      <b>Uygulama Nedir?</b><br>
+      Bu uygulama, Kubernetes ortamlarında güvenlik açıklarını, ayrıcalıklı container kullanımlarını, root kullanıcı risklerini, RBAC (Role-Based Access Control) riskli rolleri ve pod exec olaylarını merkezi bir web arayüzünde görselleştirmek için geliştirilmiştir.<br><br>
+      <b>Ne için yazıldı?</b><br>
+      Amacımız, Kubernetes yöneticilerinin ve DevOps ekiplerinin, cluster güvenliğini kolayca analiz edebilmesi ve riskli alanları hızlıca tespit edebilmesidir. Ağ topolojisi, pod iletişimi ve güvenlik zafiyetleri tek ekranda sunulur.<br><br>
+      <b>Biz Kimiz?</b><br>
+      One Plus Mon ekibi olarak, bulut ve konteyner güvenliği alanında açık kaynak çözümler üretmekteyiz. Bu proje, topluluğa katkı ve güvenli Kubernetes altyapıları için geliştirilmiştir.<br><br>
+      <span class="text-muted">Created by: <b>One Plus Mon</b></span>
+    </p>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Zafiyetler{% endblock %}
+{% block content %}
+<h2>Kubernetes Zafiyetleri</h2>
+{% if error %}
+  <div class="alert alert-danger">{{ error }}</div>
+{% else %}
+  <div class="vuln-list" id="vuln-list">
+    {% if vulnerabilities %}
+      {% for dep, vulns in vulnerabilities.items() %}
+        <div class="namespace"><b>{{ dep }}</b> <span style="color:#888">({{ pod_images[dep] if pod_images and dep in pod_images else '' }})</span></div>
+        <ul>
+        {% for v in vulns %}
+          <li class="vuln">{{ v }}</li>
+        {% endfor %}
+        </ul>
+      {% endfor %}
+    {% else %}
+      <div class="alert alert-success">Hiç zafiyet bulunamadı.</div>
+    {% endif %}
+  </div>
+{% endif %}
+{% endblock %}

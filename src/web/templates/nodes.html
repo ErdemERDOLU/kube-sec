@@ -1,0 +1,189 @@
+<!-- Drain Log Modal -->
+<div class="modal fade" id="drainLogModal" tabindex="-1" aria-labelledby="drainLogModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="drainLogModalLabel">Drain Logları</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <pre id="drain-log-content" style="height: 300px; overflow-y: auto; background: #222; color: #eee; padding: 10px;"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% extends "base.html" %}
+{% block title %}Node's{% endblock %}
+{% block content %}
+<!-- YAML Readonly Modal -->
+<div class="modal fade" id="yamlEditModal" tabindex="-1" aria-labelledby="yamlEditModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="yamlEditModalLabel">YAML Görüntüle</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <textarea id="yaml-edit-content" readonly style="width:100%;height:400px;font-family:monospace;font-size:14px;background:#f8f9fa;"></textarea>
+        <div id="yaml-edit-error" class="text-danger mt-2"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+      </div>
+    </div>
+  </div>
+</div>
+<h2>Kubernetes Node'ları</h2>
+<div id="nodes-root"></div>
+<script>
+async function fetchNodes() {
+  const resp = await fetch('/k8s-explorer/nodes');
+  return await resp.json();
+}
+
+async function renderNodes() {
+  const root = document.getElementById('nodes-root');
+  root.innerHTML = '<b>Node listesi yükleniyor...</b>';
+  const data = await fetchNodes();
+  root.innerHTML = '';
+  if (!data.nodes || data.nodes.length === 0) {
+    root.innerHTML = '<div class="text-danger">Node bulunamadı.</div>';
+    return;
+  }
+  const table = document.createElement('table');
+  table.className = 'table table-bordered table-sm';
+  const thead = document.createElement('thead');
+  thead.innerHTML = '<tr><th>Node Adı</th><th>Durum</th><th>İşlemler</th></tr>';
+  table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  data.nodes.forEach(node => {
+    const tr = document.createElement('tr');
+    // Durum: unschedulable ise Cordoned, değilse Ready/NotReady
+    let statusText = node.status;
+    if (node.unschedulable) statusText = 'Cordoned';
+    tr.innerHTML = `<td>${node.name}</td><td class="node-status">${statusText}</td>`;
+    const td = document.createElement('td');
+    // Drain butonu sadece node unschedulable değilse gösterilsin (yani cordoned/drained ise gösterilmesin)
+    if (!node.unschedulable) {
+      const drainBtn = document.createElement('button');
+      drainBtn.className = 'btn btn-sm btn-warning me-1';
+      drainBtn.textContent = 'Drain';
+      drainBtn.onclick = () => nodeAction(node.name, 'drain');
+      td.appendChild(drainBtn);
+    }
+    if (node.unschedulable) {
+      // Uncordon butonu
+      const uncordonBtn = document.createElement('button');
+      uncordonBtn.className = 'btn btn-sm btn-info me-1';
+      uncordonBtn.textContent = 'Uncordon';
+      uncordonBtn.onclick = () => nodeAction(node.name, 'uncordon');
+      td.appendChild(uncordonBtn);
+    } else {
+      // Cordon butonu
+      const cordonBtn = document.createElement('button');
+      cordonBtn.className = 'btn btn-sm btn-secondary me-1';
+      cordonBtn.textContent = 'Cordon';
+      cordonBtn.onclick = () => nodeAction(node.name, 'cordon');
+      td.appendChild(cordonBtn);
+    }
+    // Edit
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn btn-sm btn-primary me-1';
+    editBtn.textContent = 'Edit';
+    editBtn.onclick = () => nodeAction(node.name, 'edit');
+    td.appendChild(editBtn);
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  root.appendChild(table);
+}
+
+
+async function nodeAction(nodeName, action) {
+  if (action === 'edit') {
+    showYamlModal('node', '', nodeName);
+    return;
+  }
+// YAML sadece görüntüleme amaçlı modal fonksiyonu
+function showYamlModal(objType, namespace, name) {
+  const modal = new bootstrap.Modal(document.getElementById('yamlEditModal'));
+  document.getElementById('yaml-edit-content').value = '';
+  document.getElementById('yaml-edit-error').textContent = '';
+  // Node için GET ile YAML'ı çek
+  let url = `/k8s-explorer/yaml?type=${encodeURIComponent(objType)}&name=${encodeURIComponent(name)}`;
+  if (namespace) url += `&namespace=${encodeURIComponent(namespace)}`;
+  fetch(url)
+    .then(resp => {
+      if (!resp.ok) throw new Error('YAML alınamadı');
+      return resp.text();
+    })
+    .then(yaml => {
+      document.getElementById('yaml-edit-content').value = yaml;
+      modal.show();
+    })
+    .catch(e => {
+      document.getElementById('yaml-edit-error').textContent = 'YAML alınamadı: ' + e;
+      modal.show();
+    });
+}
+
+  let endpoint = '';
+  let method = 'POST';
+  if (action === 'drain') endpoint = '/k8s-explorer/node-drain';
+  else if (action === 'cordon') endpoint = '/k8s-explorer/node-cordon';
+  else if (action === 'uncordon') endpoint = '/k8s-explorer/node-uncordon';
+  else if (action === 'delete') { endpoint = '/k8s-explorer/node-delete'; method = 'DELETE'; }
+  if (!endpoint) return;
+  if (!confirm(`${nodeName} için '${action}' işlemi yapılsın mı?`)) return;
+
+  if (action === 'drain') {
+    // Modalı aç ve logları göster
+    const modal = new bootstrap.Modal(document.getElementById('drainLogModal'));
+    document.getElementById('drain-log-content').textContent = 'Drain işlemi başlatılıyor...\n';
+    modal.show();
+    try {
+      const resp = await fetch(endpoint, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ node: nodeName }) });
+      const data = await resp.json();
+      let logStr = '';
+      if (data.logs && Array.isArray(data.logs)) {
+        logStr = data.logs.join('\n');
+      } else {
+        logStr = JSON.stringify(data);
+      }
+      document.getElementById('drain-log-content').textContent = logStr;
+      // Tabloyu yenile
+      await renderNodes();
+    } catch (e) {
+      document.getElementById('drain-log-content').textContent = 'Drain işlemi sırasında hata: ' + e;
+    }
+    return;
+  }
+  if (action === 'uncordon') {
+    try {
+      const resp = await fetch(endpoint, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ node: nodeName })
+      });
+      const result = await resp.text();
+      alert(result);
+      await renderNodes();
+    } catch (e) {
+      alert('Uncordon işlemi sırasında hata: ' + e);
+    }
+    return;
+  }
+  // Diğer işlemler (cordon, delete)
+  const resp = await fetch(endpoint, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ node: nodeName }) });
+  const result = await resp.text();
+  alert(result);
+  await renderNodes();
+}
+
+window.addEventListener('DOMContentLoaded', renderNodes);
+</script>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Pod Exec Olayları{% endblock %}
+
+{% block content %}
+<style>
+    .exec-table { background: #fff; padding: 20px; border-radius: 8px; width: 100%; border-collapse: collapse; }
+    th, td { padding: 8px; border-bottom: 1px solid #eee; }
+    th { background: #f0f0f0; }
+    .ns { color: #0074d9; font-weight: bold; }
+    .pod { color: #b30000; }
+    .cmd { color: #333; font-family: monospace; }
+</style>
+<h2>Kubernetes Pod Exec Olayları</h2>
+<div style="margin:30px 0 10px 0;">
+    <b>Son Pod Exec Olayları:</b>
+    <div id="exec-table" style="margin-top:10px;">Yükleniyor...</div>
+</div>
+<script>
+fetch('/exec-events')
+    .then(resp => resp.json())
+    .then(data => {
+        if (data.error) {
+            document.getElementById('exec-table').innerHTML = 'Backend Hatası: ' + data.error;
+            return;
+        }
+        let html = '<table class="exec-table">';
+        html += '<tr><th>Zaman</th><th>Namespace</th><th>Pod</th><th>Kullanıcı</th><th>Komut</th></tr>';
+        if (!data.events || data.events.length === 0) {
+            html += '<tr><td colspan="5" style="color:#888">Kayıt yok</td></tr>';
+        } else {
+            data.events.forEach(ev => {
+                html += `<tr><td>${ev.time}</td><td class="ns">${ev.namespace}</td><td class="pod">${ev.pod}</td><td>${ev.user || '-'}</td><td class="cmd">${ev.command}</td></tr>`;
+            });
+        }
+        html += '</table>';
+        document.getElementById('exec-table').innerHTML = html;
+    })
+    .catch(() => {
+        document.getElementById('exec-table').innerHTML = 'Hata oluştu.';
+    });
+</script>
+{% endblock %}

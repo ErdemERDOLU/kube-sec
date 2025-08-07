@@ -1,0 +1,648 @@
+{% extends "base.html" %}
+{% block title %}Kubernetes Explorer{% endblock %}
+{% block content %}
+<h2>Kubernetes Explorer</h2>
+<div id="k8s-explorer-root"></div>
+<script>
+// YAML modalı oluştur
+function showYamlModal(type, namespace, name) {
+  // Modalı sadece statik HTML'den kullanıyoruz, JS ile eklemiyoruz.
+  // Modal HTML'i DOM'da olduğundan emin olduktan sonra error alanını temizle
+  const errorDiv = document.getElementById('k8s-yaml-modal-error');
+  if (errorDiv) errorDiv.textContent = '';
+  // YAML'ı getir
+  fetch(`/k8s-explorer/yaml?type=${type}&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`)
+    .then(r => r.ok ? r.text() : Promise.reject('YAML alınamadı'))
+    .then(yaml => {
+      // Bootstrap modal instance'ı global olarak bir kez oluştur
+      if (!window.k8sYamlModalInstance) {
+        window.k8sYamlModalInstance = new bootstrap.Modal(document.getElementById('k8sYamlModalDialog'));
+      }
+      window.k8sYamlModalInstance.show();
+      // Modal açıldıktan sonra textarea'ya değer ata
+      setTimeout(() => {
+        const textarea = document.getElementById('k8s-yaml-textarea');
+        if (textarea) textarea.value = yaml;
+      }, 100);
+      // Kaydet butonu
+      setTimeout(() => {
+        const saveBtn = document.getElementById('k8s-yaml-save-btn');
+        if (saveBtn) {
+          saveBtn.onclick = async function() {
+            const newYaml = document.getElementById('k8s-yaml-textarea').value;
+            const resp = await fetch(`/k8s-explorer/yaml`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ type, namespace, name, yaml: newYaml })
+            });
+            if (resp.ok) {
+              window.k8sYamlModalInstance.hide();
+              alert('Güncellendi!');
+            } else {
+              const msg = await resp.text();
+              const errorDiv2 = document.getElementById('k8s-yaml-modal-error');
+              if (errorDiv2) errorDiv2.textContent = msg;
+            }
+          };
+        }
+      }, 100);
+    })
+    .catch(err => {
+      if (!window.k8sYamlModalInstance) {
+        window.k8sYamlModalInstance = new bootstrap.Modal(document.getElementById('k8sYamlModalDialog'));
+      }
+      window.k8sYamlModalInstance.show();
+      setTimeout(() => {
+        const textarea = document.getElementById('k8s-yaml-textarea');
+        if (textarea) textarea.value = '';
+        const errorDiv2 = document.getElementById('k8s-yaml-modal-error');
+        if (errorDiv2) errorDiv2.textContent = err;
+      }, 100);
+    });
+}
+// K8s obje silme fonksiyonu
+async function deleteK8sObj(type, namespace, name) {
+  if (!confirm(`${type} '${name}' silinsin mi?`)) return false;
+  const resp = await fetch(`/k8s-explorer/delete`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type, namespace, name })
+  });
+  if (resp.ok) {
+    alert(`${type} '${name}' silindi!`);
+    return true;
+  } else {
+    const msg = await resp.text();
+    alert(`Silinemedi: ${msg}`);
+    return false;
+  }
+}
+// Breadcrumb state
+let k8sBreadcrumb = [];
+
+function renderBreadcrumb(root) {
+  let panel = document.getElementById('k8s-explorer-breadcrumb');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'k8s-explorer-breadcrumb';
+    panel.className = 'mb-3';
+    root.prepend(panel);
+  }
+  panel.innerHTML = '';
+  if (k8sBreadcrumb.length === 0) return;
+  k8sBreadcrumb.forEach((step, idx) => {
+    const a = document.createElement('a');
+    a.href = 'javascript:void(0)';
+    a.textContent = step.label;
+    a.className = 'me-2';
+    if (idx < k8sBreadcrumb.length - 1) {
+      a.onclick = () => {
+        if (step.type === 'namespace') showNamespaceChildren(step.namespace);
+        else if (step.type === 'ingresses') showIngresses();
+        else if (step.type === 'ingress') showIngressDetail(step.namespace, step.name);
+        else if (step.type === 'service') showServiceDetail(step.namespace, step.name);
+        else if (step.type === 'deployment') showDeploymentDetail(step.namespace, step.name);
+        k8sBreadcrumb = k8sBreadcrumb.slice(0, idx + 1);
+        renderBreadcrumb(root);
+      };
+      a.style.cursor = 'pointer';
+    } else {
+      a.style.fontWeight = 'bold';
+    }
+    panel.appendChild(a);
+    if (idx < k8sBreadcrumb.length - 1) {
+      const sep = document.createElement('span');
+      sep.textContent = ' > ';
+      panel.appendChild(sep);
+    }
+  });
+}
+async function fetchApi(url) {
+  const resp = await fetch(url);
+  return await resp.json();
+}
+
+function createLink(text, onClick) {
+  const a = document.createElement('a');
+  a.href = 'javascript:void(0)';
+  a.textContent = text;
+  a.onclick = function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    onClick();
+    return false;
+  };
+  return a;
+}
+
+async function showIngresses() {
+  let root = document.getElementById('k8s-explorer-root');
+  root.innerHTML = '';
+  k8sBreadcrumb = [{ type: 'ingresses', label: 'Ingress Listesi' }];
+  renderBreadcrumb(root);
+  const loading = document.createElement('b');
+  loading.textContent = 'Ingressler yükleniyor...';
+  root.appendChild(loading);
+  const data = await fetchApi('/k8s-explorer/ingresses');
+  root.innerHTML = '';
+  renderBreadcrumb(root);
+  const h4 = document.createElement('h4');
+  h4.textContent = 'Ingressler';
+  root.appendChild(h4);
+  let ingressList = data.ingresses ? [...data.ingresses] : [];
+  const ul = document.createElement('ul');
+  ingressList.forEach((ing, idx) => {
+    const li = document.createElement('li');
+    // Detaya gitmek için link
+    li.appendChild(createLink(ing.name + ' (' + ing.namespace + ')', () => showIngressDetail(ing.namespace, ing.name)));
+    // Edit butonu
+    const editBtn = document.createElement('button');
+    editBtn.innerHTML = '✏️';
+    editBtn.className = 'btn btn-sm btn-link text-primary ms-1 p-0';
+    editBtn.title = 'YAML düzenle';
+    editBtn.onclick = (e) => {
+      e.stopPropagation();
+      showYamlModal('ingress', ing.namespace, ing.name);
+    };
+    li.appendChild(editBtn);
+    // Sil butonu
+    const delBtn = document.createElement('button');
+    delBtn.innerHTML = '🗑️';
+    delBtn.className = 'btn btn-sm btn-link text-danger ms-2 p-0';
+    delBtn.title = 'Bu ingressi Kubernetes üzerinden sil';
+    delBtn.onclick = async (e) => {
+      e.stopPropagation();
+      const ok = await deleteK8sObj('ingress', ing.namespace, ing.name);
+      if (ok) {
+        ingressList.splice(idx, 1);
+        ul.removeChild(li);
+      }
+    };
+    li.appendChild(delBtn);
+    ul.appendChild(li);
+  });
+  root.appendChild(ul);
+}
+
+async function showIngressDetail(namespace, name) {
+  let root = document.getElementById('k8s-explorer-root');
+  root.innerHTML = '';
+  // Breadcrumb güncelle
+  const last = k8sBreadcrumb[k8sBreadcrumb.length - 1];
+  if (!last || last.type !== 'ingress' || last.name !== name || last.namespace !== namespace) {
+    k8sBreadcrumb = k8sBreadcrumb.filter(s => s.type !== 'service' && s.type !== 'deployment');
+    k8sBreadcrumb.push({ type: 'ingress', label: `Ingress: ${name} (${namespace})`, name, namespace });
+  }
+  renderBreadcrumb(root);
+  const data = await fetchApi(`/k8s-explorer/ingress?namespace=${namespace}&name=${name}`);
+  // Başlık
+  const h4 = document.createElement('h4');
+  h4.textContent = `Ingress: ${name} (${namespace})`;
+  root.appendChild(h4);
+  if (data.service) {
+    const span = document.createElement('span');
+    span.textContent = 'Service: ';
+    // Service detaya git
+    const serviceLink = createLink(data.service.name, () => {
+      showServiceDetail(namespace, data.service.name);
+    });
+    span.appendChild(serviceLink);
+    // Edit butonu
+    const editBtn = document.createElement('button');
+    editBtn.innerHTML = '✏️';
+    editBtn.className = 'btn btn-sm btn-link text-primary ms-1 p-0';
+    editBtn.title = 'YAML düzenle';
+    editBtn.onclick = (e) => {
+      e.stopPropagation();
+      showYamlModal('service', namespace, data.service.name);
+    };
+    span.appendChild(editBtn);
+    // Service sil butonu
+    const delBtn = document.createElement('button');
+    delBtn.innerHTML = '🗑️';
+    delBtn.className = 'btn btn-sm btn-link text-danger ms-2 p-0';
+    delBtn.title = 'Bu service Kubernetes üzerinden sil';
+    delBtn.onclick = async (e) => {
+      e.stopPropagation();
+      const ok = await deleteK8sObj('service', namespace, data.service.name);
+      if (ok) span.remove();
+    };
+    span.appendChild(delBtn);
+    root.appendChild(span);
+  } else {
+    const div = document.createElement('div');
+    div.textContent = 'Service bulunamadı.';
+    root.appendChild(div);
+  }
+  // Geri butonu
+  const btn = document.createElement('button');
+  btn.className = 'btn btn-sm btn-secondary mt-2';
+  btn.textContent = 'Ingress listesine dön';
+  btn.onclick = showIngresses;
+  root.appendChild(document.createElement('br'));
+  root.appendChild(btn);
+}
+
+async function showServiceDetail(namespace, name) {
+  let root = document.getElementById('k8s-explorer-root');
+  root.innerHTML = '';
+  // Breadcrumb güncelle
+  const last = k8sBreadcrumb[k8sBreadcrumb.length - 1];
+  if (!last || last.type !== 'service' || last.name !== name || last.namespace !== namespace) {
+    k8sBreadcrumb = k8sBreadcrumb.filter(s => s.type !== 'deployment');
+    k8sBreadcrumb.push({ type: 'service', label: `Service: ${name} (${namespace})`, name, namespace });
+  }
+  renderBreadcrumb(root);
+  // Yükleniyor mesajı
+  const loading = document.createElement('b');
+  loading.textContent = 'Service detayı yükleniyor...';
+  root.appendChild(loading);
+  try {
+    const data = await fetchApi(`/k8s-explorer/service?namespace=${namespace}&name=${name}`);
+    root.innerHTML = '';
+    renderBreadcrumb(root);
+    // Başlık
+    const h4 = document.createElement('h4');
+    h4.textContent = `Service: ${name} (${namespace})`;
+    root.appendChild(h4);
+    // JSON detay
+    const pre = document.createElement('pre');
+    pre.style.background = '#f8f9fa';
+    pre.style.color = '#333';
+    pre.style.fontSize = '12px';
+    pre.textContent = JSON.stringify(data, null, 2);
+    root.appendChild(pre);
+    if (data && Array.isArray(data.deployments) && data.deployments.length > 0) {
+      const info = document.createElement('div');
+      info.textContent = data.deployments.length === 1 ? 'Deployment bulundu:' : 'Birden fazla deployment bulundu:';
+      root.appendChild(info);
+      let deploymentList = [...data.deployments];
+      const ul = document.createElement('ul');
+      deploymentList.forEach((dep, idx) => {
+        const li = document.createElement('li');
+        // Detaya git
+        const depLink = createLink(dep.name, () => {
+          showDeploymentDetail(namespace, dep.name);
+        });
+        li.appendChild(depLink);
+        // Edit butonu
+        const editBtn = document.createElement('button');
+        editBtn.innerHTML = '✏️';
+        editBtn.className = 'btn btn-sm btn-link text-primary ms-1 p-0';
+        editBtn.title = 'YAML düzenle';
+        editBtn.onclick = (e) => {
+          e.stopPropagation();
+          showYamlModal('deployment', namespace, dep.name);
+        };
+        li.appendChild(editBtn);
+        // Sil butonu
+        const delBtn = document.createElement('button');
+        delBtn.innerHTML = '🗑️';
+        delBtn.className = 'btn btn-sm btn-link text-danger ms-2 p-0';
+        delBtn.title = 'Bu deploymentı Kubernetes üzerinden sil';
+        delBtn.onclick = async (e) => {
+          e.stopPropagation();
+          const ok = await deleteK8sObj('deployment', namespace, dep.name);
+          if (ok) {
+            deploymentList.splice(idx, 1);
+            ul.removeChild(li);
+          }
+        };
+        li.appendChild(delBtn);
+        ul.appendChild(li);
+      });
+      root.appendChild(ul);
+    } else if (data && data.error) {
+      const errDiv = document.createElement('div');
+      errDiv.className = 'text-danger';
+      errDiv.textContent = `Hata: ${data.error}`;
+      root.appendChild(errDiv);
+    } else {
+      const div = document.createElement('div');
+      div.textContent = 'Deployment bulunamadı veya servis detayına erişilemedi.';
+      root.appendChild(div);
+    }
+  } catch (err) {
+    root.innerHTML = '';
+    renderBreadcrumb(root);
+    const errDiv = document.createElement('div');
+    errDiv.className = 'text-danger';
+    errDiv.textContent = 'Service detayına erişilemedi.';
+    root.appendChild(errDiv);
+  }
+  // Geri butonu
+  const btn = document.createElement('button');
+  btn.className = 'btn btn-sm btn-secondary mt-2';
+  btn.textContent = 'Ingress listesine dön';
+  btn.onclick = showIngresses;
+  root.appendChild(document.createElement('br'));
+  root.appendChild(btn);
+}
+
+async function showDeploymentDetail(namespace, name) {
+  let root = document.getElementById('k8s-explorer-root');
+  root.innerHTML = '';
+  // Breadcrumb güncelle
+  const last = k8sBreadcrumb[k8sBreadcrumb.length - 1];
+  if (!last || last.type !== 'deployment' || last.name !== name || last.namespace !== namespace) {
+    k8sBreadcrumb.push({ type: 'deployment', label: `Deployment: ${name} (${namespace})`, name, namespace });
+  }
+  renderBreadcrumb(root);
+  const loading = document.createElement('b');
+  loading.textContent = 'Deployment detayı yükleniyor...';
+  root.appendChild(loading);
+  const data = await fetchApi(`/k8s-explorer/deployment?namespace=${namespace}&name=${name}`);
+  root.innerHTML = '';
+  renderBreadcrumb(root);
+  const h4 = document.createElement('h4');
+  h4.textContent = `Deployment: ${name} (${namespace})`;
+  root.appendChild(h4);
+  if (data.pods && data.pods.length > 0) {
+    const podDiv = document.createElement('div');
+    podDiv.textContent = 'Podlar:';
+    root.appendChild(podDiv);
+    let podList = [...data.pods];
+    const ul = document.createElement('ul');
+    podList.forEach((pod, idx) => {
+      const li = document.createElement('li');
+      li.textContent = pod;
+      // Log butonu
+      const logBtn = document.createElement('button');
+      logBtn.innerHTML = '📄';
+      logBtn.className = 'btn btn-sm btn-link text-success ms-1 p-0';
+      logBtn.title = 'Pod logunu göster';
+      logBtn.onclick = (e) => {
+        e.stopPropagation();
+        showPodLogModal(namespace, pod);
+      };
+      li.appendChild(logBtn);
+      // Edit butonu
+      const editBtn = document.createElement('button');
+      editBtn.innerHTML = '✏️';
+      editBtn.className = 'btn btn-sm btn-link text-primary ms-1 p-0';
+      editBtn.title = 'YAML düzenle';
+      editBtn.onclick = (e) => {
+        e.stopPropagation();
+        showYamlModal('pod', namespace, pod);
+      };
+      li.appendChild(editBtn);
+      // Sil butonu
+      const delBtn = document.createElement('button');
+      delBtn.innerHTML = '🗑️';
+      delBtn.className = 'btn btn-sm btn-link text-danger ms-2 p-0';
+      delBtn.title = 'Bu podu Kubernetes üzerinden sil';
+      delBtn.onclick = async (e) => {
+        e.stopPropagation();
+        const ok = await deleteK8sObj('pod', namespace, pod);
+        if (ok) {
+          podList.splice(idx, 1);
+          ul.removeChild(li);
+        }
+      };
+      li.appendChild(delBtn);
+      ul.appendChild(li);
+    });
+// Pod log modal fonksiyonu
+function showPodLogModal(namespace, podName) {
+  // Modalı oluştur veya bul
+  let modal = document.getElementById('k8s-log-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'k8s-log-modal';
+    modal.innerHTML = `
+      <div class="modal fade" tabindex="-1" id="k8sLogModalDialog">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Pod Logları: ${podName}</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+              <pre id="k8s-log-pre" style="background:#222;color:#eee;font-size:12px;max-height:500px;overflow:auto;"></pre>
+              <div id="k8s-log-modal-error" class="text-danger mt-2"></div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+  document.getElementById('k8s-log-modal-error').textContent = '';
+  document.getElementById('k8s-log-pre').textContent = 'Yükleniyor...';
+  // Logu getir
+  fetch(`/k8s-explorer/logs?type=pod&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(podName)}`)
+    .then(r => r.ok ? r.text() : Promise.reject('Log alınamadı'))
+    .then(log => {
+      document.getElementById('k8s-log-pre').textContent = log;
+    })
+    .catch(err => {
+      document.getElementById('k8s-log-pre').textContent = '';
+      document.getElementById('k8s-log-modal-error').textContent = err;
+    });
+  // Modalı aç
+  if (!window.k8sLogModalInstance) {
+    window.k8sLogModalInstance = new bootstrap.Modal(document.getElementById('k8sLogModalDialog'));
+  }
+  window.k8sLogModalInstance.show();
+  // Modal başlığını güncelle
+  const title = document.getElementById('k8s-log-modal-title');
+  if (title) title.textContent = `Pod Logları: ${podName}`;
+  const errorDiv = document.getElementById('k8s-log-modal-error');
+  if (errorDiv) errorDiv.textContent = '';
+  const pre = document.getElementById('k8s-log-pre');
+  if (pre) pre.textContent = 'Yükleniyor...';
+  // Tail state
+  if (window.k8sLogTailInterval) {
+    clearInterval(window.k8sLogTailInterval);
+    window.k8sLogTailInterval = null;
+  }
+  const tailBtn = document.getElementById('k8s-log-tail-btn');
+  if (tailBtn) {
+    tailBtn.textContent = 'Canlı Takip';
+    tailBtn.classList.remove('btn-danger');
+    tailBtn.classList.add('btn-outline-primary');
+    tailBtn.dataset.tailing = 'off';
+    tailBtn.onclick = function() {
+      if (tailBtn.dataset.tailing === 'on') {
+        // Takibi durdur
+        clearInterval(window.k8sLogTailInterval);
+        window.k8sLogTailInterval = null;
+        tailBtn.textContent = 'Canlı Takip';
+        tailBtn.classList.remove('btn-danger');
+        tailBtn.classList.add('btn-outline-primary');
+        tailBtn.dataset.tailing = 'off';
+      } else {
+        // Takibi başlat
+        tailBtn.textContent = 'Takibi Durdur';
+        tailBtn.classList.remove('btn-outline-primary');
+        tailBtn.classList.add('btn-danger');
+        tailBtn.dataset.tailing = 'on';
+        const fetchLog = () => {
+          fetch(`/k8s-explorer/logs?type=pod&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(podName)}`)
+            .then(r => r.ok ? r.text() : Promise.reject('Log alınamadı'))
+            .then(log => { if (pre) pre.textContent = log; })
+            .catch(err => { if (pre) pre.textContent = ''; if (errorDiv) errorDiv.textContent = err; });
+        };
+        fetchLog();
+        window.k8sLogTailInterval = setInterval(fetchLog, 2000);
+      }
+    };
+  }
+  // Logu getir (ilk açılışta)
+  fetch(`/k8s-explorer/logs?type=pod&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(podName)}`)
+    .then(r => r.ok ? r.text() : Promise.reject('Log alınamadı'))
+    .then(log => { if (pre) pre.textContent = log; })
+    .catch(err => { if (pre) pre.textContent = ''; if (errorDiv) errorDiv.textContent = err; });
+  // Modalı aç
+  if (!window.k8sLogModalInstance) {
+    window.k8sLogModalInstance = new bootstrap.Modal(document.getElementById('k8sLogModalDialog'));
+  }
+  window.k8sLogModalInstance.show();
+}
+
+    root.appendChild(ul);
+  } else {
+    const div = document.createElement('div');
+    div.textContent = 'Pod bulunamadı.';
+    root.appendChild(div);
+  }
+  // Geri butonu
+  const btn = document.createElement('button');
+  btn.className = 'btn btn-sm btn-secondary mt-2';
+  btn.textContent = 'Ingress listesine dön';
+  btn.onclick = showIngresses;
+  root.appendChild(document.createElement('br'));
+  root.appendChild(btn);
+}
+
+// Başlangıçta namespace seçtir, sonra children göster
+async function showNamespaceSelector() {
+  let root = document.getElementById('k8s-explorer-root');
+  root.innerHTML = '';
+  k8sBreadcrumb = [];
+  renderBreadcrumb(root);
+  const loading = document.createElement('b');
+  loading.textContent = 'Namespace listesi yükleniyor...';
+  root.appendChild(loading);
+  // Namespace'leri çek
+  let data = await fetch('/k8s-explorer/namespaces');
+  data = await data.json();
+  root.innerHTML = '';
+  renderBreadcrumb(root);
+  const h4 = document.createElement('h4');
+  h4.textContent = 'Namespace Seçin';
+  root.appendChild(h4);
+  const ul = document.createElement('ul');
+  (data.namespaces || []).forEach(ns => {
+    const li = document.createElement('li');
+    li.appendChild(createLink(ns, () => showNamespaceChildren(ns)));
+    ul.appendChild(li);
+  });
+  root.appendChild(ul);
+}
+
+// Yeni: Namespace altı children (ingress varsa onu, yoksa service)
+async function showNamespaceChildren(namespace) {
+  let root = document.getElementById('k8s-explorer-root');
+  root.innerHTML = '';
+  k8sBreadcrumb = [{ type: 'namespace', label: `Namespace: ${namespace}`, namespace }];
+  renderBreadcrumb(root);
+  const loading = document.createElement('b');
+  loading.textContent = 'Yükleniyor...';
+  root.appendChild(loading);
+  let data = await fetch(`/k8s-explorer/namespace-children?namespace=${encodeURIComponent(namespace)}`);
+  data = await data.json();
+  root.innerHTML = '';
+  renderBreadcrumb(root);
+  const h4 = document.createElement('h4');
+  h4.textContent = data.resource_type === 'ingress' ? 'Ingressler' : 'Servisler';
+  root.appendChild(h4);
+  const ul = document.createElement('ul');
+  (data.children || []).forEach(child => {
+    const li = document.createElement('li');
+    if (child.type === 'ingress') {
+      li.appendChild(createLink(child.name, () => showIngressDetail(child.namespace, child.name)));
+      // Edit/Sil butonları
+      const editBtn = document.createElement('button');
+      editBtn.innerHTML = '✏️';
+      editBtn.className = 'btn btn-sm btn-link text-primary ms-1 p-0';
+      editBtn.title = 'YAML düzenle';
+      editBtn.onclick = (e) => { e.stopPropagation(); showYamlModal('ingress', child.namespace, child.name); };
+      li.appendChild(editBtn);
+      const delBtn = document.createElement('button');
+      delBtn.innerHTML = '🗑️';
+      delBtn.className = 'btn btn-sm btn-link text-danger ms-2 p-0';
+      delBtn.title = 'Bu ingressi Kubernetes üzerinden sil';
+      delBtn.onclick = async (e) => { e.stopPropagation(); const ok = await deleteK8sObj('ingress', child.namespace, child.name); if (ok) { li.remove(); } };
+      li.appendChild(delBtn);
+    } else if (child.type === 'service') {
+      li.appendChild(createLink(child.name, () => showServiceDetail(child.namespace, child.name)));
+      // Edit/Sil butonları
+      const editBtn = document.createElement('button');
+      editBtn.innerHTML = '✏️';
+      editBtn.className = 'btn btn-sm btn-link text-primary ms-1 p-0';
+      editBtn.title = 'YAML düzenle';
+      editBtn.onclick = (e) => { e.stopPropagation(); showYamlModal('service', child.namespace, child.name); };
+      li.appendChild(editBtn);
+      const delBtn = document.createElement('button');
+      delBtn.innerHTML = '🗑️';
+      delBtn.className = 'btn btn-sm btn-link text-danger ms-2 p-0';
+      delBtn.title = 'Bu servisi Kubernetes üzerinden sil';
+      delBtn.onclick = async (e) => { e.stopPropagation(); const ok = await deleteK8sObj('service', child.namespace, child.name); if (ok) { li.remove(); } };
+      li.appendChild(delBtn);
+    }
+    ul.appendChild(li);
+  });
+  root.appendChild(ul);
+}
+
+// Namespace listesi endpointi (backend)
+// @app.route('/k8s-explorer/namespaces')
+// def k8s_explorer_namespaces(): ...
+
+// Zincirin başlangıcı artık namespace seçici
+showNamespaceSelector();
+// ...existing code...
+</script>
+<!-- YAML Modal -->
+<div class="modal fade" tabindex="-1" id="k8sYamlModalDialog">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">YAML Düzenle</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+      </div>
+      <div class="modal-body">
+        <textarea id="k8s-yaml-textarea" class="form-control" rows="18" style="font-family:monospace;"></textarea>
+        <div id="k8s-yaml-modal-error" class="text-danger mt-2"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+        <button type="button" class="btn btn-primary" id="k8s-yaml-save-btn">Kaydet</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Pod Log Modal (statik) -->
+<div class="modal fade" tabindex="-1" id="k8sLogModalDialog">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="k8s-log-modal-title">Pod Logları</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+      </div>
+      <div class="modal-body">
+        <pre id="k8s-log-pre" style="background:#222;color:#eee;font-size:12px;max-height:500px;overflow:auto;"></pre>
+        <div id="k8s-log-modal-error" class="text-danger mt-2"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-primary me-2" id="k8s-log-tail-btn">Canlı Takip</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

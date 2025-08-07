@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kubernetes Service Mesh</title>
+    <meta charset="utf-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+        h1 { color: #2d3e50; }
+        .mesh-table { background: #fff; padding: 20px; border-radius: 8px; width: 100%; border-collapse: collapse; }
+        th, td { padding: 8px; border-bottom: 1px solid #eee; }
+        th { background: #f0f0f0; }
+        .svc { color: #0074d9; font-weight: bold; }
+        .pod { color: #b30000; }
+    </style>
+    // Ok marker fonksiyonu kaldırıldı, sadece düz çizgi olacak
+</head>
+<body>
+    <h1>Kubernetes Service Mesh (Pod İletişimi)</h1>
+    <a href="/">&#8592; Güvenlik Açıkları</a>
+    <div style="margin:30px 0 10px 0;">
+        <b>Network Visualization:</b>
+        <div id="network-graph" style="width:100%;height:400px;background:#fff;border-radius:8px;overflow:hidden;"></div>
+    </div>
+    <button id="toggle-table" style="margin-bottom:10px;">Tabloyu Küçült</button>
+    <div id="mesh-table" style="transition:max-height 0.4s,opacity 0.4s;max-height:1000px;overflow:auto;">Yükleniyor...</div>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+    fetch('http://localhost:8080/mesh-data')
+        .then(resp => resp.json())
+        .then(data => {
+            // Tablo
+            let html = '<table class="mesh-table">';
+            html += '<tr><th>Namespace</th><th>Service</th><th>Service IP</th><th>Bağlı Podlar</th><th>Pod IP</th></tr>';
+            data.mesh.forEach(row => {
+                html += `<tr><td>${row.namespace}</td><td class="svc">${row.service}</td><td>${row.service_ip || '-'}</td><td>`;
+                if (row.pods.length === 0) {
+                    html += '<span style="color:#888">(yok)</span>';
+                } else {
+                    html += row.pods.map((pod, i) => `<span class="pod">&#128230; ${pod}</span>`).join('<br>');
+                }
+                html += '</td><td>';
+                if (row.pod_ips.length === 0) {
+                    html += '<span style="color:#888">-</span>';
+                } else {
+                    html += row.pod_ips.map(ip => `<span style='color:#333;font-size:13px;'>${ip || '-'}</span>`).join('<br>');
+                }
+                html += '</td></tr>';
+            });
+            html += '</table>';
+            document.getElementById('mesh-table').innerHTML = html;
+
+            // Network Graph
+            const nodes = [], links = [];
+            const nodeMap = {};
+            // Service ve pod node'ları, ilişkileri
+            data.mesh.forEach(row => {
+                // Service node
+                const svcId = `${row.namespace}:svc:${row.service}`;
+                if (!nodeMap[svcId]) {
+                    nodes.push({id: svcId, label: row.service, group: 'service', namespace: row.namespace});
+                    nodeMap[svcId] = true;
+                }
+                // Pod nodes
+                row.pods.forEach((pod, i) => {
+                    const podId = `${row.namespace}:pod:${pod}`;
+                    if (!nodeMap[podId]) {
+                        nodes.push({id: podId, label: pod, group: 'pod', namespace: row.namespace});
+                        nodeMap[podId] = true;
+                    }
+                    // Service -> Pod çiz
+                    links.push({source: svcId, target: podId, type: 'svc-pod'});
+                });
+            });
+            // Pod'dan başka servise konuşma linkleri (env var ile)
+            if (data.pod_to_service_links) {
+                data.pod_to_service_links.forEach(l => {
+                    const src = `${l.namespace}:pod:${l.pod}`;
+                    const tgt = l.target_service.replace(':', ':svc:');
+                    links.push({source: src, target: tgt, type: 'pod-svc'});
+                });
+            }
+            drawNetworkGraph(nodes, links);
+        })
+        .catch(() => {
+            document.getElementById('mesh-table').innerHTML = 'Hata oluştu.';
+        });
+        // Ok marker fonksiyonu kaldırıldı
+
+    function drawNetworkGraph(nodes, links) {
+        const width = document.getElementById('network-graph').clientWidth;
+        const height = 400;
+        d3.select('#network-graph').selectAll('*').remove();
+        const svg = d3.select('#network-graph').append('svg')
+            .attr('width', width)
+            .attr('height', height)
+            .call(d3.zoom().scaleExtent([0.3, 2]).on('zoom', (event) => {
+                svg.selectAll('g').attr('transform', event.transform);
+            }));
+        const color = d3.scaleOrdinal().domain(['deployment','service', 'pod']).range(['#ff9800','#0074d9', '#b30000']);
+        const g = svg.append('g');
+        // Namespace'lere göre yatay dağıtım için benzersiz namespace'leri bul
+        const namespaces = [...new Set(nodes.map(n => n.namespace))];
+        // Her namespace için yatayda blok, servisler üstte, podlar altta sabitlenmiş şekilde konumlandır
+        const nsCount = namespaces.length;
+        const nsWidth = width / nsCount;
+        const serviceY = height * 0.2;
+        const podYStart = height * 0.5;
+        const podYStep = 60;
+        // Her namespace için servis ve podları sırala
+        const nsPods = {};
+        nodes.forEach(n => {
+            if (!nsPods[n.namespace]) nsPods[n.namespace] = {services: [], pods: []};
+            if (n.group === 'service') nsPods[n.namespace].services.push(n);
+            else nsPods[n.namespace].pods.push(n);
+        });
+        // Servisleri yatayda eşit aralıklarla, podları ise alt alta sabitliyoruz
+        nodes.forEach(n => {
+            const nsIdx = namespaces.indexOf(n.namespace);
+            if (n.group === 'service') {
+                const sIdx = nsPods[n.namespace].services.findIndex(s => s.id === n.id);
+                n.fx = nsWidth * nsIdx + nsWidth/2;
+                n.fy = serviceY + sIdx * 40;
+            } else {
+                const pIdx = nsPods[n.namespace].pods.findIndex(p => p.id === n.id);
+                n.fx = nsWidth * nsIdx + nsWidth/2;
+                n.fy = podYStart + pIdx * podYStep;
+            }
+        });
+        const link = g.append('g')
+            .selectAll('line')
+            .data(links)
+            .enter().append('line')
+            .attr('stroke-width', 2)
+            .attr('stroke', d => {
+                if (d.type === 'dep-pod') return '#ff9800'; // Deployment -> Pod
+                if (d.type === 'svc-pod') return '#0074d9'; // Service -> Pod
+                if (d.type === 'pod-svc') return '#b300b3'; // Pod -> Service (env)
+                return '#aaa';
+            })
+            .attr('stroke-dasharray', d => {
+                if (d.type === 'dep-pod') return '1,0';
+                if (d.type === 'svc-pod') return '4,2';
+                if (d.type === 'pod-svc') return '2,4';
+                return '';
+            });
+        // Ok başı tanımı kaldırıldı
+        const nodeGroup = g.append('g').attr('class', 'nodes');
+        const node = nodeGroup
+            .selectAll('circle')
+            .data(nodes)
+            .enter().append('circle')
+            .attr('r', 22)
+            .attr('fill', d => color(d.group))
+            .attr('stroke', '#fff')
+            .attr('stroke-width', 2)
+            .call(d3.drag()
+                .on('start', dragstarted)
+                .on('drag', dragged)
+                .on('end', dragended));
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+    }
+
+    // Tabloyu küçült/büyüt
+    const toggleBtn = document.getElementById('toggle-table');
+    const meshTable = document.getElementById('mesh-table');
+    let collapsed = false;
+    toggleBtn.onclick = function() {
+        collapsed = !collapsed;
+        if (collapsed) {
+            meshTable.style.maxHeight = '0px';
+            meshTable.style.opacity = '0';
+            toggleBtn.textContent = 'Tabloyu Büyüt';
+        } else {
+            meshTable.style.maxHeight = '1000px';
+            meshTable.style.opacity = '1';
+            toggleBtn.textContent = 'Tabloyu Küçült';
+        }
+    };
+    </script>
+</body>
+</html>

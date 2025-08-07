@@ -1,0 +1,1498 @@
+<!-- Pod Properties Modal -->
+<div class="modal fade" id="podPropertiesModal" tabindex="-1" aria-labelledby="podPropertiesModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="podPropertiesModalLabel">Pod Properties</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="podPropertiesModalBody"></div>
+        <hr>
+        <h6>Kaynak Kullanımı</h6>
+        <div id="podResourceChart" style="min-height:300px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% extends "base.html" %}
+{% block title %}Workloads{% endblock %}
+{% block content %}
+<ul class="nav nav-tabs" id="workloadsTab" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Overview</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="pods-tab" data-bs-toggle="tab" data-bs-target="#pods" type="button" role="tab">Pods</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="deployments-tab" data-bs-toggle="tab" data-bs-target="#deployments" type="button" role="tab">Deployments</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="daemonsets-tab" data-bs-toggle="tab" data-bs-target="#daemonsets" type="button" role="tab">Daemon Sets</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="statefulsets-tab" data-bs-toggle="tab" data-bs-target="#statefulsets" type="button" role="tab">Stateful Sets</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="replicasets-tab" data-bs-toggle="tab" data-bs-target="#replicasets" type="button" role="tab">Replica Sets</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="replicationcontrollers-tab" data-bs-toggle="tab" data-bs-target="#replicationcontrollers" type="button" role="tab">Replication Controller</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="jobs-tab" data-bs-toggle="tab" data-bs-target="#jobs" type="button" role="tab">Jobs</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="cronjobs-tab" data-bs-toggle="tab" data-bs-target="#cronjobs" type="button" role="tab">CronJobs</button>
+  </li>
+</ul>
+<div class="tab-content mt-3" id="workloadsTabContent">
+  <div class="tab-pane fade show active" id="overview" role="tabpanel">
+    <div class="row">
+      <div class="col-md-4 mb-4"><div id="pie-pods" style="cursor:pointer;"></div></div>
+      <div class="col-md-4 mb-4"><div id="pie-deployments"></div></div>
+      <div class="col-md-4 mb-4"><div id="pie-daemonsets"></div></div>
+      <div class="col-md-4 mb-4"><div id="pie-statefulsets"></div></div>
+      <div class="col-md-4 mb-4"><div id="pie-replicasets"></div></div>
+      <div class="col-md-4 mb-4"><div id="pie-jobs"></div></div>
+      <div class="col-md-4 mb-4"><div id="pie-cronjobs"></div></div>
+    </div>
+    <div class="mt-4">
+      <!-- Event logları göster butonu kaldırıldı -->
+    </div>
+    <div class="card mt-4">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><b>Event Logları</b></span>
+        <button class="btn btn-sm btn-secondary" id="toggleLiveBtn">Canlı Takip Et</button>
+      </div>
+      <div class="card-body p-2">
+        <div id="eventLogContent" style="max-height:400px; overflow-y:auto; font-size:0.95em; background:#f8f9fa; padding:10px; border-radius:4px; border:1px solid #dee2e6;">Yükleniyor...</div>
+      </div>
+    </div>
+    <script>
+    let liveInterval = null;
+    async function fetchEventLogs() {
+      const content = document.getElementById('eventLogContent');
+      content.innerHTML = 'Yükleniyor...';
+      try {
+        const resp = await fetch('/exec-events');
+        const data = await resp.json();
+        if (data.events && data.events.length > 0) {
+          let html = '<table class="table table-sm table-bordered"><thead><tr><th>Zaman</th><th>Namespace</th><th>Kind</th><th>İsim</th><th>Tip</th><th>Reason</th><th>Message</th></tr></thead><tbody>';
+          for (const ev of data.events) {
+            html += `<tr><td>${ev.time}</td><td>${ev.namespace}</td><td>${ev.kind || ''}</td><td>${ev.name || ''}</td><td>${ev.type || ''}</td><td>${ev.reason || ''}</td><td>${ev.message || ''}</td></tr>`;
+          }
+          html += '</tbody></table>';
+          content.innerHTML = html;
+        } else {
+          content.innerHTML = '<div class="text-muted">Event logu bulunamadı.</div>';
+        }
+      } catch (e) {
+        content.innerHTML = '<div class="text-danger">Event logları alınırken hata oluştu.</div>';
+      }
+    }
+    // Sayfa yüklendiğinde event logunu getir
+    document.addEventListener('DOMContentLoaded', function() {
+      fetchEventLogs();
+    });
+    document.getElementById('toggleLiveBtn').addEventListener('click', function() {
+      const btn = this;
+      if (liveInterval) {
+        clearInterval(liveInterval);
+        liveInterval = null;
+        btn.textContent = 'Canlı Takip Et';
+      } else {
+        fetchEventLogs();
+        liveInterval = setInterval(fetchEventLogs, 3000);
+        btn.textContent = 'Canlı Takibi Durdur';
+      }
+    });
+    </script>
+  </div>
+  <div class="tab-pane fade" id="pods" role="tabpanel">
+    <div id="pie-pods-tab" style="min-height:300px;"></div>
+    <div class="mt-3">
+      <h5>Pod Listesi</h5>
+      <div class="mb-2">
+        <label for="namespaceFilter" class="form-label mb-0">Namespace Filtrele:</label>
+        <select id="namespaceFilter" class="form-select form-select-sm" style="width:auto; display:inline-block;"></select>
+      </div>
+      <div id="pods-table-container">
+        <div class="text-muted">Yükleniyor...</div>
+      </div>
+
+        <!-- YAML Edit Modal -->
+        <div class="modal fade" id="yamlEditModal" tabindex="-1" aria-labelledby="yamlEditModalLabel" aria-hidden="true">
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="yamlEditModalLabel">Pod YAML Edit</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <textarea id="yamlEditArea" class="form-control" rows="18" style="font-family:monospace; font-size:0.95em; min-height:300px;"></textarea>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="saveYamlBtn">Kaydet</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      <!-- Describe Modal -->
+      <div class="modal fade" id="describeModal" tabindex="-1" aria-labelledby="describeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="describeModalLabel">Pod Describe</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <pre id="describeModalBody" style="font-size:0.95em; white-space:pre-wrap; max-height:60vh; overflow:auto; background:#f8f9fa; border-radius:4px; border:1px solid #dee2e6; padding:10px;"></pre>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scale Deployment Modal -->
+      <div class="modal fade" id="scaleDeploymentModal" tabindex="-1" aria-labelledby="scaleDeploymentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="scaleDeploymentModalLabel">Deployment Scale</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-2"><b id="scaleDeploymentName"></b></div>
+              <label for="scaleReplicasInput" class="form-label">Replica Sayısı:</label>
+              <input type="number" min="0" class="form-control" id="scaleReplicasInput" style="width:120px; display:inline-block;">
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-primary" id="scaleDeploymentSaveBtn">Kaydet</button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <div class="tab-pane fade" id="deployments" role="tabpanel">
+    <div id="pie-deployments-tab" style="min-height:300px;"></div>
+    <div class="mt-3">
+      <h5>Deployment Listesi</h5>
+      <div class="mb-2">
+        <label for="deploymentNameFilter" class="form-label mb-0">Deployment Filtrele:</label>
+        <select id="deploymentNameFilter" class="form-select form-select-sm" style="width:auto; display:inline-block;"></select>
+      </div>
+      <div id="deployments-table-container">
+        <div class="text-muted">Yükleniyor...</div>
+      </div>
+    </div>
+  </div>
+  <div class="tab-pane fade" id="daemonsets" role="tabpanel">
+    <div id="pie-daemonsets-tab" style="min-height:300px;"></div>
+    <div class="mt-3">
+      <h5>Daemon Set Listesi</h5>
+      <div id="daemonsets-table-container">
+        <div class="text-muted">Yükleniyor...</div>
+      </div>
+    </div>
+  </div>
+  <!-- DaemonSet Logs Modal -->
+<div class="modal fade" id="daemonSetLogsModal" tabindex="-1" aria-labelledby="daemonSetLogsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="daemonSetLogsModalLabel">DaemonSet Pod Logları</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label for="daemonSetPodSelect" class="form-label mb-0">Pod Seç:</label>
+          <select id="daemonSetPodSelect" class="form-select form-select-sm" style="width:auto; display:inline-block;"></select>
+        </div>
+        <pre id="daemonSetLogsModalBody" style="font-size:0.95em; white-space:pre-wrap; max-height:70vh; overflow:auto; background:#f8f9fa; border-radius:4px; border:1px solid #dee2e6; padding:10px;"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+      </div>
+    </div>
+  </div>
+</div>
+  <div class="tab-pane fade" id="statefulsets" role="tabpanel">
+    <div id="pie-statefulsets-tab" style="min-height:300px;"></div>
+    <div class="mt-3">
+      <h5>StatefulSet Listesi</h5>
+      <div class="mb-2">
+        <label for="statefulsetNamespaceFilter" class="form-label mb-0">Namespace Filtrele:</label>
+        <select id="statefulsetNamespaceFilter" class="form-select form-select-sm" style="width:auto; display:inline-block;"></select>
+      </div>
+      <div id="statefulsets-table-container">
+        <div class="text-muted">Yükleniyor...</div>
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" id="statefulSetLogsModal" tabindex="-1" aria-labelledby="statefulSetLogsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="statefulSetLogsModalLabel">StatefulSet Pod Logları</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label for="statefulSetPodSelect" class="form-label mb-0">Pod Seç:</label>
+          <select id="statefulSetPodSelect" class="form-select form-select-sm" style="width:auto; display:inline-block;"></select>
+        </div>
+        <pre id="statefulSetLogsModalBody" style="font-size:0.95em; white-space:pre-wrap; max-height:70vh; overflow:auto; background:#f8f9fa; border-radius:4px; border:1px solid #dee2e6; padding:10px;"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scale StatefulSet Modal -->
+<div class="modal fade" id="scaleStatefulSetModal" tabindex="-1" aria-labelledby="scaleStatefulSetModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="scaleStatefulSetModalLabel">StatefulSet Scale</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2"><b id="scaleStatefulSetName"></b></div>
+        <label for="scaleStatefulSetReplicasInput" class="form-label">Replica Sayısı:</label>
+        <input type="number" min="0" class="form-control" id="scaleStatefulSetReplicasInput" style="width:120px; display:inline-block;"></input>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" id="scaleStatefulSetSaveBtn">Kaydet</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+// StatefulSets tablosunu getir ve göster
+async function fetchAndRenderStatefulSetsTable() {
+  const container = document.getElementById('statefulsets-table-container');
+  container.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
+  try {
+    const nsFilter = document.getElementById('statefulsetNamespaceFilter');
+    const selectedNs = nsFilter.value;
+    let url = '/k8s-explorer/statefulsets-summary';
+    if (selectedNs) url += `?namespace=${encodeURIComponent(selectedNs)}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    const statefulsets = Array.isArray(data.statefulsets) ? data.statefulsets : [];
+    // Namespace dropdownu doldur
+    if (!nsFilter.dataset.filled) {
+      // Tüm namespace'leri topla
+      const allNs = [...new Set(statefulsets.map(ss => ss.namespace))];
+      nsFilter.innerHTML = '<option value="">(Tümü)</option>' + allNs.map(ns => `<option value="${ns}">${ns}</option>`).join('');
+      nsFilter.dataset.filled = '1';
+    }
+    if (statefulsets.length === 0) {
+      container.innerHTML = '<div class="text-muted">StatefulSet bulunamadı.</div>';
+      updateStatefulSetsPieChart([]);
+      return;
+    }
+    let html = '<table class="table table-sm table-bordered"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Replicas</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
+    for (const ss of statefulsets) {
+      let age = '-';
+      if (ss.creation_timestamp) {
+        const created = new Date(ss.creation_timestamp);
+        const now = new Date();
+        const diffMs = now - created;
+        const diffDays = Math.floor(diffMs / (1000*60*60*24));
+        const diffHrs = Math.floor((diffMs % (1000*60*60*24)) / (1000*60*60));
+        const diffMin = Math.floor((diffMs % (1000*60*60)) / (1000*60));
+        if (diffDays > 0) age = diffDays + 'd';
+        else if (diffHrs > 0) age = diffHrs + 'h';
+        else age = diffMin + 'm';
+      }
+      html += `<tr><td>${ss.namespace}</td><td>${ss.name}</td><td>${ss.ready}</td><td>${ss.replicas}</td><td>${age}</td><td>
+        <button class="btn btn-sm btn-warning" onclick="restartStatefulSet('${ss.name}','${ss.namespace}')">Restart</button>
+        <button class="btn btn-sm btn-info ms-1" onclick="showScaleStatefulSetModal('${ss.name}','${ss.namespace}',${ss.replicas})">Scale</button>
+        <button class="btn btn-sm btn-success ms-1" onclick="editStatefulSetYaml('${ss.name}','${ss.namespace}')">Edit</button>
+        <button class="btn btn-sm btn-secondary ms-1" onclick="showStatefulSetLogs('${ss.name}','${ss.namespace}')">Logs</button>
+      </td></tr>`;
+// StatefulSet Edit fonksiyonu (global)
+window.editStatefulSetYaml = async function(name, namespace) {
+  let modal = document.getElementById('yamlEditModal');
+  let label = document.getElementById('yamlEditModalLabel');
+  let area = document.getElementById('yamlEditArea');
+  let saveBtn = document.getElementById('saveYamlBtn');
+  if (!modal || !label || !area || !saveBtn) {
+    alert('YAML edit modalı eksik. Lütfen HTML içinde yamlEditModal, yamlEditModalLabel, yamlEditArea, saveYamlBtn id\'li elemanların olduğundan emin olun.');
+    return;
+  }
+  label.textContent = `StatefulSet YAML Edit: ${namespace}/${name}`;
+  area.value = 'Yükleniyor...';
+  // Modalı body'ye ekle ve göster (Bootstrap 5 uyumlu)
+  if (!document.body.contains(modal)) {
+    document.body.appendChild(modal);
+  }
+  if (modal.style.display === 'none' || (modal.classList.contains('fade') && !modal.classList.contains('show'))) {
+    try {
+      modal.parentNode.removeChild(modal);
+      document.body.appendChild(modal);
+    } catch (e) { /* ignore */ }
+  }
+  let bsModal = bootstrap.Modal.getInstance(modal);
+  if (!bsModal) bsModal = new bootstrap.Modal(modal);
+  bsModal.show();
+  try {
+    const resp = await fetch(`/k8s-explorer/yaml?type=statefulset&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`);
+    if (resp.ok) {
+      area.value = await resp.text();
+    } else {
+      area.value = 'YAML alınamadı: ' + (await resp.text());
+    }
+  } catch (e) {
+    area.value = 'YAML alınırken hata oluştu.';
+  }
+  saveBtn.onclick = async function() {
+    saveBtn.disabled = true;
+    try {
+      const yaml = area.value;
+      const resp = await fetch('/k8s-explorer/yaml', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'statefulset', namespace, name, yaml })
+      });
+      if (resp.ok) {
+        alert('YAML kaydedildi.');
+        if (typeof fetchAndRenderStatefulSetsTable === 'function') fetchAndRenderStatefulSetsTable();
+        bsModal.hide();
+      } else {
+        alert('Kaydetme başarısız: ' + (await resp.text()));
+      }
+    } catch (e) {
+      alert('Kaydetme sırasında hata: ' + e);
+    } finally {
+      saveBtn.disabled = false;
+    }
+  };
+};
+// StatefulSet Scale fonksiyonu (global)
+window.showScaleStatefulSetModal = function(name, namespace, currentReplicas) {
+  let modal = document.getElementById('scaleStatefulSetModal');
+  let label = document.getElementById('scaleStatefulSetModalLabel');
+  let nameSpan = document.getElementById('scaleStatefulSetName');
+  let input = document.getElementById('scaleStatefulSetReplicasInput');
+  let saveBtn = document.getElementById('scaleStatefulSetSaveBtn');
+  if (!modal || !label || !nameSpan || !input || !saveBtn) {
+    alert('Scale modalı eksik. Lütfen HTML içinde scaleStatefulSetModal, scaleStatefulSetModalLabel, scaleStatefulSetName, scaleStatefulSetReplicasInput, scaleStatefulSetSaveBtn id\'li elemanların olduğundan emin olun.');
+    return;
+  }
+  label.textContent = `StatefulSet Scale: ${namespace}/${name}`;
+  nameSpan.textContent = `${namespace}/${name}`;
+  input.value = currentReplicas;
+  let bsModal = bootstrap.Modal.getInstance(modal);
+  if (!bsModal) bsModal = new bootstrap.Modal(modal);
+  bsModal.show();
+  saveBtn.onclick = async function() {
+    const replicas = parseInt(input.value);
+    if (isNaN(replicas) || replicas < 0) {
+      alert('Geçerli bir replica sayısı girin.');
+      return;
+    }
+    saveBtn.disabled = true;
+    try {
+      const resp = await fetch('/k8s-explorer/scale-statefulset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, namespace, replicas })
+      });
+      if (resp.ok) {
+        alert('StatefulSet scale edildi.');
+        if (typeof fetchAndRenderStatefulSetsTable === 'function') fetchAndRenderStatefulSetsTable();
+        bsModal.hide();
+      } else {
+        alert('Scale başarısız: ' + (await resp.text()));
+      }
+    } catch (e) {
+      alert('Scale sırasında hata: ' + e);
+    } finally {
+      saveBtn.disabled = false;
+    }
+  };
+};
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+    updateStatefulSetsPieChart(statefulsets);
+// StatefulSet Logs fonksiyonu (global)
+window.showStatefulSetLogs = async function(name, namespace) {
+  let modal = document.getElementById('statefulSetLogsModal');
+  let body = document.getElementById('statefulSetLogsModalBody');
+  let label = document.getElementById('statefulSetLogsModalLabel');
+  let podSelect = document.getElementById('statefulSetPodSelect');
+  if (!modal || !body || !label || !podSelect) {
+    alert('Logs modalı veya pod seçici bulunamadı. Lütfen HTML içinde statefulSetLogsModal, statefulSetLogsModalBody, statefulSetLogsModalLabel ve statefulSetPodSelect id\'li elemanların olduğundan emin olun.');
+    return;
+  }
+  if (!document.body.contains(modal)) {
+    document.body.appendChild(modal);
+  }
+  if (modal.style.display === 'none' || (modal.classList.contains('fade') && !modal.classList.contains('show'))) {
+    try {
+      modal.parentNode.removeChild(modal);
+      document.body.appendChild(modal);
+    } catch (e) { /* ignore */ }
+  }
+  label.textContent = `StatefulSet Pod Logları: ${namespace}/${name}`;
+  body.textContent = 'Yükleniyor...';
+  podSelect.innerHTML = '<option>Yükleniyor...</option>';
+  let bsModal = bootstrap.Modal.getInstance(modal);
+  if (!bsModal) bsModal = new bootstrap.Modal(modal);
+  bsModal.show();
+  try {
+    const resp = await fetch(`/k8s-explorer/statefulset-logs?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}&mode=perpod`);
+    if (!resp.ok) {
+      body.textContent = 'Loglar alınamadı: ' + (await resp.text());
+      podSelect.innerHTML = '<option>Hata</option>';
+      return;
+    }
+    const data = await resp.json();
+    if (data && data.pod_logs && Object.keys(data.pod_logs).length > 0) {
+      // Fill pod selector
+      podSelect.innerHTML = '<option value="__all__">Tümü</option>' + Object.keys(data.pod_logs).map(pod => `<option value="${pod}">${pod}</option>`).join('');
+      // Show all pod logs by default
+      let allLogs = Object.entries(data.pod_logs).map(([pod, log]) => `--- ${pod} ---\n${log || '(Log yok)'}`).join('\n\n');
+      body.textContent = allLogs;
+      podSelect.onchange = function() {
+        const selectedPod = podSelect.value;
+        if (selectedPod === '__all__') {
+          body.textContent = allLogs;
+        } else {
+          body.textContent = data.pod_logs[selectedPod] || '(Log yok)';
+        }
+      };
+    } else if (data && data.error) {
+      body.textContent = 'Loglar alınamadı: ' + data.error;
+      podSelect.innerHTML = '<option>Hata</option>';
+    } else {
+      body.textContent = 'Loglar alınamadı: Beklenmeyen yanıt.';
+      podSelect.innerHTML = '<option>Yok</option>';
+    }
+  } catch (e) {
+    body.textContent = 'Loglar alınırken hata oluştu.';
+    podSelect.innerHTML = '<option>Hata</option>';
+  }
+};
+// StatefulSet Restart fonksiyonu (global)
+window.restartStatefulSet = async function(name, namespace) {
+  if (!confirm(`${namespace}/${name} StatefulSet'i restart edilsin mi?`)) return;
+  try {
+    const resp = await fetch('/k8s-explorer/restart-statefulset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, namespace })
+    });
+    if (resp.ok) {
+      alert('StatefulSet restart edildi.');
+      if (typeof fetchAndRenderStatefulSetsTable === 'function') fetchAndRenderStatefulSetsTable();
+    } else {
+      alert('Restart başarısız: ' + (await resp.text()));
+    }
+  } catch (e) {
+    alert('Restart sırasında hata: ' + e);
+  }
+};
+  } catch (e) {
+    container.innerHTML = '<div class="text-danger">StatefulSetler alınırken hata oluştu.</div>';
+  }
+}
+
+// StatefulSets pie chart'ı güncelle
+function updateStatefulSetsPieChart(statefulsets) {
+  // Pie chart datasını hazırla
+  const statusCounts = { 'Ready': 0, 'NotReady': 0 };
+  for (const ss of statefulsets) {
+    const [ready, total] = (ss.ready || '').split('/').map(x => parseInt(x) || 0);
+    if (ready === total && total > 0) statusCounts['Ready']++;
+    else statusCounts['NotReady']++;
+  }
+  renderPieChart('pie-statefulsets-tab', 'Stateful Sets', statusCounts);
+}
+
+// Namespace değişince tablo ve pie chart güncelle
+document.addEventListener('DOMContentLoaded', function() {
+  const nsFilter = document.getElementById('statefulsetNamespaceFilter');
+  if (nsFilter) {
+    nsFilter.onchange = fetchAndRenderStatefulSetsTable;
+  }
+  document.querySelector('button[data-bs-target="#statefulsets"]').addEventListener('shown.bs.tab', function() {
+    // Dropdownu her açışta bir kez doldurmak için dataset.filled sıfırla
+    document.getElementById('statefulsetNamespaceFilter').dataset.filled = '';
+    fetchAndRenderStatefulSetsTable();
+  });
+});
+</script>
+  <div class="tab-pane fade" id="replicasets" role="tabpanel">Replica Sets içeriği buraya gelecek.</div>
+  <div class="tab-pane fade" id="replicationcontrollers" role="tabpanel">Replication Controller içeriği buraya gelecek.</div>
+  <div class="tab-pane fade" id="jobs" role="tabpanel">Jobs içeriği buraya gelecek.</div>
+  <div class="tab-pane fade" id="cronjobs" role="tabpanel">CronJobs içeriği buraya gelecek.</div>
+</div>
+{% block scripts %}
+</script>
+<script src="/static/pod_describe.js"></script>
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<!-- YAML parse için js-yaml -->
+<script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+<script>
+// Highcharts yüklenmeden önce fonksiyonları çağırmak için yardımcı
+function ensureHighchartsAndRender(fn) {
+  if (typeof Highcharts !== 'undefined') {
+    fn();
+  } else {
+    const script = document.createElement('script');
+    script.src = 'https://code.highcharts.com/highcharts.js';
+    script.onload = fn;
+    document.head.appendChild(script);
+  }
+}
+
+// Pie chart'taki Pods'a tıklanınca Pods sekmesine geç
+document.addEventListener('DOMContentLoaded', function() {
+  const piePods = document.getElementById('pie-pods');
+  if (piePods) {
+    piePods.addEventListener('click', function() {
+      const podsTabBtn = document.querySelector('button[data-bs-target="#pods"]');
+      if (podsTabBtn) podsTabBtn.click();
+    });
+  }
+});
+
+// Deployments tablosunu getir ve göster
+async function fetchAndRenderDeploymentsTable() {
+  const container = document.getElementById('deployments-table-container');
+  container.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
+  try {
+    const resp = await fetch('/k8s-explorer/deployments-summary');
+    const data = await resp.json();
+    const deployments = Array.isArray(data.deployments) ? data.deployments : [];
+    const nameFilter = document.getElementById('deploymentNameFilter');
+    // Always update filter options to reflect current deployments
+    const prevValue = nameFilter.value;
+    const names = [...new Set(deployments.map(d => d.name))];
+    nameFilter.innerHTML = '<option value="">(Tümü)</option>' + names.map(n => `<option value="${n}">${n}</option>`).join('');
+    // Restore previous selection if possible
+    if (names.includes(prevValue)) nameFilter.value = prevValue;
+    let selectedName = nameFilter.value;
+    // Remove any previous event listeners and add a new one
+    nameFilter.onchange = fetchAndRenderDeploymentsTable;
+    const filtered = selectedName ? deployments.filter(d => d.name === selectedName) : deployments;
+    if (filtered.length === 0) {
+      container.innerHTML = '<div class="text-muted">Deployment bulunamadı.</div>';
+      return;
+    }
+    let html = '<table class="table table-sm table-bordered"><thead><tr><th>NAME</th><th>READY</th><th>UP-TO-DATE</th><th>AVAILABLE</th><th>AGE</th><th>NAMESPACE</th><th>İşlemler</th></tr></thead><tbody>';
+    for (const dep of filtered) {
+      const ready = dep.ready !== undefined ? dep.ready : '-';
+      const upToDate = dep.updated_replicas !== undefined ? dep.updated_replicas : '-';
+      const available = dep.available_replicas !== undefined ? dep.available_replicas : '-';
+      let age = '-';
+      if (dep.creation_timestamp) {
+        const created = new Date(dep.creation_timestamp);
+        const now = new Date();
+        const diffMs = now - created;
+        const diffDays = Math.floor(diffMs / (1000*60*60*24));
+        const diffHrs = Math.floor((diffMs % (1000*60*60*24)) / (1000*60*60));
+        const diffMin = Math.floor((diffMs % (1000*60*60)) / (1000*60));
+        if (diffDays > 0) age = diffDays + 'd';
+        else if (diffHrs > 0) age = diffHrs + 'h';
+        else age = diffMin + 'm';
+      }
+      // Add namespace column if available
+      const ns = dep.namespace;
+      html += `<tr><td>${dep.name}</td><td>${ready}</td><td>${upToDate}</td><td>${available}</td><td>${age}</td><td>${ns || ''}</td><td>
+        <button class="btn btn-sm btn-info" onclick="describeDeployment('${dep.name}','${dep.namespace}')">Describe</button>
+        <button class="btn btn-sm btn-primary" onclick="editDeploymentYaml('${dep.name}','${dep.namespace}')">Edit</button>
+        <button class="btn btn-sm btn-warning" onclick="showScaleDeploymentModal('${dep.name}','${dep.namespace}', ${parseInt(dep.ready.split('/')[1] || dep.ready) || 1})">Scale</button>
+      </td></tr>`;
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  } 
+  catch (e) {
+    container.innerHTML = '<div class="text-danger">Deploymentlar alınırken hata oluştu.</div>';
+  }
+}
+
+// Deployment Describe function (global scope for button onclick)
+async function describeDeployment(name, namespace) {
+  let modal = document.getElementById('describeModal');
+  let body = document.getElementById('describeModalBody');
+  let label = document.getElementById('describeModalLabel');
+  if (!modal || !body || !label) {
+    console.error('Describe modal bulunamadı.');
+    alert('Describe modal bulunamadı. Lütfen HTML içinde describeModal, describeModalBody ve describeModalLabel id\'li elemanların olduğundan emin olun.');
+    return;
+  }
+  // Modal'ı body'ye ekle (gerekirse, sadece document.body'de yoksa)
+  if (!document.body.contains(modal)) {
+    document.body.appendChild(modal);
+    console.warn('Describe modal body\'ye eklendi.');
+  }
+  // Eğer modal görünmüyorsa, force re-append (Bootstrap bug fix)
+  if (modal.style.display === 'none' || modal.classList.contains('fade') && !modal.classList.contains('show')) {
+    try {
+      modal.parentNode.removeChild(modal);
+      document.body.appendChild(modal);
+      console.warn('Describe modal yeniden eklendi.');
+    } catch (e) { /* ignore */ }
+  }
+  label.textContent = `Deployment Describe: ${namespace ? namespace + '/' : ''}${name}`;
+  body.textContent = 'Yükleniyor...';
+  // Modal açma: Eğer zaten açıksa tekrar açmaya çalışma
+  let bsModal = bootstrap.Modal.getInstance(modal);
+  if (!bsModal) {
+    try {
+      bsModal = new bootstrap.Modal(modal);
+    } catch (err) {
+      console.error('Modal oluşturulamadı:', err);
+      alert('Modal oluşturulamadı: ' + err);
+      return;
+    }
+  }
+  try {
+    bsModal.show();
+  } catch (err) {
+    console.error('Modal açılamadı:', err);
+    alert('Modal açılamadı: ' + err);
+    return;
+  }
+  try {
+    let url = `/k8s-explorer/describe?type=deployment&name=${encodeURIComponent(name)}`;
+    // Trim namespace and only add if non-empty
+    const ns = (namespace || '').trim();
+    if (ns) {
+      url += `&namespace=${encodeURIComponent(ns)}`;
+    }
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (resp.ok && data && data.describe) {
+      body.textContent = data.describe;
+    } else if (data && data.error) {
+      body.textContent = 'Describe alınamadı: ' + data.error;
+    } else {
+      body.textContent = 'Describe alınamadı: Beklenmeyen yanıt.';
+    }
+  } catch (e) {
+    body.textContent = 'Describe alınırken hata oluştu.';
+  }
+}
+// Ensure describeDeployment is globally accessible for inline onclick
+window.describeDeployment = describeDeployment;
+// Remove duplicate filter change event registration (now handled in fetchAndRenderDeploymentsTable)
+// Deployment Describe function (global scope for button onclick)
+// Deployment YAML Edit fonksiyonu
+async function editDeploymentYaml(name, namespace) {
+  // YAML'ı getir
+  const resp = await fetch(`/k8s-explorer/yaml?type=deployment&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`);
+  const yaml = await resp.text();
+  const area = document.getElementById('yamlEditArea');
+  const label = document.getElementById('yamlEditModalLabel');
+  const saveBtn = document.getElementById('saveYamlBtn');
+  const modalDiv = document.getElementById('yamlEditModal');
+  if (!area || !label || !saveBtn || !modalDiv) {
+    alert('YAML edit modali veya alanı bulunamadı. Lütfen HTML içinde yamlEditArea, yamlEditModalLabel, saveYamlBtn ve yamlEditModal id\'li elemanların olduğundan emin olun.');
+    return;
+  }
+  // Modal'ı body'ye ekle (gerekirse)
+  if (!document.body.contains(modalDiv)) {
+    document.body.appendChild(modalDiv);
+    console.warn('YAML edit modal body\'ye eklendi.');
+  }
+  // Eğer modal görünmüyorsa, force re-append (Bootstrap bug fix)
+  if (modalDiv.style.display === 'none' || (modalDiv.classList.contains('fade') && !modalDiv.classList.contains('show'))) {
+    try {
+      modalDiv.parentNode.removeChild(modalDiv);
+      document.body.appendChild(modalDiv);
+      console.warn('YAML edit modal yeniden eklendi.');
+    } catch (e) { /* ignore */ }
+  }
+  area.value = yaml;
+  label.textContent = `Deployment YAML Edit: ${namespace}/${name}`;
+  saveBtn.onclick = async function() {
+    const newYaml = area.value;
+    const patchResp = await fetch('/k8s-explorer/yaml', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'deployment', namespace, name, yaml: newYaml })
+    });
+    if (patchResp.ok) {
+      alert('YAML başarıyla güncellendi.');
+      var modal = bootstrap.Modal.getInstance(modalDiv);
+      if (!modal) modal = new bootstrap.Modal(modalDiv);
+      modal.hide();
+      // Deployments tablosunu ve cache'i güncelle
+      if (typeof fetchAndRenderDeploymentsTable === 'function') fetchAndRenderDeploymentsTable();
+      if (typeof renderOverviewCharts === 'function') renderOverviewCharts();
+      if (typeof renderDeploymentsTabChart === 'function') renderDeploymentsTabChart();
+    } else {
+      alert('YAML güncellenemedi: ' + await patchResp.text());
+    }
+  };
+  var modal = bootstrap.Modal.getInstance(modalDiv);
+  if (!modal) modal = new bootstrap.Modal(modalDiv);
+  modal.show();
+}
+window.editDeploymentYaml = editDeploymentYaml;
+
+// Deployments sekmesi açıldığında tabloyu yükle
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelector('button[data-bs-target="#deployments"]').addEventListener('shown.bs.tab', fetchAndRenderDeploymentsTable);
+});
+
+// Pods tablosunu getir ve göster
+async function fetchAndRenderPodsTable() {
+  const container = document.getElementById('pods-table-container');
+  if (!container) return;
+  container.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
+  try {
+    const resp = await fetch('/k8s-explorer/pods-summary');
+    const data = await resp.json();
+    const pods = Array.isArray(data.pods) ? data.pods : [];
+    // Namespace filtreleri
+    const namespaces = [...new Set(pods.map(p=>p.namespace))];
+    const nsFilter = document.getElementById('namespaceFilter');
+    // Namespace dropdownu sadece ilk yüklemede doldur
+    if (!nsFilter.dataset.filled) {
+      nsFilter.innerHTML = '<option value="">(Tümü)</option>' + namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
+      nsFilter.dataset.filled = '1';
+    }
+    let selectedNs = nsFilter.value;
+    const filteredPods = selectedNs ? pods.filter(p=>p.namespace===selectedNs) : pods;
+    if (filteredPods.length === 0) {
+      container.innerHTML = '<div class="text-muted">Pod bulunamadı.</div>';
+      updatePodsPieChart(filteredPods);
+      return;
+    }
+    let html = '<table class="table table-sm table-bordered"><thead><tr><th>Namespace</th><th>Pod</th><th>Durum</th><th>İşlemler</th></tr></thead><tbody>';
+    for (const pod of filteredPods) {
+      html += `<tr><td>${pod.namespace}</td><td>${pod.name}</td><td>${pod.status}</td><td>
+        <button class="btn btn-sm btn-primary me-1" onclick="showPodProperties('${pod.namespace}','${pod.name}')">Properties</button>
+        <button class="btn btn-sm btn-secondary me-1" onclick="editPodYaml('${pod.namespace}','${pod.name}')">YAML Edit</button>
+        <button class="btn btn-sm btn-danger me-1" onclick="deletePod('${pod.namespace}','${pod.name}')">Delete</button>
+        <button class="btn btn-sm btn-info" onclick="describePod('${pod.namespace}','${pod.name}')">Describe</button>
+      </td></tr>`;
+    }
+    html += '</tbody></table>';
+// Pod Properties fonksiyonu (global)
+window.showPodProperties = async function(namespace, name) {
+  let modal = document.getElementById('podPropertiesModal');
+  let label = document.getElementById('podPropertiesModalLabel');
+  let body = document.getElementById('podPropertiesModalBody');
+  if (!modal || !label || !body) {
+    alert('Properties modalı eksik. Lütfen HTML içinde podPropertiesModal, podPropertiesModalLabel, podPropertiesModalBody id\'li elemanların olduğundan emin olun.');
+    return;
+  }
+  label.textContent = `Pod Properties: ${namespace}/${name}`;
+  body.innerHTML = 'Yükleniyor...';
+  document.getElementById('podResourceChart').innerHTML = '<div class="text-muted">Kaynak kullanımı yükleniyor...</div>';
+  if (!document.body.contains(modal)) {
+    document.body.appendChild(modal);
+  }
+  if (modal.style.display === 'none' || (modal.classList.contains('fade') && !modal.classList.contains('show'))) {
+    try {
+      modal.parentNode.removeChild(modal);
+      document.body.appendChild(modal);
+    } catch (e) { /* ignore */ }
+  }
+  let bsModal = bootstrap.Modal.getInstance(modal);
+  if (!bsModal) bsModal = new bootstrap.Modal(modal);
+  bsModal.show();
+  // Prometheus endpoint autodetect (prefer backend discovery)
+  async function findPrometheusBaseUrl() {
+    // Try backend endpoint first
+    try {
+      const resp = await fetch('/k8s-explorer/prometheus-url');
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.url) return data.url + '/api/v1';
+      }
+    } catch (e) {}
+    // Fallback: try common endpoints (legacy logic)
+    const candidates = [
+      '/prometheus',
+      '/prometheus/',
+      '/api/v1',
+      'http://localhost:9090',
+      'http://prometheus:9090',
+      'http://prometheus-server:9090',
+      'http://127.0.0.1:9090',
+      '/prometheus/api/v1',
+      '/api/v1'
+    ];
+    for (const base of candidates) {
+      try {
+        const resp = await fetch(base + '/status/config', {method:'GET'});
+        if (resp.ok) return base;
+      } catch (e) { continue; }
+    }
+    return null;
+  }
+
+  async function fetchPodMetrics(promBase, namespace, podName) {
+    // Prometheus queries for CPU, memory, network usage (last 30m, 1m step)
+    const end = Math.floor(Date.now()/1000);
+    const start = end - 1800;
+    const step = 60;
+    // CPU (millicores): sum(rate(container_cpu_usage_seconds_total{namespace="$NAMESPACE", pod="$POD", container!="", container!="POD"}[2m])) by (container)
+    const cpuQ = `sum(rate(container_cpu_usage_seconds_total{namespace=\"${namespace}\",pod=\"${name}\",container!="",container!="POD"}[2m])) by (container)`;
+    // Memory (bytes): sum(container_memory_usage_bytes{namespace="$NAMESPACE", pod="$POD", container!="", container!="POD"}) by (container)
+    const memQ = `sum(container_memory_usage_bytes{namespace=\"${namespace}\",pod=\"${name}\",container!="",container!="POD"}) by (container)`;
+    // Network RX: sum(rate(container_network_receive_bytes_total{namespace=\"${namespace}\",pod=\"${name}\"}[2m]))
+    const netRxQ = `sum(rate(container_network_receive_bytes_total{namespace=\"${namespace}\",pod=\"${name}\"}[2m]))`;
+    // Network TX: sum(rate(container_network_transmit_bytes_total{namespace=\"${namespace}\",pod=\"${name}\"}[2m]))
+    const netTxQ = `sum(rate(container_network_transmit_bytes_total{namespace=\"${namespace}\",pod=\"${name}\"}[2m]))`;
+    async function rangeQuery(query) {
+      const url = `${promBase}/query_range?query=${encodeURIComponent(query)}&start=${start}&end=${end}&step=${step}`;
+      const resp = await fetch(url);
+      if (!resp.ok) return null;
+      const data = await resp.json();
+      if (data.status !== 'success') return null;
+      return data.data.result;
+    }
+    const [cpu, mem, netrx, nettx] = await Promise.all([
+      rangeQuery(cpuQ),
+      rangeQuery(memQ),
+      rangeQuery(netRxQ),
+      rangeQuery(netTxQ)
+    ]);
+    return {cpu, mem, netrx, nettx};
+  }
+
+  async function renderPodResourceChart(namespace, name) {
+    const chartDiv = document.getElementById('podResourceChart');
+    chartDiv.innerHTML = '<div class="text-muted">Kaynak kullanımı yükleniyor...</div>';
+    const promBase = await findPrometheusBaseUrl();
+    if (!promBase) {
+      chartDiv.innerHTML = '<div class="text-danger">Prometheus endpoint bulunamadı.</div>';
+      return;
+    }
+    try {
+      const metrics = await fetchPodMetrics(promBase, namespace, name);
+      // Prepare Highcharts series
+      const times = (metrics.cpu && metrics.cpu[0] && metrics.cpu[0].values) ? metrics.cpu[0].values.map(v=>v[0]*1000) : [];
+      function toSeries(metricArr, label, unit, factor=1) {
+        if (!metricArr || !metricArr[0] || !metricArr[0].values) return {name: label, data: []};
+        return {
+          name: label,
+          data: metricArr[0].values.map(v=>[v[0]*1000, parseFloat(v[1])*factor]),
+          tooltip: {valueSuffix: unit}
+        };
+      }
+      const series = [
+        toSeries(metrics.cpu, 'CPU (core)', ' core'),
+        toSeries(metrics.mem, 'Memory (MB)', ' MB', 1/1024/1024),
+        toSeries(metrics.netrx, 'Net RX (KB/s)', ' KB/s', 1/1024),
+        toSeries(metrics.nettx, 'Net TX (KB/s)', ' KB/s', 1/1024)
+      ];
+      Highcharts.chart('podResourceChart', {
+        chart: { type: 'spline', height: 320 },
+        title: { text: 'Pod Kaynak Kullanımı (son 30dk)' },
+        xAxis: { type: 'datetime', title: {text: 'Zaman'} },
+        yAxis: { title: { text: 'Kullanım' }, min: 0 },
+        series: series,
+        credits: { enabled: false },
+        tooltip: { shared: true, xDateFormat: '%H:%M' }
+      });
+    } catch (e) {
+      chartDiv.innerHTML = '<div class="text-danger">Prometheus metrikleri alınamadı.</div>';
+    }
+  }
+  // Chartı başlat
+  renderPodResourceChart(namespace, name);
+  try {
+    const resp = await fetch(`/k8s-explorer/yaml?type=pod&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`);
+    if (resp.ok) {
+      const yamlText = await resp.text();
+      // Parse YAML to object (try/catch for safety)
+      let podObj = null;
+      try {
+        podObj = jsyaml.load(yamlText);
+      } catch (e) { podObj = null; }
+      if (podObj && typeof podObj === 'object') {
+        let html = '<div class="table-responsive"><table class="table table-bordered table-sm">';
+        for (const key of ['name','namespace','status','nodeName','hostIP','podIP']) {
+          let val = podObj.metadata?.[key] || podObj.status?.[key] || podObj.spec?.[key] || '-';
+          if (key === 'name') val = podObj.metadata?.name || '-';
+          if (key === 'namespace') val = podObj.metadata?.namespace || '-';
+          if (key === 'status') val = podObj.status?.phase || '-';
+          if (key === 'nodeName') val = podObj.spec?.nodeName || '-';
+          if (key === 'hostIP') val = podObj.status?.hostIP || '-';
+          if (key === 'podIP') val = podObj.status?.podIP || '-';
+          html += `<tr><th>${key}</th><td>${val}</td></tr>`;
+        }
+        // Labels
+        if (podObj.metadata?.labels) {
+          html += `<tr><th>labels</th><td><pre style='white-space:pre-wrap;'>${JSON.stringify(podObj.metadata.labels, null, 2)}</pre></td></tr>`;
+        }
+        // Annotations
+        if (podObj.metadata?.annotations) {
+          html += `<tr><th>annotations</th><td><pre style='white-space:pre-wrap;'>${JSON.stringify(podObj.metadata.annotations, null, 2)}</pre></td></tr>`;
+        }
+        html += '</table></div>';
+        body.innerHTML = html;
+      } else {
+        body.innerHTML = '<div class="text-danger">Pod bilgisi alınamadı.</div>';
+      }
+    } else {
+      body.innerHTML = '<div class="text-danger">Pod bilgisi alınamadı: ' + (await resp.text()) + '</div>';
+    }
+  } catch (e) {
+    body.innerHTML = '<div class="text-danger">Pod bilgisi alınırken hata oluştu.</div>';
+  }
+};
+    container.innerHTML = html;
+    updatePodsPieChart(filteredPods);
+  } catch (e) {
+    container.innerHTML = '<div class="text-danger">Podlar alınırken hata oluştu.</div>';
+  }
+}
+// Pie chart'ı namespace filtresine göre güncelle
+function updatePodsPieChart(pods) {
+  // Eğer pods parametresi yoksa, fetch ile al
+  if (!pods) {
+    fetch('/k8s-explorer/pods-summary').then(r=>r.json()).then(data=>{
+      const ns = document.getElementById('namespaceFilter').value;
+      const filtered = ns ? (data.pods||[]).filter(p=>p.namespace===ns) : (data.pods||[]);
+      updatePodsPieChart(filtered);
+    });
+    return;
+  }
+  // Pie chart datasını hazırla
+  const statusCounts = {};
+  for (const pod of pods) {
+    const status = pod.status || 'Unknown';
+    statusCounts[status] = (statusCounts[status] || 0) + 1;
+  }
+  renderPieChart('pie-pods-tab', 'Pods', statusCounts);
+}
+
+// Pie chart'ı sekme açıldığında daima güncelle
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    const deploymentsTabBtn = document.querySelector('button[data-bs-target="#deployments"]');
+    if (deploymentsTabBtn) {
+      deploymentsTabBtn.addEventListener('shown.bs.tab', function() {
+        ensureHighchartsAndRender(renderDeploymentsTabChart);
+      });
+    }
+    // Eğer sayfa ilk açıldığında Deployments tabı aktifse, grafiği yükle
+    if (document.getElementById('deployments').classList.contains('active')) {
+      ensureHighchartsAndRender(renderDeploymentsTabChart);
+    }
+  });
+})();
+
+// Namespace değişince tablo ve pie chart güncelle
+// ve 20sn'de bir otomatik güncelle
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelector('button[data-bs-target="#pods"]').addEventListener('shown.bs.tab', fetchAndRenderPodsTable);
+    document.getElementById('namespaceFilter').onchange = function() {
+      fetchAndRenderPodsTable();
+    };
+    setInterval(fetchAndRenderPodsTable, 20000);
+  });
+})();
+
+// Pie chart'taki Pods'a tıklanınca Pods sekmesine geç ve tabloyu güncelle
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    const piePods = document.getElementById('pie-pods');
+    if (piePods) {
+      piePods.addEventListener('click', function() {
+        const podsTabBtn = document.querySelector('button[data-bs-target="#pods"]');
+        if (podsTabBtn) podsTabBtn.click();
+        setTimeout(fetchAndRenderPodsTable, 300);
+      });
+    }
+  });
+})();
+
+
+// YAML Edit ve Delete butonları için fonksiyonlar
+async function editPodYaml(namespace, name) {
+  // YAML'ı getir
+  const resp = await fetch(`/k8s-explorer/yaml?type=pod&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`);
+  const yaml = await resp.text();
+  const area = document.getElementById('yamlEditArea');
+  const label = document.getElementById('yamlEditModalLabel');
+  const saveBtn = document.getElementById('saveYamlBtn');
+  const modalDiv = document.getElementById('yamlEditModal');
+  if (!area || !label || !saveBtn || !modalDiv) {
+    alert('YAML edit modali veya alanı bulunamadı. Lütfen HTML içinde yamlEditArea, yamlEditModalLabel, saveYamlBtn ve yamlEditModal id\'li elemanların olduğundan emin olun.');
+    return;
+  }
+  area.value = yaml;
+  label.textContent = `Pod YAML Edit: ${namespace}/${name}`;
+  saveBtn.onclick = async function() {
+    const newYaml = area.value;
+    const patchResp = await fetch('/k8s-explorer/yaml', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'pod', namespace, name, yaml: newYaml })
+    });
+    if (patchResp.ok) {
+      alert('YAML başarıyla güncellendi.');
+      var modal = bootstrap.Modal.getInstance(modalDiv);
+      modal.hide();
+      fetchAndRenderPodsTable();
+    } else {
+      alert('YAML güncellenemedi: ' + await patchResp.text());
+    }
+  };
+  var modal = new bootstrap.Modal(modalDiv);
+  modal.show();
+}
+
+async function deletePod(namespace, name) {
+  if (!confirm(`${namespace}/${name} podunu silmek istediğinize emin misiniz?`)) return;
+  const resp = await fetch(`/k8s-explorer/delete?type=pod&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`, { method: 'POST' });
+  if (resp.ok) {
+    alert('Pod silindi.');
+    fetchAndRenderPodsTable();
+  } else {
+    alert('Pod silinemedi: ' + await resp.text());
+  }
+}
+
+// Pods sekmesi açıldığında tabloyu yükle
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelector('button[data-bs-target="#pods"]').addEventListener('shown.bs.tab', fetchAndRenderPodsTable);
+});
+async function fetchWorkloadStats() {
+  const resp = await fetch('/k8s-explorer/workload-stats');
+  return await resp.json();
+}
+
+function renderPieChart(container, title, statusCounts) {
+  if (typeof Highcharts === 'undefined') {
+    document.getElementById(container).innerHTML = '<div class="text-danger">Highcharts yüklenemedi.</div>';
+    return;
+  }
+  // Status color mapping
+  const statusColors = {
+    'Ready': '#28a745',
+    'Failed': '#dc3545',
+    'Pending': '#ffc107',
+    'Succeeded': '#007bff',
+    'Unknown': '#6c757d',
+    'Running': '#17a2b8',
+    'CrashLoopBackOff': '#fd7e14',
+    'Completed': '#20c997',
+    'Other': '#adb5bd'
+  };
+  // Defensive: ensure statusCounts is a valid object
+  if (!statusCounts || typeof statusCounts !== 'object' || Array.isArray(statusCounts)) {
+    statusCounts = {};
+  }
+  // Debug: log statusCounts
+  console.log('Pie chart data for', container, statusCounts);
+  const data = [];
+  let hasData = false;
+  for (const [status, countRaw] of Object.entries(statusCounts)) {
+    // Accept both numbers and numeric strings (including floats)
+    let count = countRaw;
+    if (typeof countRaw === 'string') {
+      // Try to parse as float for more flexibility
+      count = parseFloat(countRaw.replace(',', '.'));
+    }
+    if (typeof count === 'number' && !isNaN(count) && count > 0) {
+      hasData = true;
+      data.push({
+        name: status,
+        y: count,
+        color: statusColors[status] || statusColors['Other']
+      });
+    }
+  }
+  // If no data, show a gray "No Data" slice
+  if (!hasData) {
+    data.push({ name: 'No Data', y: 1, color: '#adb5bd' });
+  }
+  // Clear previous chart
+  document.getElementById(container).innerHTML = '';
+  Highcharts.chart(container, {
+    chart: { type: 'pie' },
+    title: { text: title },
+    series: [{
+      name: 'Count',
+      colorByPoint: true,
+      data: data
+    }],
+    plotOptions: { pie: { dataLabels: { enabled: true, format: '{point.name}: {point.y}' } } },
+    credits: { enabled: false }
+  });
+}
+
+async function renderOverviewCharts() {
+  const stats = await fetchWorkloadStats();
+  // Helper to get status counts or fallback
+  function getStatusCounts(obj) {
+    if (!obj) return {};
+    // If already a status breakdown (has non-numeric keys), return as is
+    if (typeof obj === 'object' && !Array.isArray(obj) && Object.keys(obj).length > 0) {
+      // If keys are status names (not just 'ready'/'failed'), return as is
+      const keys = Object.keys(obj);
+      if (keys.some(k => !['ready','failed','total'].includes(k.toLowerCase()))) {
+        return obj;
+      }
+      // If only ready/failed, map to status breakdown
+      const mapped = {};
+      if (obj.ready !== undefined) mapped['Ready'] = obj.ready;
+      if (obj.failed !== undefined) mapped['Failed'] = obj.failed;
+      return mapped;
+    }
+    return {};
+  }
+  renderPieChart('pie-pods', 'Pods', getStatusCounts(stats?.pods));
+  renderPieChart('pie-deployments', 'Deployments', getStatusCounts(stats?.deployments));
+  renderPieChart('pie-daemonsets', 'Daemon Sets', getStatusCounts(stats?.daemonsets));
+  renderPieChart('pie-statefulsets', 'Stateful Sets', getStatusCounts(stats?.statefulsets));
+  renderPieChart('pie-replicasets', 'Replica Sets', getStatusCounts(stats?.replicasets));
+  renderPieChart('pie-jobs', 'Jobs', getStatusCounts(stats?.jobs));
+  renderPieChart('pie-cronjobs', 'CronJobs', getStatusCounts(stats?.cronjobs));
+}
+
+async function renderPodsTabChart() {
+  const pieContainer = document.getElementById('pie-pods-tab');
+  pieContainer.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
+  try {
+    const resp = await fetch('/k8s-explorer/pods-summary');
+    if (!resp.ok) {
+      pieContainer.innerHTML = '<div class="text-danger">Pod verisi alınamadı.</div>';
+      return;
+    }
+    const data = await resp.json();
+    console.log('Pods pie chart RAW response:', data);
+    const pods = Array.isArray(data.pods) ? data.pods : [];
+    console.log('Pods pie chart parsed pods:', pods);
+    if (pods.length === 0) {
+      renderPieChart('pie-pods-tab', 'Pods', {});
+      return;
+    }
+    const statusCounts = {};
+    for (const pod of pods) {
+      const status = pod.status || 'Unknown';
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+    }
+    console.log('Pods pie chart debug:', {pods, statusCounts});
+    renderPieChart('pie-pods-tab', 'Pods', statusCounts);
+  } catch (e) {
+    pieContainer.innerHTML = '<div class="text-danger">Pod verisi alınırken hata oluştu.</div>';
+  }
+}
+async function renderDeploymentsTabChart() {
+  const stats = await fetchWorkloadStats();
+  function getStatusCounts(obj) {
+    if (!obj) return {};
+    if (typeof obj === 'object' && !Array.isArray(obj) && Object.keys(obj).length > 0) {
+      const keys = Object.keys(obj);
+      if (keys.some(k => !['ready','failed','total'].includes(k.toLowerCase()))) {
+        return obj;
+      }
+      const mapped = {};
+      if (obj.ready !== undefined) mapped['Ready'] = obj.ready;
+      if (obj.failed !== undefined) mapped['Failed'] = obj.failed;
+      return mapped;
+    }
+    return {};
+  }
+  renderPieChart('pie-deployments-tab', 'Deployments', getStatusCounts(stats?.deployments));
+}
+
+// DaemonSets tablosunu getir ve göster
+async function fetchAndRenderDaemonSetsTable() {
+  const container = document.getElementById('daemonsets-table-container');
+  container.innerHTML = '<div class="text-muted">Yükleniyor...";</div>';
+  try {
+    const resp = await fetch('/k8s-explorer/daemonsets-summary');
+    const data = await resp.json();
+    const daemonsets = Array.isArray(data.daemonsets) ? data.daemonsets : [];
+    if (daemonsets.length === 0) {
+      container.innerHTML = '<div class="text-muted">DaemonSet bulunamadı.</div>';
+      return;
+    }
+    let html = '<table class="table table-sm table-bordered"><thead><tr><th>NAME</th><th>READY</th><th>CURRENT</th><th>DESIRED</th><th>AGE</th><th>NAMESPACE</th><th>İşlemler</th></tr></thead><tbody>';
+    for (const ds of daemonsets) {
+      let age = '-';
+      if (ds.creation_timestamp) {
+        const created = new Date(ds.creation_timestamp);
+        const now = new Date();
+        const diffMs = now - created;
+        const diffDays = Math.floor(diffMs / (1000*60*60*24));
+        const diffHrs = Math.floor((diffMs % (1000*60*60*24)) / (1000*60*60));
+        const diffMin = Math.floor((diffMs % (1000*60*60)) / (1000*60));
+        if (diffDays > 0) age = diffDays + 'd';
+        else if (diffHrs > 0) age = diffHrs + 'h';
+        else age = diffMin + 'm';
+      }
+      html += `<tr><td>${ds.name}</td><td>${ds.ready || '-'}</td><td>${ds.current || '-'}</td><td>${ds.desired || '-'}</td><td>${age}</td><td>${ds.namespace || ''}</td><td>
+        <button class="btn btn-sm btn-primary" onclick="editDaemonSetYaml('${ds.name}','${ds.namespace}')">Edit</button>
+        <button class="btn btn-sm btn-danger ms-1" onclick="restartDaemonSet('${ds.name}','${ds.namespace}')">Restart</button>
+        <button class="btn btn-sm btn-secondary ms-1" onclick="showDaemonSetLogs('${ds.name}','${ds.namespace}')">Logs</button>
+      </td></tr>`;
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = '<div class="text-danger">DaemonSetler alınırken hata oluştu.</div>';
+  }
+}
+
+// DaemonSets pie chart'ı çiz
+async function renderDaemonSetsTabChart() {
+  const pieContainer = document.getElementById('pie-daemonsets-tab');
+  pieContainer.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
+  try {
+    const resp = await fetch('/k8s-explorer/daemonsets-summary');
+    if (!resp.ok) {
+      pieContainer.innerHTML = '<div class="text-danger">DaemonSet verisi alınamadı.</div>';
+      return;
+    }
+    const data = await resp.json();
+    const daemonsets = Array.isArray(data.daemonsets) ? data.daemonsets : [];
+    if (daemonsets.length === 0) {
+      renderPieChart('pie-daemonsets-tab', 'Daemon Sets', {});
+      return;
+    }
+    // Status breakdown: Ready/NotReady
+    let ready = 0, notReady = 0;
+    for (const ds of daemonsets) {
+      if (ds.ready && ds.desired && ds.ready == ds.desired) ready++;
+      else notReady++;
+    }
+    const statusCounts = { 'Ready': ready, 'NotReady': notReady };
+    renderPieChart('pie-daemonsets-tab', 'Daemon Sets', statusCounts);
+  } catch (e) {
+    pieContainer.innerHTML = '<div class="text-danger">DaemonSet verisi alınırken hata oluştu.</div>';
+  }
+}
+
+// DaemonSets sekmesi açıldığında tabloyu ve grafiği yükle
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    const tabBtn = document.querySelector('button[data-bs-target="#daemonsets"]');
+    if (tabBtn) tabBtn.addEventListener('shown.bs.tab', function() {
+      fetchAndRenderDaemonSetsTable();
+      renderDaemonSetsTabChart();
+    });
+  });
+})();
+document.addEventListener('DOMContentLoaded', function() {
+  if (document.getElementById('overview').classList.contains('active')) {
+    ensureHighchartsAndRender(renderOverviewCharts);
+  }
+  document.querySelector('button[data-bs-target="#overview"]').addEventListener('shown.bs.tab', function() { ensureHighchartsAndRender(renderOverviewCharts); });
+  document.querySelector('button[data-bs-target="#pods"]').addEventListener('shown.bs.tab', function() { ensureHighchartsAndRender(renderPodsTabChart); });
+  document.querySelector('button[data-bs-target="#deployments"]').addEventListener('shown.bs.tab', function() { ensureHighchartsAndRender(renderDeploymentsTabChart); });
+});
+
+// Scale Deployment Modal logic (global)
+window.showScaleDeploymentModal = function(name, namespace, currentReplicas) {
+  const modalDiv = document.getElementById('scaleDeploymentModal');
+  // Ensure modal is in document.body (fix for Bootstrap modal bug)
+  if (modalDiv && !document.body.contains(modalDiv)) {
+    document.body.appendChild(modalDiv);
+  }
+  if (modalDiv && (modalDiv.style.display === 'none' || (modalDiv.classList.contains('fade') && !modalDiv.classList.contains('show')))) {
+    try {
+      modalDiv.parentNode.removeChild(modalDiv);
+      document.body.appendChild(modalDiv);
+    } catch (e) { /* ignore */ }
+  }
+  const label = document.getElementById('scaleDeploymentName');
+  const input = document.getElementById('scaleReplicasInput');
+  const saveBtn = document.getElementById('scaleDeploymentSaveBtn');
+  label.textContent = `${namespace}/${name}`;
+  input.value = currentReplicas;
+  saveBtn.onclick = async function() {
+    const newReplicas = parseInt(input.value);
+    if (isNaN(newReplicas) || newReplicas < 0) {
+      alert('Geçerli bir sayı girin.');
+      return;
+    }
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Kaydediliyor...';
+    try {
+      const resp = await fetch('/k8s-explorer/scale-deployment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, namespace, replicas: newReplicas })
+      });
+      if (resp.ok) {
+        alert('Replica sayısı güncellendi.');
+        var modal = bootstrap.Modal.getInstance(modalDiv);
+        if (!modal) modal = new bootstrap.Modal(modalDiv);
+        modal.hide();
+        if (typeof fetchAndRenderDeploymentsTable === 'function') fetchAndRenderDeploymentsTable();
+        if (typeof renderOverviewCharts === 'function') renderOverviewCharts();
+        if (typeof renderDeploymentsTabChart === 'function') renderDeploymentsTabChart();
+      } else {
+        alert('Replica güncellenemedi: ' + (await resp.text()));
+      }
+    } catch (e) {
+      alert('Hata: ' + e);
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Kaydet';
+    }
+  };
+  var modal = bootstrap.Modal.getInstance(modalDiv);
+  if (!modal) modal = new bootstrap.Modal(modalDiv);
+  modal.show();
+};
+window.editDaemonSetYaml = async function(name, namespace) {
+  // YAML'ı getir
+  const resp = await fetch(`/k8s-explorer/yaml?type=daemonset&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`);
+  const yaml = await resp.text();
+  const area = document.getElementById('yamlEditArea');
+  const label = document.getElementById('yamlEditModalLabel');
+  const saveBtn = document.getElementById('saveYamlBtn');
+  const modalDiv = document.getElementById('yamlEditModal');
+  if (!area || !label || !saveBtn || !modalDiv) {
+    alert('YAML edit modali veya alanı bulunamadı. Lütfen HTML içinde yamlEditArea, yamlEditModalLabel, saveYamlBtn ve yamlEditModal id\'li elemanların olduğundan emin olun.');
+    return;
+  }
+  // Modal'ı body'ye ekle (gerekirse)
+  if (!document.body.contains(modalDiv)) {
+    document.body.appendChild(modalDiv);
+    console.warn('YAML edit modal body\'ye eklendi.');
+  }
+  // Eğer modal görünmüyorsa, force re-append (Bootstrap bug fix)
+  if (modalDiv.style.display === 'none' || (modalDiv.classList.contains('fade') && !modalDiv.classList.contains('show'))) {
+    try {
+      modalDiv.parentNode.removeChild(modalDiv);
+      document.body.appendChild(modalDiv);
+      console.warn('YAML edit modal yeniden eklendi.');
+    } catch (e) { /* ignore */ }
+  }
+  area.value = yaml;
+  label.textContent = `DaemonSet YAML Edit: ${namespace}/${name}`;
+  saveBtn.onclick = async function() {
+    const newYaml = area.value;
+    const patchResp = await fetch('/k8s-explorer/yaml', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'daemonset', namespace, name, yaml: newYaml })
+    });
+    if (patchResp.ok) {
+      alert('YAML başarıyla güncellendi.');
+      var modal = bootstrap.Modal.getInstance(modalDiv);
+      if (!modal) modal = new bootstrap.Modal(modalDiv);
+      modal.hide();
+      if (typeof fetchAndRenderDaemonSetsTable === 'function') fetchAndRenderDaemonSetsTable();
+      if (typeof renderOverviewCharts === 'function') renderOverviewCharts();
+      if (typeof renderDaemonSetsTabChart === 'function') renderDaemonSetsTabChart();
+    } else {
+      alert('YAML güncellenemedi: ' + await patchResp.text());
+    }
+  };
+  var modal = bootstrap.Modal.getInstance(modalDiv);
+  if (!modal) modal = new bootstrap.Modal(modalDiv);
+  modal.show();
+};
+
+
+// DaemonSet Logs fonksiyonu (global)
+window.showDaemonSetLogs = async function(name, namespace) {
+  let modal = document.getElementById('daemonSetLogsModal');
+  let body = document.getElementById('daemonSetLogsModalBody');
+  let label = document.getElementById('daemonSetLogsModalLabel');
+  let podSelect = document.getElementById('daemonSetPodSelect');
+  if (!modal || !body || !label || !podSelect) {
+    alert('Logs modalı veya pod seçici bulunamadı. Lütfen HTML içinde daemonSetLogsModal, daemonSetLogsModalBody, daemonSetLogsModalLabel ve daemonSetPodSelect id\'li elemanların olduğundan emin olun.');
+    return;
+  }
+  if (!document.body.contains(modal)) {
+    document.body.appendChild(modal);
+  }
+  if (modal.style.display === 'none' || (modal.classList.contains('fade') && !modal.classList.contains('show'))) {
+    try {
+      modal.parentNode.removeChild(modal);
+      document.body.appendChild(modal);
+    } catch (e) { /* ignore */ }
+  }
+  label.textContent = `DaemonSet Pod Logları: ${namespace}/${name}`;
+  body.textContent = 'Yükleniyor...';
+  podSelect.innerHTML = '<option>Yükleniyor...</option>';
+  let bsModal = bootstrap.Modal.getInstance(modal);
+  if (!bsModal) bsModal = new bootstrap.Modal(modal);
+  bsModal.show();
+  try {
+    const resp = await fetch(`/k8s-explorer/daemonset-logs?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}&mode=perpod`);
+    if (!resp.ok) {
+      body.textContent = 'Loglar alınamadı: ' + (await resp.text());
+      podSelect.innerHTML = '<option>Hata</option>';
+      return;
+    }
+    const data = await resp.json();
+    if (data && data.pod_logs && Object.keys(data.pod_logs).length > 0) {
+      // Fill pod selector
+      podSelect.innerHTML = '<option value="__all__">Tümü</option>' + Object.keys(data.pod_logs).map(pod => `<option value="${pod}">${pod}</option>`).join('');
+      // Show all pod logs by default
+      let allLogs = Object.entries(data.pod_logs).map(([pod, log]) => `--- ${pod} ---\n${log || '(Log yok)'}`).join('\n\n');
+      body.textContent = allLogs;
+      podSelect.onchange = function() {
+        const selectedPod = podSelect.value;
+        if (selectedPod === '__all__') {
+          body.textContent = allLogs;
+        } else {
+          body.textContent = data.pod_logs[selectedPod] || '(Log yok)';
+        }
+      };
+    } else if (data && data.error) {
+      body.textContent = 'Loglar alınamadı: ' + data.error;
+      podSelect.innerHTML = '<option>Hata</option>';
+    } else {
+      body.textContent = 'Loglar alınamadı: Beklenmeyen yanıt.';
+      podSelect.innerHTML = '<option>Yok</option>';
+    }
+  } catch (e) {
+    body.textContent = 'Loglar alınırken hata oluştu.';
+    podSelect.innerHTML = '<option>Hata</option>';
+  }
+};
+</script>
+<script>
+// DaemonSet Restart fonksiyonu (global)
+window.restartDaemonSet = async function(name, namespace) {
+  if (!confirm(`${namespace}/${name} DaemonSet'i restart edilsin mi?`)) return;
+  try {
+    const resp = await fetch('/k8s-explorer/restart-daemonset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, namespace })
+    });
+    if (resp.ok) {
+      alert('DaemonSet restart edildi.');
+      if (typeof fetchAndRenderDaemonSetsTable === 'function') fetchAndRenderDaemonSetsTable();
+    } else {
+      alert('Restart başarısız: ' + (await resp.text()));
+    }
+  } catch (e) {
+    alert('Restart sırasında hata: ' + e);
+  }
+};
+</script>
+{% endblock %}
+{% endblock %}
+

@@ -124,6 +124,7 @@
       <div id="pods-table-container">
         <div class="text-muted">Yükleniyor...</div>
       </div>
+  <div id="pods-pagination" class="mt-2"></div>
 
         <!-- YAML Edit Modal -->
         <div class="modal fade" id="yamlEditModal" tabindex="-1" aria-labelledby="yamlEditModalLabel" aria-hidden="true">
@@ -322,6 +323,7 @@ async function fetchAndRenderStatefulSetsTable() {
         else age = diffMin + 'm';
       }
       html += `<tr><td>${ss.namespace}</td><td>${ss.name}</td><td>${ss.ready}</td><td>${ss.replicas}</td><td>${age}</td><td>
+        <button class="btn btn-sm btn-secondary" onclick="showStatefulSetProperties('${ss.name}','${ss.namespace}')">Properties</button>
         <button class="btn btn-sm btn-warning" onclick="restartStatefulSet('${ss.name}','${ss.namespace}')">Restart</button>
         <button class="btn btn-sm btn-info ms-1" onclick="showScaleStatefulSetModal('${ss.name}','${ss.namespace}',${ss.replicas})">Scale</button>
         <button class="btn btn-sm btn-success ms-1" onclick="editStatefulSetYaml('${ss.name}','${ss.namespace}')">Edit</button>
@@ -385,6 +387,59 @@ window.editStatefulSetYaml = async function(name, namespace) {
     }
   };
 };
+// StatefulSet Properties Modal
+function ensureStatefulSetPropertiesModal() {
+  let modal = document.getElementById('statefulSetPropertiesModal');
+  if (modal) return modal;
+  const html = `
+  <div class="modal fade" id="statefulSetPropertiesModal" tabindex="-1" aria-labelledby="statefulSetPropertiesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="statefulSetPropertiesModalLabel">StatefulSet Properties</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" style="max-height:70vh; overflow:auto;">
+          <pre id="statefulSetPropertiesBody" style="font-size:0.9em; white-space:pre-wrap; background:#f8f9fa; border:1px solid #dee2e6; padding:10px; border-radius:4px;">Yükleniyor...</pre>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  document.body.appendChild(div.firstElementChild);
+  return document.getElementById('statefulSetPropertiesModal');
+}
+
+async function showStatefulSetProperties(name, namespace) {
+  const modalEl = ensureStatefulSetPropertiesModal();
+  const bodyEl = document.getElementById('statefulSetPropertiesBody');
+  const labelEl = document.getElementById('statefulSetPropertiesModalLabel');
+  if (!modalEl || !bodyEl || !labelEl) {
+    alert('Properties modal oluşturulamadı.');
+    return;
+  }
+  labelEl.textContent = `StatefulSet Properties: ${namespace}/${name}`;
+  bodyEl.textContent = 'Yükleniyor...';
+  let bsModal = bootstrap.Modal.getInstance(modalEl);
+  if (!bsModal) bsModal = new bootstrap.Modal(modalEl);
+  bsModal.show();
+  try {
+    const resp = await fetch(`/k8s-explorer/statefulset-properties?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`);
+    const data = await resp.json();
+    if (resp.ok && data.statefulset) {
+      bodyEl.textContent = JSON.stringify(data.statefulset, null, 2);
+    } else {
+      bodyEl.textContent = 'Properties alınamadı: ' + (data.error || 'Bilinmeyen hata');
+    }
+  } catch (e) {
+    bodyEl.textContent = 'İstek sırasında hata oluştu: ' + e;
+  }
+}
+window.showStatefulSetProperties = showStatefulSetProperties;
 // StatefulSet Scale fonksiyonu (global)
 window.showScaleStatefulSetModal = function(name, namespace, currentReplicas) {
   let modal = document.getElementById('scaleStatefulSetModal');
@@ -541,7 +596,23 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 </script>
-  <div class="tab-pane fade" id="replicasets" role="tabpanel">Replica Sets içeriği buraya gelecek.</div>
+  <div class="tab-pane fade" id="replicasets" role="tabpanel">
+    <div class="row">
+      <div class="col-md-6">
+        <div id="pie-replicasets-tab" style="min-height:300px;"></div>
+      </div>
+      <div class="col-md-6">
+        <h5 class="mt-2">ReplicaSet Listesi</h5>
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+          <label for="replicasetsNamespaceFilter" class="form-label mb-0">Namespace:</label>
+          <select id="replicasetsNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
+          <button class="btn btn-sm btn-outline-danger ms-auto" id="deleteSelectedReplicaSetsBtn" disabled>Seçili ReplicaSet'leri Sil</button>
+        </div>
+  <div id="replicasets-table-container"><div class="text-muted">Yükleniyor...</div></div>
+  <div id="replicasets-pagination" class="mt-2"></div>
+      </div>
+    </div>
+  </div>
   <div class="tab-pane fade" id="replicationcontrollers" role="tabpanel">Replication Controller içeriği buraya gelecek.</div>
   <div class="tab-pane fade" id="jobs" role="tabpanel">Jobs içeriği buraya gelecek.</div>
   <div class="tab-pane fade" id="cronjobs" role="tabpanel">CronJobs içeriği buraya gelecek.</div>
@@ -619,6 +690,7 @@ async function fetchAndRenderDeploymentsTable() {
       // Add namespace column if available
       const ns = dep.namespace;
       html += `<tr><td>${dep.name}</td><td>${ready}</td><td>${upToDate}</td><td>${available}</td><td>${age}</td><td>${ns || ''}</td><td>
+        <button class="btn btn-sm btn-secondary" onclick="showDeploymentProperties('${dep.name}','${dep.namespace}')">Properties</button>
         <button class="btn btn-sm btn-info" onclick="describeDeployment('${dep.name}','${dep.namespace}')">Describe</button>
         <button class="btn btn-sm btn-primary" onclick="editDeploymentYaml('${dep.name}','${dep.namespace}')">Edit</button>
         <button class="btn btn-sm btn-warning" onclick="showScaleDeploymentModal('${dep.name}','${dep.namespace}', ${parseInt(dep.ready.split('/')[1] || dep.ready) || 1})">Scale</button>
@@ -753,13 +825,78 @@ async function editDeploymentYaml(name, namespace) {
 }
 window.editDeploymentYaml = editDeploymentYaml;
 
+// Deployment Properties Modal (dinamik oluşturulacak)
+function ensureDeploymentPropertiesModal() {
+  let modal = document.getElementById('deploymentPropertiesModal');
+  if (modal) return modal;
+  const html = `
+  <div class="modal fade" id="deploymentPropertiesModal" tabindex="-1" aria-labelledby="deploymentPropertiesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="deploymentPropertiesModalLabel">Deployment Properties</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" style="max-height:70vh; overflow:auto;">
+          <pre id="deploymentPropertiesBody" style="font-size:0.9em; white-space:pre-wrap; background:#f8f9fa; border:1px solid #dee2e6; padding:10px; border-radius:4px;">Yükleniyor...</pre>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  document.body.appendChild(div.firstElementChild);
+  return document.getElementById('deploymentPropertiesModal');
+}
+
+async function showDeploymentProperties(name, namespace) {
+  const modalEl = ensureDeploymentPropertiesModal();
+  const bodyEl = document.getElementById('deploymentPropertiesBody');
+  const labelEl = document.getElementById('deploymentPropertiesModalLabel');
+  if (!modalEl || !bodyEl || !labelEl) {
+    alert('Properties modal oluşturulamadı.');
+    return;
+  }
+  labelEl.textContent = `Deployment Properties: ${namespace}/${name}`;
+  bodyEl.textContent = 'Yükleniyor...';
+  let bsModal = bootstrap.Modal.getInstance(modalEl);
+  if (!bsModal) bsModal = new bootstrap.Modal(modalEl);
+  bsModal.show();
+  try {
+    const resp = await fetch(`/k8s-explorer/deployment-properties?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`);
+    const data = await resp.json();
+    if (resp.ok && data.deployment) {
+      // Güzel formatlı JSON
+      bodyEl.textContent = JSON.stringify(data.deployment, null, 2);
+    } else {
+      bodyEl.textContent = 'Properties alınamadı: ' + (data.error || 'Bilinmeyen hata');
+    }
+  } catch (e) {
+    bodyEl.textContent = 'İstek sırasında hata oluştu: ' + e;
+  }
+}
+window.showDeploymentProperties = showDeploymentProperties;
+
 // Deployments sekmesi açıldığında tabloyu yükle
 document.addEventListener('DOMContentLoaded', function() {
   document.querySelector('button[data-bs-target="#deployments"]').addEventListener('shown.bs.tab', fetchAndRenderDeploymentsTable);
+  const rsTabBtn = document.querySelector('button[data-bs-target="#replicasets"]');
+  if (rsTabBtn) {
+    rsTabBtn.addEventListener('shown.bs.tab', function() {
+      fetchAndRenderReplicaSetsTable();
+      renderReplicaSetsTabChart();
+    });
+  }
 });
 
-// Pods tablosunu getir ve göster
-async function fetchAndRenderPodsTable() {
+// Pods tablosunu getir ve göster (düzeltilmiş)
+let podsCurrentPage = 1;
+const PODS_PAGE_SIZE = 10;
+async function fetchAndRenderPodsTable(page) {
+  if (page) podsCurrentPage = page;
   const container = document.getElementById('pods-table-container');
   if (!container) return;
   container.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
@@ -767,31 +904,70 @@ async function fetchAndRenderPodsTable() {
     const resp = await fetch('/k8s-explorer/pods-summary');
     const data = await resp.json();
     const pods = Array.isArray(data.pods) ? data.pods : [];
-    // Namespace filtreleri
     const namespaces = [...new Set(pods.map(p=>p.namespace))];
     const nsFilter = document.getElementById('namespaceFilter');
-    // Namespace dropdownu sadece ilk yüklemede doldur
-    if (!nsFilter.dataset.filled) {
+    if (nsFilter) {
+      const prev = nsFilter.value;
+      // Her seferinde güncelle (cluster değişikliklerinde senkron kalır)
       nsFilter.innerHTML = '<option value="">(Tümü)</option>' + namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
-      nsFilter.dataset.filled = '1';
+      // Seçim korunabiliyorsa geri yükle
+      if ([...nsFilter.options].some(o=>o.value===prev)) nsFilter.value = prev; else nsFilter.value='';
     }
-    let selectedNs = nsFilter.value;
+    const selectedNs = nsFilter ? nsFilter.value : '';
     const filteredPods = selectedNs ? pods.filter(p=>p.namespace===selectedNs) : pods;
     if (filteredPods.length === 0) {
       container.innerHTML = '<div class="text-muted">Pod bulunamadı.</div>';
       updatePodsPieChart(filteredPods);
       return;
     }
+    const totalPages = Math.ceil(filteredPods.length / PODS_PAGE_SIZE);
+    if (podsCurrentPage > totalPages) podsCurrentPage = totalPages;
+    if (podsCurrentPage < 1) podsCurrentPage = 1;
+    const start = (podsCurrentPage - 1) * PODS_PAGE_SIZE;
+    const pageItems = filteredPods.slice(start, start + PODS_PAGE_SIZE);
     let html = '<table class="table table-sm table-bordered"><thead><tr><th>Namespace</th><th>Pod</th><th>Durum</th><th>İşlemler</th></tr></thead><tbody>';
-    for (const pod of filteredPods) {
+    for (const pod of pageItems) {
       html += `<tr><td>${pod.namespace}</td><td>${pod.name}</td><td>${pod.status}</td><td>
-        <button class="btn btn-sm btn-primary me-1" onclick="showPodProperties('${pod.namespace}','${pod.name}')">Properties</button>
-        <button class="btn btn-sm btn-secondary me-1" onclick="editPodYaml('${pod.namespace}','${pod.name}')">YAML Edit</button>
-        <button class="btn btn-sm btn-danger me-1" onclick="deletePod('${pod.namespace}','${pod.name}')">Delete</button>
-        <button class="btn btn-sm btn-info" onclick="describePod('${pod.namespace}','${pod.name}')">Describe</button>
+        <button class=\"btn btn-sm btn-primary me-1\" onclick=\"showPodProperties('${pod.namespace}','${pod.name}')\">Properties</button>
+        <button class=\"btn btn-sm btn-secondary me-1\" onclick=\"editPodYaml('${pod.namespace}','${pod.name}')\">YAML Edit</button>
+        <button class=\"btn btn-sm btn-danger me-1\" onclick=\"deletePod('${pod.namespace}','${pod.name}')\">Delete</button>
+        <button class=\"btn btn-sm btn-info\" onclick=\"describePod('${pod.namespace}','${pod.name}')\">Describe</button>
       </td></tr>`;
     }
     html += '</tbody></table>';
+    container.innerHTML = html;
+    // Pagination bar
+    const pagDiv = document.getElementById('pods-pagination');
+    if (pagDiv) {
+      if (totalPages <= 1) {
+        pagDiv.innerHTML = '';
+      } else {
+        let phtml = '<nav><ul class="pagination pagination-sm mb-0">';
+        const makeLi = (p, label, disabled=false, active=false) => `<li class=\"page-item ${disabled?'disabled':''} ${active?'active':''}\"><a class=\"page-link\" href=\"#\" data-page=\"${p}\">${label}</a></li>`;
+        phtml += makeLi(podsCurrentPage-1,'«', podsCurrentPage===1);
+        // window of pages
+        const windowSize = 5;
+        let startP = Math.max(1, podsCurrentPage - Math.floor(windowSize/2));
+        let endP = Math.min(totalPages, startP + windowSize -1);
+        if (endP - startP + 1 < windowSize) startP = Math.max(1, endP - windowSize +1);
+        for (let p=startP; p<=endP; p++) phtml += makeLi(p, p, false, p===podsCurrentPage);
+        phtml += makeLi(podsCurrentPage+1,'»', podsCurrentPage===totalPages);
+        phtml += '</ul></nav>';
+        pagDiv.innerHTML = phtml;
+        pagDiv.querySelectorAll('a.page-link').forEach(a=>{
+          a.addEventListener('click', ev=>{
+            ev.preventDefault();
+            const p = parseInt(a.dataset.page);
+            if (!isNaN(p)) fetchAndRenderPodsTable(p);
+          });
+        });
+      }
+    }
+    updatePodsPieChart(filteredPods);
+  } catch (e) {
+    container.innerHTML = '<div class="text-danger">Podlar alınırken hata oluştu.</div>';
+  }
+}
 // Pod Properties fonksiyonu (global)
 window.showPodProperties = async function(namespace, name) {
   let modal = document.getElementById('podPropertiesModal');
@@ -818,7 +994,6 @@ window.showPodProperties = async function(namespace, name) {
   bsModal.show();
   // Prometheus endpoint autodetect (prefer backend discovery)
   async function findPrometheusBaseUrl() {
-    // Try backend endpoint first
     try {
       const resp = await fetch('/k8s-explorer/prometheus-url');
       if (resp.ok) {
@@ -826,46 +1001,38 @@ window.showPodProperties = async function(namespace, name) {
         if (data.url) return data.url + '/api/v1';
       }
     } catch (e) {}
-    // Fallback: try common endpoints (legacy logic)
-    const candidates = [
-      '/prometheus',
-      '/prometheus/',
-      '/api/v1',
-      'http://localhost:9090',
-      'http://prometheus:9090',
-      'http://prometheus-server:9090',
-      'http://127.0.0.1:9090',
-      '/prometheus/api/v1',
-      '/api/v1'
-    ];
+    const candidates = ['/api/prometheus','/prometheus','http://prometheus:9090'];
     for (const base of candidates) {
       try {
-        const resp = await fetch(base + '/status/config', {method:'GET'});
-        if (resp.ok) return base;
-      } catch (e) { continue; }
+        const r = await fetch(base + '/api/v1/status/buildinfo');
+        if (r.ok) return base + '/api/v1';
+      } catch (e) {}
     }
     return null;
   }
-
-  async function fetchPodMetrics(promBase, namespace, podName) {
-    // Prometheus queries for CPU, memory, network usage (last 30m, 1m step)
-    const end = Math.floor(Date.now()/1000);
-    const start = end - 1800;
-    const step = 60;
-    // CPU (millicores): sum(rate(container_cpu_usage_seconds_total{namespace="$NAMESPACE", pod="$POD", container!="", container!="POD"}[2m])) by (container)
-    const cpuQ = `sum(rate(container_cpu_usage_seconds_total{namespace=\"${namespace}\",pod=\"${name}\",container!="",container!="POD"}[2m])) by (container)`;
-    // Memory (bytes): sum(container_memory_usage_bytes{namespace="$NAMESPACE", pod="$POD", container!="", container!="POD"}) by (container)
-    const memQ = `sum(container_memory_usage_bytes{namespace=\"${namespace}\",pod=\"${name}\",container!="",container!="POD"}) by (container)`;
-    // Network RX: sum(rate(container_network_receive_bytes_total{namespace=\"${namespace}\",pod=\"${name}\"}[2m]))
-    const netRxQ = `sum(rate(container_network_receive_bytes_total{namespace=\"${namespace}\",pod=\"${name}\"}[2m]))`;
-    // Network TX: sum(rate(container_network_transmit_bytes_total{namespace=\"${namespace}\",pod=\"${name}\"}[2m]))
-    const netTxQ = `sum(rate(container_network_transmit_bytes_total{namespace=\"${namespace}\",pod=\"${name}\"}[2m]))`;
+      // Namespace dropdownu sadece ilk yüklemede doldur
+      if (!nsFilter.dataset.filled) {
+        nsFilter.innerHTML = '<option value="">(Tümü)</option>' + namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
+        nsFilter.dataset.filled = '1';
     async function rangeQuery(query) {
-      const url = `${promBase}/query_range?query=${encodeURIComponent(query)}&start=${start}&end=${end}&step=${step}`;
-      const resp = await fetch(url);
-      if (!resp.ok) return null;
-      const data = await resp.json();
-      if (data.status !== 'success') return null;
+      let selectedNs = nsFilter.value;
+      const filteredPods = selectedNs ? pods.filter(p=>p.namespace===selectedNs) : pods;
+      if (filteredPods.length === 0) {
+        container.innerHTML = '<div class="text-muted">Pod bulunamadı.</div>';
+        updatePodsPieChart(filteredPods);
+        return;
+      }
+      let html = '<table class="table table-sm table-bordered"><thead><tr><th>Namespace</th><th>Pod</th><th>Durum</th><th>İşlemler</th></tr></thead><tbody>';
+      for (const pod of filteredPods) {
+        html += `<tr><td>${pod.namespace}</td><td>${pod.name}</td><td>${pod.status}</td><td>
+          <button class="btn btn-sm btn-primary me-1" onclick="showPodProperties('${pod.namespace}','${pod.name}')">Properties</button>
+          <button class="btn btn-sm btn-secondary me-1" onclick="editPodYaml('${pod.namespace}','${pod.name}')">YAML Edit</button>
+          <button class="btn btn-sm btn-outline-dark me-1" onclick="showPodDescribe('${pod.namespace}','${pod.name}')">Describe</button>
+        </td></tr>`;
+      }
+      html += '</tbody></table>';
+      container.innerHTML = html;
+      updatePodsPieChart(filteredPods);
       return data.data.result;
     }
     const [cpu, mem, netrx, nettx] = await Promise.all([
@@ -959,12 +1126,6 @@ window.showPodProperties = async function(namespace, name) {
     body.innerHTML = '<div class="text-danger">Pod bilgisi alınırken hata oluştu.</div>';
   }
 };
-    container.innerHTML = html;
-    updatePodsPieChart(filteredPods);
-  } catch (e) {
-    container.innerHTML = '<div class="text-danger">Podlar alınırken hata oluştu.</div>';
-  }
-}
 // Pie chart'ı namespace filtresine göre güncelle
 function updatePodsPieChart(pods) {
   // Eğer pods parametresi yoksa, fetch ile al
@@ -1218,6 +1379,180 @@ async function renderDeploymentsTabChart() {
   }
   renderPieChart('pie-deployments-tab', 'Deployments', getStatusCounts(stats?.deployments));
 }
+// ReplicaSets pie chart
+async function renderReplicaSetsTabChart() {
+  const pieContainer = document.getElementById('pie-replicasets-tab');
+  if (!pieContainer) return;
+  pieContainer.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
+  try {
+    const resp = await fetch('/k8s-explorer/replicasets-summary');
+    const data = await resp.json();
+    let rsets = Array.isArray(data.replicasets) ? data.replicasets : [];
+    const nsSel = document.getElementById('replicasetsNamespaceFilter');
+    if (nsSel && nsSel.value) {
+      rsets = rsets.filter(r=>r.namespace === nsSel.value);
+    }
+    if (rsets.length === 0) {
+      renderPieChart('pie-replicasets-tab', 'ReplicaSets', {});
+      return;
+    }
+    // Status hesapla: hazır olanlar ve olmayanlar
+    let ready = 0, notReady = 0;
+    for (const rs of rsets) {
+      try {
+        const parts = (rs.ready || '0/0').split('/');
+        const rdy = parseInt(parts[0]||'0');
+        const total = parseInt(parts[1]||'0');
+        ready += rdy;
+        notReady += Math.max(total - rdy, 0);
+      } catch(e){ /* ignore */ }
+    }
+    const series = {};
+    if (ready>0) series['Ready'] = ready;
+    if (notReady>0) series['Not Ready'] = notReady;
+    renderPieChart('pie-replicasets-tab', 'ReplicaSets', series);
+  } catch (e) {
+    pieContainer.innerHTML = '<div class="text-danger">ReplicaSet verisi alınırken hata oluştu.</div>';
+  }
+}
+
+// ReplicaSets tablosu
+let replicaSetsCurrentPage = 1;
+const REPLICASETS_PAGE_SIZE = 10;
+async function fetchAndRenderReplicaSetsTable(page) {
+  if (page) replicaSetsCurrentPage = page;
+  const container = document.getElementById('replicasets-table-container');
+  if (!container) return;
+  container.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
+  try {
+    const resp = await fetch('/k8s-explorer/replicasets-summary');
+    const data = await resp.json();
+    let rsets = Array.isArray(data.replicasets) ? data.replicasets : [];
+    // Namespace dropdownu
+    const nsSel = document.getElementById('replicasetsNamespaceFilter');
+    if (nsSel) {
+      const prev = nsSel.value;
+      const namespaces = [...new Set(rsets.map(r=>r.namespace))].sort();
+      nsSel.innerHTML = '<option value="">(Hepsi)</option>' + namespaces.map(ns=>`<option value="${ns}">${ns}</option>`).join('');
+      if ([...nsSel.options].some(o=>o.value===prev)) nsSel.value = prev; else nsSel.value='';
+      if (!nsSel.onchange) nsSel.onchange = () => fetchAndRenderReplicaSetsTable(1);
+    }
+    if (nsSel && nsSel.value) {
+      rsets = rsets.filter(r=>r.namespace === nsSel.value);
+    }
+  if (rsets.length === 0) {
+      container.innerHTML = '<div class="text-muted">ReplicaSet bulunamadı.</div>';
+      return;
+    }
+  const totalPages = Math.ceil(rsets.length / REPLICASETS_PAGE_SIZE);
+  if (replicaSetsCurrentPage > totalPages) replicaSetsCurrentPage = totalPages;
+  if (replicaSetsCurrentPage < 1) replicaSetsCurrentPage = 1;
+  const start = (replicaSetsCurrentPage - 1) * REPLICASETS_PAGE_SIZE;
+  const pageItems = rsets.slice(start, start + REPLICASETS_PAGE_SIZE);
+  let html = '<div class="d-flex gap-2 mb-2"'
+             + '<button id="deleteSelectedReplicaSetsBtn" class="btn btn-sm btn-danger" disabled>Seçilenleri Sil</button>'
+             + '</div>';
+    html += '<table class="table table-sm table-bordered align-middle"><thead>'
+          + '<tr>'
+          + '<th style="width:26px"><input type="checkbox" id="replicaSetsSelectAll"></th>'
+          + '<th>Namespace</th><th>Name</th><th>Ready</th><th>Desired</th><th>Age</th>'
+          + '</tr></thead><tbody>';
+    const now = new Date();
+  for (const rs of pageItems) {
+      let age='-';
+      if (rs.creation_timestamp) {
+        const created = new Date(rs.creation_timestamp);
+        const diffMs = now - created;
+        const diffDays = Math.floor(diffMs / (1000*60*60*24));
+        const diffHrs = Math.floor((diffMs % (1000*60*60*24)) / (1000*60*60));
+        const diffMin = Math.floor((diffMs % (1000*60*60)) / (1000*60));
+        if (diffDays > 0) age = diffDays + 'd'; else if (diffHrs>0) age = diffHrs + 'h'; else age = diffMin + 'm';
+      }
+      html += `<tr>`
+           + `<td><input type="checkbox" class="replicaset-row-cb" data-namespace="${rs.namespace}" data-name="${rs.name}"></td>`
+           + `<td>${rs.namespace}</td><td>${rs.name}</td><td>${rs.ready}</td><td>${rs.desired}</td><td>${age}</td>`
+           + `</tr>`;
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+    // Pagination bar
+    const pagDiv = document.getElementById('replicasets-pagination');
+    if (pagDiv) {
+      if (totalPages <= 1) pagDiv.innerHTML = ''; else {
+        let phtml = '<nav><ul class="pagination pagination-sm mb-0">';
+        const makeLi = (p, label, disabled=false, active=false) => `<li class=\"page-item ${disabled?'disabled':''} ${active?'active':''}\"><a class=\"page-link\" href=\"#\" data-page=\"${p}\">${label}</a></li>`;
+        phtml += makeLi(replicaSetsCurrentPage-1,'«', replicaSetsCurrentPage===1);
+        const windowSize = 5;
+        let startP = Math.max(1, replicaSetsCurrentPage - Math.floor(windowSize/2));
+        let endP = Math.min(totalPages, startP + windowSize -1);
+        if (endP - startP + 1 < windowSize) startP = Math.max(1, endP - windowSize +1);
+        for (let p=startP; p<=endP; p++) phtml += makeLi(p, p, false, p===replicaSetsCurrentPage);
+        phtml += makeLi(replicaSetsCurrentPage+1,'»', replicaSetsCurrentPage===totalPages);
+        phtml += '</ul></nav>';
+        pagDiv.innerHTML = phtml;
+        pagDiv.querySelectorAll('a.page-link').forEach(a=>{
+          a.addEventListener('click', ev=>{ ev.preventDefault(); const p=parseInt(a.dataset.page); if(!isNaN(p)) fetchAndRenderReplicaSetsTable(p); });
+        });
+      }
+    }
+
+    // Selection & bulk delete logic
+    const selectAll = container.querySelector('#replicaSetsSelectAll');
+    const rowCheckboxes = Array.from(container.querySelectorAll('.replicaset-row-cb'));
+    const deleteBtn = container.querySelector('#deleteSelectedReplicaSetsBtn');
+    function refreshDeleteBtn() {
+      deleteBtn.disabled = !rowCheckboxes.some(cb => cb.checked);
+    }
+    if (selectAll) {
+      selectAll.addEventListener('change', () => {
+        rowCheckboxes.forEach(cb => cb.checked = selectAll.checked);
+        refreshDeleteBtn();
+      });
+    }
+    rowCheckboxes.forEach(cb => cb.addEventListener('change', () => {
+      if (!cb.checked && selectAll && selectAll.checked) selectAll.checked = false;
+      refreshDeleteBtn();
+    }));
+    refreshDeleteBtn();
+
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', async () => {
+        const selected = rowCheckboxes.filter(cb => cb.checked).map(cb => ({namespace: cb.dataset.namespace, name: cb.dataset.name}));
+        if (selected.length === 0) return;
+        if (!confirm(`${selected.length} ReplicaSet silinsin mi?`)) return;
+        deleteBtn.disabled = true;
+        deleteBtn.textContent = 'Siliniyor...';
+        try {
+          const respDel = await fetch('/k8s-explorer/delete-replicasets', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({items: selected})
+          });
+          if (!respDel.ok) {
+            alert('Silme isteği başarısız: ' + await respDel.text());
+          } else {
+            const result = await respDel.json();
+            if (result.error) {
+              alert('Hata: ' + result.error);
+            } else {
+              const failed = (result.results||[]).filter(r => !r.deleted);
+              if (failed.length > 0) {
+                alert(`Bazı ReplicaSet'ler silinemedi: \n` + failed.map(f=>`${f.namespace}/${f.name}: ${f.error||'hata'}`).join('\n'));
+              }
+            }
+          }
+        } catch (err) {
+          alert('Silme sırasında hata: ' + err);
+        }
+        // Yenile
+        fetchAndRenderReplicaSetsTable();
+        renderReplicaSetsTabChart();
+      });
+    }
+  } catch (e) {
+    container.innerHTML = '<div class="text-danger">ReplicaSet listesi alınırken hata oluştu.</div>';
+  }
+}
 
 // DaemonSets tablosunu getir ve göster
 async function fetchAndRenderDaemonSetsTable() {
@@ -1246,6 +1581,7 @@ async function fetchAndRenderDaemonSetsTable() {
         else age = diffMin + 'm';
       }
       html += `<tr><td>${ds.name}</td><td>${ds.ready || '-'}</td><td>${ds.current || '-'}</td><td>${ds.desired || '-'}</td><td>${age}</td><td>${ds.namespace || ''}</td><td>
+        <button class="btn btn-sm btn-secondary" onclick="showDaemonSetProperties('${ds.name}','${ds.namespace}')">Properties</button>
         <button class="btn btn-sm btn-primary" onclick="editDaemonSetYaml('${ds.name}','${ds.namespace}')">Edit</button>
         <button class="btn btn-sm btn-danger ms-1" onclick="restartDaemonSet('${ds.name}','${ds.namespace}')">Restart</button>
         <button class="btn btn-sm btn-secondary ms-1" onclick="showDaemonSetLogs('${ds.name}','${ds.namespace}')">Logs</button>
@@ -1411,6 +1747,36 @@ window.editDaemonSetYaml = async function(name, namespace) {
   modal.show();
 };
 
+// Eksik yardımcılar: describe ve metrics fetch
+async function describePod(namespace, name) {
+  try {
+    const resp = await fetch(`/k8s-explorer/describe?type=pod&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`);
+    const text = await resp.text();
+    alert(text.substring(0, 2000)); // basit gösterim
+  } catch(e) { alert('Describe alınamadı: ' + e); }
+}
+
+async function showPodDescribe(namespace, name) { return describePod(namespace, name); }
+
+// Pod metriklerini Prometheus'tan almak için kullanılan yardımcı (placeholder)
+async function fetchPodMetrics(promBase, namespace, name) {
+  if (!promBase) return {cpu:[], mem:[], netrx:[], nettx:[]};
+  const baseQuery = `pod=\"${name}\"`;
+  const cpuQ = `sum(rate(container_cpu_usage_seconds_total{${baseQuery}}[5m])) by (pod)`;
+  const memQ = `sum(container_memory_usage_bytes{${baseQuery}}) by (pod)`;
+  const netRxQ = `sum(rate(container_network_receive_bytes_total{${baseQuery}}[5m])) by (pod)`;
+  const netTxQ = `sum(rate(container_network_transmit_bytes_total{${baseQuery}}[5m])) by (pod)`;
+  const qs = p => Object.entries(p).map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join('&');
+  const rangeQuery = async (query) => {
+    const url = `${promBase}/query_range?${qs({query, start: Math.floor(Date.now()/1000)-1800, end: Math.floor(Date.now()/1000), step: 30})}`;
+    try { const r = await fetch(url); const j = await r.json(); return j.data.result; } catch(e){ return []; }
+  };
+  const [cpu, mem, netrx, nettx] = await Promise.all([
+    rangeQuery(cpuQ), rangeQuery(memQ), rangeQuery(netRxQ), rangeQuery(netTxQ)
+  ]);
+  return {cpu, mem, netrx, nettx};
+}
+
 
 // DaemonSet Logs fonksiyonu (global)
 window.showDaemonSetLogs = async function(name, namespace) {
@@ -1492,6 +1858,60 @@ window.restartDaemonSet = async function(name, namespace) {
     alert('Restart sırasında hata: ' + e);
   }
 };
+
+// DaemonSet Properties Modal (dinamik oluşturma)
+function ensureDaemonSetPropertiesModal() {
+  let modal = document.getElementById('daemonSetPropertiesModal');
+  if (modal) return modal;
+  const html = `
+  <div class="modal fade" id="daemonSetPropertiesModal" tabindex="-1" aria-labelledby="daemonSetPropertiesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="daemonSetPropertiesModalLabel">DaemonSet Properties</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" style="max-height:70vh; overflow:auto;">
+          <pre id="daemonSetPropertiesBody" style="font-size:0.9em; white-space:pre-wrap; background:#f8f9fa; border:1px solid #dee2e6; padding:10px; border-radius:4px;">Yükleniyor...</pre>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  document.body.appendChild(div.firstElementChild);
+  return document.getElementById('daemonSetPropertiesModal');
+}
+
+async function showDaemonSetProperties(name, namespace) {
+  const modalEl = ensureDaemonSetPropertiesModal();
+  const bodyEl = document.getElementById('daemonSetPropertiesBody');
+  const labelEl = document.getElementById('daemonSetPropertiesModalLabel');
+  if (!modalEl || !bodyEl || !labelEl) {
+    alert('Properties modal oluşturulamadı.');
+    return;
+  }
+  labelEl.textContent = `DaemonSet Properties: ${namespace}/${name}`;
+  bodyEl.textContent = 'Yükleniyor...';
+  let bsModal = bootstrap.Modal.getInstance(modalEl);
+  if (!bsModal) bsModal = new bootstrap.Modal(modalEl);
+  bsModal.show();
+  try {
+    const resp = await fetch(`/k8s-explorer/daemonset-properties?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`);
+    const data = await resp.json();
+    if (resp.ok && data.daemonset) {
+      bodyEl.textContent = JSON.stringify(data.daemonset, null, 2);
+    } else {
+      bodyEl.textContent = 'Properties alınamadı: ' + (data.error || 'Bilinmeyen hata');
+    }
+  } catch (e) {
+    bodyEl.textContent = 'İstek sırasında hata oluştu: ' + e;
+  }
+}
+window.showDaemonSetProperties = showDaemonSetProperties;
 </script>
 {% endblock %}
 {% endblock %}

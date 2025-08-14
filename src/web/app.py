@@ -14,7 +14,7 @@ import time
 import traceback
 import urllib.parse
 import sys
-from flask import session
+from flask import session, send_from_directory
 import requests
 from flask import Flask, render_template, jsonify, request
 from flask_cors import CORS
@@ -44,6 +44,23 @@ swagger = Swagger(app, config={
     "host": "127.0.0.1:8080",
     "schemes": ["http"]
 })
+
+# Suppress noisy InsecureRequestWarning globally (dev convenience; remove for prod hardening)
+try:
+    import urllib3
+    from urllib3.exceptions import InsecureRequestWarning
+    urllib3.disable_warnings(InsecureRequestWarning)
+except Exception:
+    pass
+
+# Favicon route to avoid 404 spam in logs; serve from static if present else empty 204
+@app.route('/favicon.ico')
+def favicon():
+    static_path = os.path.join(app.root_path, 'static')
+    ico_path = os.path.join(static_path, 'favicon.ico')
+    if os.path.exists(ico_path):
+        return send_from_directory(static_path, 'favicon.ico', mimetype='image/vnd.microsoft.icon')
+    return ('', 204)
 
 harbor_trivy_cache = {}
 harbor_trivy_cache_time = {}
@@ -136,6 +153,84 @@ def statefulsets_summary():
         return jsonify({'statefulsets': result})
     except Exception as e:
         return jsonify({'statefulsets': [], 'error': str(e)})
+
+@app.route('/k8s-explorer/statefulset-properties')
+def statefulset_properties():
+    """Return detailed properties for a single StatefulSet."""
+    namespace = request.args.get('namespace')
+    name = request.args.get('name')
+    if not namespace or not name:
+        return jsonify({'error': 'namespace ve name zorunlu'}), 400
+    try:
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        apps_v1 = client.AppsV1Api()
+        ss = apps_v1.read_namespaced_stateful_set(name=name, namespace=namespace)
+        md = ss.metadata
+        spec = ss.spec
+        status = ss.status
+        tpl_spec = spec.template.spec if spec and spec.template else None
+        containers = tpl_spec.containers if tpl_spec else []
+        def to_dict_container(cn):
+            resources = getattr(cn, 'resources', None)
+            sec = getattr(cn, 'security_context', None)
+            return {
+                'name': cn.name,
+                'image': cn.image,
+                'image_pull_policy': getattr(cn, 'image_pull_policy', None),
+                'ports': [p.container_port for p in (cn.ports or [])] if getattr(cn, 'ports', None) else [],
+                'env': [{ 'name': e.name, 'value': getattr(e, 'value', None)} for e in (cn.env or [])] if getattr(cn, 'env', None) else [],
+                'resources': {
+                    'limits': getattr(resources, 'limits', None) if resources else None,
+                    'requests': getattr(resources, 'requests', None) if resources else None
+                },
+                'security_context': {
+                    'run_as_user': getattr(sec, 'run_as_user', None) if sec else None,
+                    'read_only_root_filesystem': getattr(sec, 'read_only_root_filesystem', None) if sec else None,
+                    'allow_privilege_escalation': getattr(sec, 'allow_privilege_escalation', None) if sec else None,
+                } if sec else None,
+                'liveness_probe': bool(getattr(cn, 'liveness_probe', None)),
+                'readiness_probe': bool(getattr(cn, 'readiness_probe', None)),
+            }
+        result = {
+            'metadata': {
+                'name': md.name,
+                'namespace': md.namespace,
+                'labels': md.labels or {},
+                'annotations': md.annotations or {},
+                'creation_timestamp': md.creation_timestamp.isoformat() if getattr(md, 'creation_timestamp', None) else None,
+            },
+            'spec': {
+                'replicas': getattr(spec, 'replicas', None),
+                'service_name': getattr(spec, 'service_name', None),
+                'pod_management_policy': getattr(spec, 'pod_management_policy', None),
+                'update_strategy': getattr(getattr(spec, 'update_strategy', None), 'type', None),
+                'selector': getattr(getattr(spec, 'selector', None), 'match_labels', None),
+                'containers': [to_dict_container(cn) for cn in (containers or [])]
+            },
+            'status': {
+                'replicas': getattr(status, 'replicas', None),
+                'ready_replicas': getattr(status, 'ready_replicas', None),
+                'current_replicas': getattr(status, 'current_replicas', None),
+                'updated_replicas': getattr(status, 'updated_replicas', None),
+                'collision_count': getattr(status, 'collision_count', None),
+                'conditions': [
+                    {
+                        'type': c.type,
+                        'status': c.status,
+                        'reason': getattr(c, 'reason', None),
+                        'message': getattr(c, 'message', None),
+                        'last_transition_time': getattr(c, 'last_transition_time', None).isoformat() if getattr(c, 'last_transition_time', None) else None
+                    } for c in (getattr(status, 'conditions', []) or [])
+                ]
+            }
+        }
+        return jsonify({'statefulset': result})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # StatefulSet restart API
 @app.route('/k8s-explorer/restart-statefulset', methods=['POST'])
@@ -274,6 +369,84 @@ def daemonsets_summary():
         return jsonify({'daemonsets': result})
     except Exception as e:
         return jsonify({'daemonsets': [], 'error': str(e)})
+
+@app.route('/k8s-explorer/daemonset-properties')
+def daemonset_properties():
+    """Return detailed properties for a single DaemonSet."""
+    namespace = request.args.get('namespace')
+    name = request.args.get('name')
+    if not namespace or not name:
+        return jsonify({'error': 'namespace ve name zorunlu'}), 400
+    try:
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        apps_v1 = client.AppsV1Api()
+        ds = apps_v1.read_namespaced_daemon_set(name=name, namespace=namespace)
+        md = ds.metadata
+        spec = ds.spec
+        status = ds.status
+        tpl_spec = spec.template.spec if spec and spec.template else None
+        containers = tpl_spec.containers if tpl_spec else []
+        def to_dict_container(cn):
+            resources = getattr(cn, 'resources', None)
+            sec = getattr(cn, 'security_context', None)
+            return {
+                'name': cn.name,
+                'image': cn.image,
+                'image_pull_policy': getattr(cn, 'image_pull_policy', None),
+                'ports': [p.container_port for p in (cn.ports or [])] if getattr(cn, 'ports', None) else [],
+                'env': [{ 'name': e.name, 'value': getattr(e, 'value', None)} for e in (cn.env or [])] if getattr(cn, 'env', None) else [],
+                'resources': {
+                    'limits': getattr(resources, 'limits', None) if resources else None,
+                    'requests': getattr(resources, 'requests', None) if resources else None
+                },
+                'security_context': {
+                    'run_as_user': getattr(sec, 'run_as_user', None) if sec else None,
+                    'read_only_root_filesystem': getattr(sec, 'read_only_root_filesystem', None) if sec else None,
+                    'allow_privilege_escalation': getattr(sec, 'allow_privilege_escalation', None) if sec else None,
+                } if sec else None,
+                'liveness_probe': bool(getattr(cn, 'liveness_probe', None)),
+                'readiness_probe': bool(getattr(cn, 'readiness_probe', None)),
+            }
+        result = {
+            'metadata': {
+                'name': md.name,
+                'namespace': md.namespace,
+                'labels': md.labels or {},
+                'annotations': md.annotations or {},
+                'creation_timestamp': md.creation_timestamp.isoformat() if getattr(md, 'creation_timestamp', None) else None,
+            },
+            'spec': {
+                'selector': getattr(spec.selector, 'match_labels', None) if getattr(spec, 'selector', None) else None,
+                'update_strategy': getattr(getattr(spec, 'update_strategy', None), 'type', None),
+                'min_ready_seconds': getattr(spec, 'min_ready_seconds', None),
+                'revision_history_limit': getattr(spec, 'revision_history_limit', None),
+                'containers': [to_dict_container(cn) for cn in (containers or [])]
+            },
+            'status': {
+                'desired_number_scheduled': getattr(status, 'desired_number_scheduled', None),
+                'current_number_scheduled': getattr(status, 'current_number_scheduled', None),
+                'number_ready': getattr(status, 'number_ready', None),
+                'number_available': getattr(status, 'number_available', None),
+                'number_unavailable': getattr(status, 'number_unavailable', None),
+                'updated_number_scheduled': getattr(status, 'updated_number_scheduled', None),
+                'conditions': [
+                    {
+                        'type': c.type,
+                        'status': c.status,
+                        'reason': getattr(c, 'reason', None),
+                        'message': getattr(c, 'message', None),
+                        'last_transition_time': getattr(c, 'last_transition_time', None).isoformat() if getattr(c, 'last_transition_time', None) else None
+                    } for c in (getattr(status, 'conditions', []) or [])
+                ]
+            }
+        }
+        return jsonify({'daemonset': result})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 # DaemonSet restart API
@@ -689,6 +862,151 @@ def deployments_summary():
         return jsonify({'deployments': result})
     except Exception as e:
         return jsonify({'deployments': [], 'error': str(e)})
+
+@app.route('/k8s-explorer/replicasets-summary')
+def replicasets_summary():
+    """ReplicaSets summary list (namespace, name, ready, desired, age)."""
+    try:
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        apps_v1 = client.AppsV1Api()
+        rsets = apps_v1.list_replica_set_for_all_namespaces().items
+        result = []
+        for rs in rsets:
+            desired = getattr(rs.spec, 'replicas', 0) or 0
+            ready = getattr(rs.status, 'ready_replicas', 0) or 0
+            creation_timestamp = getattr(rs.metadata, 'creation_timestamp', None)
+            result.append({
+                'namespace': rs.metadata.namespace,
+                'name': rs.metadata.name,
+                'ready': f"{ready}/{desired}",
+                'desired': desired,
+                'ready_replicas': ready,
+                'creation_timestamp': creation_timestamp.isoformat() if creation_timestamp else None
+            })
+        return jsonify({'replicasets': result})
+    except Exception as e:
+        return jsonify({'replicasets': [], 'error': str(e)})
+
+@app.route('/k8s-explorer/delete-replicasets', methods=['POST'])
+def delete_replicasets():
+    """Delete one or more ReplicaSets.
+    Body JSON: { "items": [ {"namespace": "ns", "name": "rs1"}, ... ] }
+    Returns: { deleted: [...], errors: [...] }
+    """
+    try:
+        data = request.get_json(force=True)
+        items = data.get('items') if isinstance(data, dict) else None
+        if not items or not isinstance(items, list):
+            return jsonify({'error': 'items listesi zorunlu'}), 400
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        apps_v1 = client.AppsV1Api()
+        deleted = []
+        errors = []
+        for it in items:
+            ns = (it or {}).get('namespace')
+            name = (it or {}).get('name')
+            if not ns or not name:
+                errors.append({'namespace': ns, 'name': name, 'error': 'eksik namespace veya name'})
+                continue
+            try:
+                # Foreground propagation -> orphanDependents=False ensures pods may be deleted depending policy
+                apps_v1.delete_namespaced_replica_set(name=name, namespace=ns)
+                deleted.append({'namespace': ns, 'name': name})
+            except Exception as ie:
+                errors.append({'namespace': ns, 'name': name, 'error': str(ie)})
+        status_code = 207 if errors else 200
+        return jsonify({'deleted': deleted, 'errors': errors}), status_code
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/k8s-explorer/deployment-properties')
+def deployment_properties():
+    """Return detailed properties for a single Deployment (spec + status essentials)."""
+    namespace = request.args.get('namespace')
+    name = request.args.get('name')
+    if not namespace or not name:
+        return jsonify({'error': 'namespace ve name zorunlu'}), 400
+    try:
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        apps_v1 = client.AppsV1Api()
+        dep = apps_v1.read_namespaced_deployment(name=name, namespace=namespace)
+        md = dep.metadata
+        spec = dep.spec
+        status = dep.status
+        def to_dict_container(cn):
+            resources = getattr(cn, 'resources', None)
+            limits = getattr(resources, 'limits', None) if resources else None
+            requests_r = getattr(resources, 'requests', None) if resources else None
+            sec = getattr(cn, 'security_context', None)
+            return {
+                'name': cn.name,
+                'image': cn.image,
+                'image_pull_policy': getattr(cn, 'image_pull_policy', None),
+                'ports': [p.container_port for p in (cn.ports or [])] if getattr(cn, 'ports', None) else [],
+                'env': [{ 'name': e.name, 'value': getattr(e, 'value', None)} for e in (cn.env or [])] if getattr(cn, 'env', None) else [],
+                'resources': {
+                    'limits': limits,
+                    'requests': requests_r
+                },
+                'security_context': {
+                    'run_as_user': getattr(sec, 'run_as_user', None) if sec else None,
+                    'run_as_group': getattr(sec, 'run_as_group', None) if sec else None,
+                    'fs_group': getattr(sec, 'fs_group', None) if sec else None,
+                    'read_only_root_filesystem': getattr(sec, 'read_only_root_filesystem', None) if sec else None,
+                    'allow_privilege_escalation': getattr(sec, 'allow_privilege_escalation', None) if sec else None,
+                } if sec else None,
+                'liveness_probe': bool(getattr(cn, 'liveness_probe', None)),
+                'readiness_probe': bool(getattr(cn, 'readiness_probe', None)),
+            }
+        containers = [to_dict_container(cn) for cn in (spec.template.spec.containers or [])]
+        strategy = getattr(spec, 'strategy', None)
+        selector = getattr(spec, 'selector', None)
+        result = {
+            'metadata': {
+                'name': md.name,
+                'namespace': md.namespace,
+                'labels': md.labels or {},
+                'annotations': md.annotations or {},
+                'creation_timestamp': md.creation_timestamp.isoformat() if getattr(md, 'creation_timestamp', None) else None,
+            },
+            'spec': {
+                'replicas': getattr(spec, 'replicas', None),
+                'strategy': getattr(strategy, 'type', None) if strategy else None,
+                'selector': getattr(selector, 'match_labels', None) if selector else None,
+                'containers': containers,
+            },
+            'status': {
+                'replicas': getattr(status, 'replicas', None),
+                'ready_replicas': getattr(status, 'ready_replicas', None),
+                'updated_replicas': getattr(status, 'updated_replicas', None),
+                'available_replicas': getattr(status, 'available_replicas', None),
+                'unavailable_replicas': getattr(status, 'unavailable_replicas', None),
+                'conditions': [
+                    {
+                        'type': c.type,
+                        'status': c.status,
+                        'reason': getattr(c, 'reason', None),
+                        'message': getattr(c, 'message', None),
+                        'last_update_time': getattr(c, 'last_update_time', None).isoformat() if getattr(c, 'last_update_time', None) else None
+                    } for c in (getattr(status, 'conditions', []) or [])
+                ]
+            }
+        }
+        return jsonify({'deployment': result})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/configmap-secrets')

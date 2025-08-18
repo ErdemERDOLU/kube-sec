@@ -1,18 +1,187 @@
 {% extends "base.html" %}
-{% block title %}Ana Sayfa{% endblock %}
+{% block title %}Ana Sayfa - Kubernetes Security Checker{% endblock %}
+
 {% block content %}
-<div class="card mb-4" style="background:#f8f9fa;border:1px solid #e0e0e0;">
-  <div class="card-body">
-    <h3 class="card-title">Kubernetes Security Checker</h3>
-    <p class="card-text">
-      <b>Uygulama Nedir?</b><br>
-      Bu uygulama, Kubernetes ortamlarında güvenlik açıklarını, ayrıcalıklı container kullanımlarını, root kullanıcı risklerini, RBAC (Role-Based Access Control) riskli rolleri ve pod exec olaylarını merkezi bir web arayüzünde görselleştirmek için geliştirilmiştir.<br><br>
-      <b>Ne için yazıldı?</b><br>
-      Amacımız, Kubernetes yöneticilerinin ve DevOps ekiplerinin, cluster güvenliğini kolayca analiz edebilmesi ve riskli alanları hızlıca tespit edebilmesidir. Ağ topolojisi, pod iletişimi ve güvenlik zafiyetleri tek ekranda sunulur.<br><br>
-      <b>Biz Kimiz?</b><br>
-      One Plus Mon ekibi olarak, bulut ve konteyner güvenliği alanında açık kaynak çözümler üretmekteyiz. Bu proje, topluluğa katkı ve güvenli Kubernetes altyapıları için geliştirilmiştir.<br><br>
-      <span class="text-muted">Created by: <b>One Plus Mon</b></span>
-    </p>
-  </div>
+<div class="row">
+    <!-- Hero Section -->
+    <div class="col-12 mb-5">
+        <div class="card bg-primary text-white">
+            <div class="card-body p-5 text-center">
+                <i class="bi bi-shield-check display-1 mb-4"></i>
+                <h1 class="display-4 fw-bold mb-3">Kubernetes Security Checker</h1>
+                <p class="lead mb-4">
+                    Kubernetes ortamlarınızda güvenlik açıklarını tespit edin, 
+                    ayrıcalıklı container kullanımlarını analiz edin ve cluster güvenliğinizi artırın.
+                </p>
+                <div class="d-flex gap-3 justify-content-center flex-wrap">
+                    <a href="/mesh" class="btn btn-light btn-lg">
+                        <i class="bi bi-diagram-3 me-2"></i>Mesh Görselleştirme
+                    </a>
+                    <a href="/vulnerabilities" class="btn btn-outline-light btn-lg">
+                        <i class="bi bi-bug me-2"></i>Zafiyetleri Tara
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Feature Cards -->
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center p-4">
+                <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                     style="width: 80px; height: 80px;">
+                    <i class="bi bi-shield-exclamation text-primary" style="font-size: 2rem;"></i>
+                </div>
+                <h4 class="card-title">Güvenlik Analizi</h4>
+                <p class="card-text text-muted">
+                    Kubernetes cluster'ınızdaki güvenlik açıklarını, ayrıcalıklı container'ları 
+                    ve RBAC risklerini detaylı olarak analiz edin.
+                </p>
+                <a href="/vulnerabilities" class="btn btn-primary">
+                    <i class="bi bi-arrow-right me-1"></i>Analiz Et
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center p-4">
+                <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                     style="width: 80px; height: 80px;">
+                    <i class="bi bi-diagram-3 text-success" style="font-size: 2rem;"></i>
+                </div>
+                <h4 class="card-title">Network Mesh</h4>
+                <p class="card-text text-muted">
+                    Pod iletişimlerini, service bağlantılarını ve network topolojisini 
+                    interaktif grafiklerle görselleştirin.
+                </p>
+                <a href="/mesh" class="btn btn-success">
+                    <i class="bi bi-arrow-right me-1"></i>Görselleştir
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center p-4">
+                <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                     style="width: 80px; height: 80px;">
+                    <i class="bi bi-compass text-info" style="font-size: 2rem;"></i>
+                </div>
+                <h4 class="card-title">Kubernetes Explorer</h4>
+                <p class="card-text text-muted">
+                    Cluster kaynaklarınızı keşfedin, YAML dosyalarını düzenleyin 
+                    ve pod loglarını gerçek zamanlı takip edin.
+                </p>
+                <a href="/k8s-explorer" class="btn btn-info">
+                    <i class="bi bi-arrow-right me-1"></i>Keşfet
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center p-4">
+                <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                     style="width: 80px; height: 80px;">
+                    <i class="bi bi-layers text-warning" style="font-size: 2rem;"></i>
+                </div>
+                <h4 class="card-title">Workload Yönetimi</h4>
+                <p class="card-text text-muted">
+                    Deployment'ları, DaemonSet'leri ve Pod'ları merkezi bir arayüzden 
+                    yönetin ve durumlarını izleyin.
+                </p>
+                <a href="/workloads" class="btn btn-warning">
+                    <i class="bi bi-arrow-right me-1"></i>Yönet
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center p-4">
+                <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                     style="width: 80px; height: 80px;">
+                    <i class="bi bi-hdd-stack text-danger" style="font-size: 2rem;"></i>
+                </div>
+                <h4 class="card-title">Node Monitoring</h4>
+                <p class="card-text text-muted">
+                    Kubernetes node'larınızın kaynak kullanımını, durumunu 
+                    ve performans metriklerini izleyin.
+                </p>
+                <a href="/nodes" class="btn btn-danger">
+                    <i class="bi bi-arrow-right me-1"></i>İzle
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center p-4">
+                <div class="bg-secondary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                     style="width: 80px; height: 80px;">
+                    <i class="bi bi-code-slash text-secondary" style="font-size: 2rem;"></i>
+                </div>
+                <h4 class="card-title">YAML Linter</h4>
+                <p class="card-text text-muted">
+                    Kubernetes YAML dosyalarınızı doğrulayın, syntax hatalarını 
+                    tespit edin ve best practice önerilerini alın.
+                </p>
+                <a href="/yaml-linter" class="btn btn-secondary">
+                    <i class="bi bi-arrow-right me-1"></i>Doğrula
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- About Section -->
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body p-5">
+                <div class="row align-items-center">
+                    <div class="col-lg-8">
+                        <h2 class="mb-4">
+                            <i class="bi bi-info-circle text-primary me-2"></i>
+                            Uygulama Hakkında
+                        </h2>
+                        <p class="lead mb-3">
+                            Bu uygulama, Kubernetes ortamlarında güvenlik açıklarını, ayrıcalıklı container 
+                            kullanımlarını, root kullanıcı risklerini, RBAC (Role-Based Access Control) 
+                            riskli rolleri ve pod exec olaylarını merkezi bir web arayüzünde görselleştirmek 
+                            için geliştirilmiştir.
+                        </p>
+                        <p class="mb-3">
+                            <strong>Amacımız:</strong> Kubernetes yöneticilerinin ve DevOps ekiplerinin, 
+                            cluster güvenliğini kolayca analiz edebilmesi ve riskli alanları hızlıca 
+                            tespit edebilmesidir. Ağ topolojisi, pod iletişimi ve güvenlik zafiyetleri 
+                            tek ekranda sunulur.
+                        </p>
+                        <p class="text-muted mb-0">
+                            <i class="bi bi-people me-2"></i>
+                            <strong>One Plus Mon</strong> ekibi olarak, bulut ve konteyner güvenliği 
+                            alanında açık kaynak çözümler üretmekteyiz.
+                        </p>
+                    </div>
+                    <div class="col-lg-4 text-center">
+                        <div class="bg-light rounded-3 p-4">
+                            <i class="bi bi-award text-primary display-1 mb-3"></i>
+                            <h5>Açık Kaynak</h5>
+                            <p class="text-muted mb-0">
+                                Topluluk katkısı ile geliştirilen güvenli Kubernetes altyapıları için.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

@@ -614,8 +614,39 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
   </div>
   <div class="tab-pane fade" id="replicationcontrollers" role="tabpanel">Replication Controller içeriği buraya gelecek.</div>
-  <div class="tab-pane fade" id="jobs" role="tabpanel">Jobs içeriği buraya gelecek.</div>
-  <div class="tab-pane fade" id="cronjobs" role="tabpanel">CronJobs içeriği buraya gelecek.</div>
+  <div class="tab-pane fade" id="jobs" role="tabpanel">
+    <div class="row">
+      <div class="col-md-6">
+        <div id="pie-jobs-tab" style="min-height:300px;"></div>
+      </div>
+      <div class="col-md-6">
+        <h5 class="mt-2">Job Listesi</h5>
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+          <label for="jobsNamespaceFilter" class="form-label mb-0">Namespace:</label>
+          <select id="jobsNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
+        </div>
+        <div id="jobs-table-container"><div class="text-muted">Yükleniyor...</div></div>
+        <div id="jobs-pagination" class="mt-2"></div>
+      </div>
+    </div>
+  </div>
+  <div class="tab-pane fade" id="cronjobs" role="tabpanel">
+    <div class="row">
+      <div class="col-md-4">
+        <label for="cronjobsNamespaceFilter" class="form-label mb-0">Namespace:</label>
+        <select id="cronjobsNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
+      </div>
+      <div class="col-md-8 text-end">
+        <div id="pie-cronjobs-tab" style="height:200px; display:inline-block; min-width:200px;"></div>
+      </div>
+    </div>
+    <div class="mt-3">
+      <div id="cronjobs-table-container"><div class="text-muted">Yükleniyor...</div></div>
+      <nav>
+        <ul class="pagination" id="cronjobs-pagination"></ul>
+      </nav>
+    </div>
+  </div>
 </div>
 {% block scripts %}
 </script>
@@ -1633,6 +1664,229 @@ async function renderDaemonSetsTabChart() {
     });
   });
 })();
+// Jobs tab
+let jobsCurrentPage = 1;
+const JOBS_PAGE_SIZE = 10;
+async function renderJobsTabChart() {
+  const pieContainer = document.getElementById('pie-jobs-tab');
+  if (!pieContainer) return;
+  pieContainer.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
+  try {
+    const resp = await fetch('/k8s-explorer/jobs-summary');
+    if (!resp.ok) {
+      pieContainer.innerHTML = '<div class="text-danger">Job verisi alınamadı.</div>';
+      return;
+    }
+    const data = await resp.json();
+    const jobs = Array.isArray(data.jobs) ? data.jobs : [];
+    if (jobs.length === 0) {
+      renderPieChart('pie-jobs-tab', 'Jobs', {});
+      return;
+    }
+    // Count succeeded vs failed vs active
+    const counts = { 'Succeeded': 0, 'Failed': 0, 'Active': 0 };
+    for (const j of jobs) {
+      if (j.succeeded && j.succeeded > 0) counts['Succeeded'] += 1;
+      else if (j.failed && j.failed > 0) counts['Failed'] += 1;
+      else counts['Active'] += 1;
+    }
+    renderPieChart('pie-jobs-tab', 'Jobs', counts);
+  } catch (e) {
+    pieContainer.innerHTML = '<div class="text-danger">Job verisi alınırken hata oluştu.</div>';
+  }
+}
+
+async function fetchAndRenderJobsTable(page) {
+  if (page) jobsCurrentPage = page;
+  const container = document.getElementById('jobs-table-container');
+  if (!container) return;
+  container.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
+  try {
+    const resp = await fetch('/k8s-explorer/jobs-summary');
+    const data = await resp.json();
+    let jobs = Array.isArray(data.jobs) ? data.jobs : [];
+    const nsSel = document.getElementById('jobsNamespaceFilter');
+    if (nsSel) {
+      const prev = nsSel.value;
+      const namespaces = [...new Set(jobs.map(j=>j.namespace))].sort();
+      nsSel.innerHTML = '<option value="">(Hepsi)</option>' + namespaces.map(ns=>`<option value="${ns}">${ns}</option>`).join('');
+      if ([...nsSel.options].some(o=>o.value===prev)) nsSel.value = prev; else nsSel.value='';
+      if (!nsSel.onchange) nsSel.onchange = () => fetchAndRenderJobsTable(1);
+    }
+    if (nsSel && nsSel.value) jobs = jobs.filter(j=>j.namespace === nsSel.value);
+    if (jobs.length === 0) {
+      container.innerHTML = '<div class="text-muted">Job bulunamadı.</div>';
+      renderPieChart('pie-jobs-tab', 'Jobs', {});
+      return;
+    }
+    const totalPages = Math.ceil(jobs.length / JOBS_PAGE_SIZE);
+    if (jobsCurrentPage > totalPages) jobsCurrentPage = totalPages;
+    if (jobsCurrentPage < 1) jobsCurrentPage = 1;
+    const start = (jobsCurrentPage - 1) * JOBS_PAGE_SIZE;
+    const pageItems = jobs.slice(start, start + JOBS_PAGE_SIZE);
+    let html = '<table class="table table-sm table-bordered"><thead><tr><th>Namespace</th><th>Name</th><th>Succeeded</th><th>Failed</th><th>Completions</th><th>Age</th></tr></thead><tbody>';
+    const now = new Date();
+    for (const j of pageItems) {
+      let age='-';
+      if (j.creation_timestamp) {
+        const created = new Date(j.creation_timestamp);
+        const diffMs = now - created;
+        const diffDays = Math.floor(diffMs / (1000*60*60*24));
+        const diffHrs = Math.floor((diffMs % (1000*60*60*24)) / (1000*60*60));
+        const diffMin = Math.floor((diffMs % (1000*60*60)) / (1000*60));
+        if (diffDays > 0) age = diffDays + 'd'; else if (diffHrs>0) age = diffHrs + 'h'; else age = diffMin + 'm';
+      }
+      html += `<tr><td>${j.namespace}</td><td>${j.name}</td><td>${j.succeeded || 0}</td><td>${j.failed || 0}</td><td>${j.completions || '-'}</td><td>${age}</td></tr>`;
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+    // Pagination
+    const pagDiv = document.getElementById('jobs-pagination');
+    if (pagDiv) {
+      if (totalPages <= 1) pagDiv.innerHTML = ''; else {
+        let phtml = '<nav><ul class="pagination pagination-sm mb-0">';
+        const makeLi = (p, label, disabled=false, active=false) => `<li class="page-item ${disabled?'disabled':''} ${active?'active':''}"><a class="page-link" href="#" data-page="${p}">${label}</a></li>`;
+        phtml += makeLi(jobsCurrentPage-1,'«', jobsCurrentPage===1);
+        const windowSize = 5;
+        let startP = Math.max(1, jobsCurrentPage - Math.floor(windowSize/2));
+        let endP = Math.min(totalPages, startP + windowSize -1);
+        if (endP - startP + 1 < windowSize) startP = Math.max(1, endP - windowSize +1);
+        for (let p = startP; p<=endP; p++) phtml += makeLi(p, p, false, p===jobsCurrentPage);
+        phtml += makeLi(jobsCurrentPage+1,'»', jobsCurrentPage===totalPages);
+        phtml += '</ul></nav>';
+        pagDiv.innerHTML = phtml;
+        pagDiv.querySelectorAll('a.page-link').forEach(a=>{
+          a.addEventListener('click', ev=>{ ev.preventDefault(); const p=parseInt(a.dataset.page); if(!isNaN(p)) fetchAndRenderJobsTable(p); });
+        });
+      }
+    }
+    // Update jobs pie chart too
+    renderJobsTabChart();
+  } catch (e) {
+    container.innerHTML = '<div class="text-danger">Job listesi alınırken hata oluştu.</div>';
+  }
+}
+
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.querySelector('button[data-bs-target="#jobs"]');
+    if (btn) btn.addEventListener('shown.bs.tab', function() {
+      fetchAndRenderJobsTable();
+      ensureHighchartsAndRender(renderJobsTabChart);
+    });
+  });
+})();
+// CronJobs tab
+let cronjobsCurrentPage = 1;
+const CRONJOBS_PAGE_SIZE = 10;
+async function renderCronJobsTabChart() {
+  const pieContainer = document.getElementById('pie-cronjobs-tab');
+  if (!pieContainer) return;
+  pieContainer.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
+  try {
+    const resp = await fetch('/k8s-explorer/cronjobs-summary');
+    if (!resp.ok) {
+      pieContainer.innerHTML = '<div class="text-danger">CronJob verisi alınamadı.</div>';
+      return;
+    }
+    const data = await resp.json();
+    const cronjobs = Array.isArray(data.cronjobs) ? data.cronjobs : [];
+    if (cronjobs.length === 0) {
+      renderPieChart('pie-cronjobs-tab', 'CronJobs', {});
+      return;
+    }
+    const counts = { 'Active': 0, 'Suspended': 0, 'Idle': 0 };
+    for (const cj of cronjobs) {
+      if (cj.suspended) counts['Suspended'] += 1;
+      else if (cj.active && cj.active > 0) counts['Active'] += 1;
+      else counts['Idle'] += 1;
+    }
+    renderPieChart('pie-cronjobs-tab', 'CronJobs', counts);
+  } catch (e) {
+    pieContainer.innerHTML = '<div class="text-danger">CronJob verisi alınırken hata oluştu.</div>';
+  }
+}
+
+async function fetchAndRenderCronJobsTable(page) {
+  if (page) cronjobsCurrentPage = page;
+  const container = document.getElementById('cronjobs-table-container');
+  if (!container) return;
+  container.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
+  try {
+    const resp = await fetch('/k8s-explorer/cronjobs-summary');
+    const data = await resp.json();
+    let cronjobs = Array.isArray(data.cronjobs) ? data.cronjobs : [];
+    const nsSel = document.getElementById('cronjobsNamespaceFilter');
+    if (nsSel) {
+      const prev = nsSel.value;
+      const namespaces = [...new Set(cronjobs.map(c=>c.namespace))].sort();
+      nsSel.innerHTML = '<option value="">(Hepsi)</option>' + namespaces.map(ns=>`<option value="${ns}">${ns}</option>`).join('');
+      if ([...nsSel.options].some(o=>o.value===prev)) nsSel.value = prev; else nsSel.value='';
+      if (!nsSel.onchange) nsSel.onchange = () => fetchAndRenderCronJobsTable(1);
+    }
+    if (nsSel && nsSel.value) cronjobs = cronjobs.filter(c=>c.namespace === nsSel.value);
+    if (cronjobs.length === 0) {
+      container.innerHTML = '<div class="text-muted">CronJob bulunamadı.</div>';
+      renderPieChart('pie-cronjobs-tab', 'CronJobs', {});
+      return;
+    }
+    const totalPages = Math.ceil(cronjobs.length / CRONJOBS_PAGE_SIZE);
+    if (cronjobsCurrentPage > totalPages) cronjobsCurrentPage = totalPages;
+    if (cronjobsCurrentPage < 1) cronjobsCurrentPage = 1;
+    const start = (cronjobsCurrentPage - 1) * CRONJOBS_PAGE_SIZE;
+    const pageItems = cronjobs.slice(start, start + CRONJOBS_PAGE_SIZE);
+    let html = '<table class="table table-sm table-bordered"><thead><tr><th>Namespace</th><th>Name</th><th>Schedule</th><th>Suspended</th><th>LastSchedule</th><th>Age</th></tr></thead><tbody>';
+    const now = new Date();
+    for (const cj of pageItems) {
+      let age='-';
+      if (cj.creation_timestamp) {
+        const created = new Date(cj.creation_timestamp);
+        const diffMs = now - created;
+        const diffDays = Math.floor(diffMs / (1000*60*60*24));
+        const diffHrs = Math.floor((diffMs % (1000*60*60*24)) / (1000*60*60));
+        const diffMin = Math.floor((diffMs % (1000*60*60)) / (1000*60));
+        if (diffDays > 0) age = diffDays + 'd'; else if (diffHrs>0) age = diffHrs + 'h'; else age = diffMin + 'm';
+      }
+      html += `<tr><td>${cj.namespace}</td><td>${cj.name}</td><td>${cj.schedule || '-'}</td><td>${cj.suspended? 'Yes':'No'}</td><td>${cj.last_schedule_time? cj.last_schedule_time : '-'}</td><td>${age}</td></tr>`;
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+    // Pagination
+    const pagDiv = document.getElementById('cronjobs-pagination');
+    if (pagDiv) {
+      if (totalPages <= 1) pagDiv.innerHTML = ''; else {
+        let phtml = '<nav><ul class="pagination pagination-sm mb-0">';
+        const makeLi = (p, label, disabled=false, active=false) => `<li class="page-item ${disabled?'disabled':''} ${active?'active':''}"><a class="page-link" href="#" data-page="${p}">${label}</a></li>`;
+        phtml += makeLi(cronjobsCurrentPage-1,'«', cronjobsCurrentPage===1);
+        const windowSize = 5;
+        let startP = Math.max(1, cronjobsCurrentPage - Math.floor(windowSize/2));
+        let endP = Math.min(totalPages, startP + windowSize -1);
+        if (endP - startP + 1 < windowSize) startP = Math.max(1, endP - windowSize +1);
+        for (let p = startP; p<=endP; p++) phtml += makeLi(p, p, false, p===cronjobsCurrentPage);
+        phtml += makeLi(cronjobsCurrentPage+1,'»', cronjobsCurrentPage===totalPages);
+        phtml += '</ul></nav>';
+        pagDiv.innerHTML = phtml;
+        pagDiv.querySelectorAll('a.page-link').forEach(a=>{
+          a.addEventListener('click', ev=>{ ev.preventDefault(); const p=parseInt(a.dataset.page); if(!isNaN(p)) fetchAndRenderCronJobsTable(p); });
+        });
+      }
+    }
+    // Update pie chart
+    renderCronJobsTabChart();
+  } catch (e) {
+    container.innerHTML = '<div class="text-danger">CronJob listesi alınırken hata oluştu.</div>';
+  }
+}
+
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.querySelector('button[data-bs-target="#cronjobs"]');
+    if (btn) btn.addEventListener('shown.bs.tab', function() {
+      fetchAndRenderCronJobsTable();
+      ensureHighchartsAndRender(renderCronJobsTabChart);
+    });
+  });
+})();
 document.addEventListener('DOMContentLoaded', function() {
   if (document.getElementById('overview').classList.contains('active')) {
     ensureHighchartsAndRender(renderOverviewCharts);
@@ -1915,4 +2169,3 @@ window.showDaemonSetProperties = showDaemonSetProperties;
 </script>
 {% endblock %}
 {% endblock %}
-

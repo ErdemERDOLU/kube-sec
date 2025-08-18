@@ -601,27 +601,77 @@ def yaml_lint_api():
 
 
 
-# Pod silme endpointi
-@app.route('/k8s-explorer/delete', methods=['POST'])
+# Generic delete endpoint for various K8s resources
+@app.route('/k8s-explorer/delete', methods=['POST', 'DELETE'])
 def k8s_explorer_delete():
     try:
-        obj_type = request.args.get('type')
-        namespace = request.args.get('namespace')
-        name = request.args.get('name')
-        if obj_type != 'pod' or not namespace or not name:
-            return 'type=pod, namespace ve name zorunlu', 400
+        # Accept parameters from querystring OR JSON body (frontend uses JSON DELETE)
+        data = {}
+        try:
+            data = request.get_json(force=False) or {}
+        except Exception:
+            data = {}
+
+        obj_type = (request.args.get('type') or data.get('type') or '').lower()
+        namespace = request.args.get('namespace') or data.get('namespace')
+        name = request.args.get('name') or data.get('name')
+
+        if not obj_type or not namespace or not name:
+            return jsonify({'error': 'type, namespace ve name zorunlu'}), 400
+
         config.load_kube_config()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
         client.Configuration.set_default(c)
+
         core_v1 = client.CoreV1Api()
-        core_v1.delete_namespaced_pod(name=name, namespace=namespace, grace_period_seconds=30)
-        # Pod silindi, pods_summary_cache'i hemen güncelle
-        update_pods_summary_cache()
-        return 'ok', 200
+        apps_v1 = client.AppsV1Api()
+
+        # Perform deletion depending on resource type
+        if obj_type == 'pod':
+            core_v1.delete_namespaced_pod(name=name, namespace=namespace, grace_period_seconds=30)
+            # update pods cache immediately
+            try:
+                update_pods_summary_cache()
+            except Exception:
+                pass
+            return jsonify({'ok': True, 'deleted': {'type': 'pod', 'namespace': namespace, 'name': name}}), 200
+
+        elif obj_type == 'service':
+            core_v1.delete_namespaced_service(name=name, namespace=namespace)
+            return jsonify({'ok': True, 'deleted': {'type': 'service', 'namespace': namespace, 'name': name}}), 200
+
+        elif obj_type in ('deployment', 'deployments'):
+            apps_v1.delete_namespaced_deployment(name=name, namespace=namespace, body=client.V1DeleteOptions())
+            return jsonify({'ok': True, 'deleted': {'type': 'deployment', 'namespace': namespace, 'name': name}}), 200
+
+        elif obj_type in ('replicaset', 'replicasets'):
+            apps_v1.delete_namespaced_replica_set(name=name, namespace=namespace, body=client.V1DeleteOptions())
+            return jsonify({'ok': True}), 200
+
+        elif obj_type in ('daemonset', 'daemonsets'):
+            apps_v1.delete_namespaced_daemon_set(name=name, namespace=namespace, body=client.V1DeleteOptions())
+            return jsonify({'ok': True}), 200
+
+        elif obj_type in ('statefulset', 'statefulsets'):
+            apps_v1.delete_namespaced_stateful_set(name=name, namespace=namespace, body=client.V1DeleteOptions())
+            return jsonify({'ok': True}), 200
+
+        else:
+            return jsonify({'error': f'Unsupported resource type: {obj_type}'}), 400
+
+    except client.exceptions.ApiException as api_exc:
+        # Kubernetes client errors: return message and code
+        try:
+            msg = api_exc.body or str(api_exc)
+        except Exception:
+            msg = str(api_exc)
+        return jsonify({'error': 'Kubernetes API error', 'details': msg}), getattr(api_exc, 'status', 500)
     except Exception as e:
-        return str(e), 500
+        # Generic error
+        tb = traceback.format_exc()
+        return jsonify({'error': str(e), 'trace': tb}), 500
 
 
 # Workload stats API for Overview pie charts
@@ -890,6 +940,135 @@ def replicasets_summary():
         return jsonify({'replicasets': result})
     except Exception as e:
         return jsonify({'replicasets': [], 'error': str(e)})
+
+
+@app.route('/k8s-explorer/jobs-summary')
+def jobs_summary():
+    """Jobs summary list (namespace, name, succeeded, failed, completions, age)."""
+    try:
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        batch_v1 = client.BatchV1Api()
+        jobs = batch_v1.list_job_for_all_namespaces().items
+        result = []
+        for job in jobs:
+            succeeded = getattr(job.status, 'succeeded', 0) or 0
+            failed = getattr(job.status, 'failed', 0) or 0
+            completions = getattr(job.spec, 'completions', None)
+            creation_timestamp = getattr(job.metadata, 'creation_timestamp', None)
+            result.append({
+                'namespace': job.metadata.namespace,
+                'name': job.metadata.name,
+                'succeeded': succeeded,
+                'failed': failed,
+                'completions': completions,
+                'creation_timestamp': creation_timestamp.isoformat() if creation_timestamp else None
+            })
+        return jsonify({'jobs': result})
+    except Exception as e:
+        return jsonify({'jobs': [], 'error': str(e)})
+
+
+@app.route('/k8s-explorer/cronjobs-summary')
+def cronjobs_summary():
+    """CronJobs summary list (namespace, name, schedule, suspended, last_schedule_time, active, age)."""
+    try:
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        batch_v1 = client.BatchV1Api()
+        batch_v1beta1 = client.BatchV1beta1Api() if hasattr(client, 'BatchV1beta1Api') else None
+        cronjobs = []
+        # Prefer BatchV1 CronJob API if available
+        try:
+            if hasattr(batch_v1, 'list_cron_job_for_all_namespaces'):
+                cronjobs = batch_v1.list_cron_job_for_all_namespaces().items
+            elif batch_v1beta1:
+                cronjobs = batch_v1beta1.list_cron_job_for_all_namespaces().items
+            else:
+                cronjobs = []
+        except Exception:
+            # Fallback to beta if v1 call failed
+            if batch_v1beta1:
+                try:
+                    cronjobs = batch_v1beta1.list_cron_job_for_all_namespaces().items
+                except Exception:
+                    cronjobs = []
+            else:
+                cronjobs = []
+        result = []
+        for cj in cronjobs:
+            spec = getattr(cj, 'spec', None) or {}
+            status = getattr(cj, 'status', None) or {}
+            suspended = getattr(spec, 'suspend', False)
+            schedule = getattr(spec, 'schedule', None)
+            last_schedule_time = getattr(status, 'last_schedule_time', None) or getattr(status, 'lastScheduleTime', None)
+            active = 0
+            try:
+                active = len(getattr(status, 'active', []) or [])
+            except Exception:
+                active = 0
+            creation_timestamp = getattr(cj.metadata, 'creation_timestamp', None)
+            result.append({
+                'namespace': cj.metadata.namespace,
+                'name': cj.metadata.name,
+                'schedule': schedule,
+                'suspended': bool(suspended),
+                'last_schedule_time': last_schedule_time.isoformat() if last_schedule_time else None,
+                'active': active,
+                'creation_timestamp': creation_timestamp.isoformat() if creation_timestamp else None
+            })
+        return jsonify({'cronjobs': result})
+    except Exception as e:
+        return jsonify({'cronjobs': [], 'error': str(e)})
+
+
+# Simple proxy API used by k8s_explorer frontend
+@app.route('/api/k8s/service/<namespace>/<name>/pods')
+def api_service_pods(namespace, name):
+    """Return pods belonging to a Service by using its selector."""
+    try:
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        core_v1 = client.CoreV1Api()
+        svc = core_v1.read_namespaced_service(name, namespace)
+        selector = svc.spec.selector or {}
+        if not selector:
+            return jsonify([])
+        # Build label selector string
+        selector_str = ','.join([f"{k}={v}" for k, v in selector.items()])
+        pods = core_v1.list_namespaced_pod(namespace=namespace, label_selector=selector_str).items
+        result = []
+        for p in pods:
+            result.append({
+                'namespace': p.metadata.namespace,
+                'name': p.metadata.name,
+                'status': getattr(p.status, 'phase', None)
+            })
+        return jsonify(result)
+    except client.exceptions.ApiException as ae:
+        # If the service doesn't exist, return empty list (frontend expects no pods)
+        try:
+            status_code = int(getattr(ae, 'status', 0) or 0)
+        except Exception:
+            status_code = 0
+        if status_code == 404:
+            return jsonify([])
+        import traceback
+        tb = traceback.format_exc()
+        return jsonify({'error': str(ae), 'traceback': tb}), 500
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        return jsonify({'error': str(e), 'traceback': tb}), 500
 
 @app.route('/k8s-explorer/delete-replicasets', methods=['POST'])
 def delete_replicasets():

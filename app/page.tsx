@@ -1,7 +1,7 @@
 "use client"
 
-import  from "../src/web/static/pod_describe"
+import { cn } from "../lib/utils"
 
 export default function SyntheticV0PageForDeployment() {
-  return < />
+  return <cn />
 }

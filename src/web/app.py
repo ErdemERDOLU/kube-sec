@@ -2084,11 +2084,21 @@ def vulnerabilities():
         kube_client.networking_v1 = client.NetworkingV1Api()
     except Exception as e:
         return render_template('vulnerabilities.html', error=str(e))
+    
     scanner = K8sScanner(kube_client)
     all_vulnerabilities = {}
     pod_images = {}
+    
+    selected_namespace = request.args.get('namespace', 'all')
+    
     namespaces = [ns.metadata.name for ns in kube_client.core_v1.list_namespace().items]
-    for ns in namespaces:
+    
+    if selected_namespace != 'all' and selected_namespace in namespaces:
+        target_namespaces = [selected_namespace]
+    else:
+        target_namespaces = namespaces
+    
+    for ns in target_namespaces:
         deployments = kube_client.apps_v1.list_namespaced_deployment(ns).items
         for dep in deployments:
             vulns = scanner.list_vulnerabilities(dep)
@@ -2098,7 +2108,12 @@ def vulnerabilities():
             # Pod image bilgisini ekle
             if dep.spec.template.spec.containers:
                 pod_images[dep_key] = ', '.join([c.image for c in dep.spec.template.spec.containers])
-    return render_template('vulnerabilities.html', vulnerabilities=all_vulnerabilities, pod_images=pod_images)
+    
+    return render_template('vulnerabilities.html', 
+                         vulnerabilities=all_vulnerabilities, 
+                         pod_images=pod_images,
+                         all_namespaces=namespaces,
+                         selected_namespace=selected_namespace)
 
 
 

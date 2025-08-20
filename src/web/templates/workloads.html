@@ -23,6 +23,24 @@
       </div>
     </div>
   </div>
+  <!-- Kubernetes Events Table -->
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="workload-card">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 fw-bold">Kubernetes Events (Son 100)</h6>
+        </div>
+        <div class="card-body">
+          <div id="events-table-container">
+            <div class="d-flex align-items-center justify-content-center py-4">
+              <div class="loading-spinner me-2"></div>
+              <span class="text-muted">Events yükleniyor...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Pod Logs Modal -->
@@ -899,8 +917,34 @@ async function loadOverviewData() {
     // Update overview charts
     updateOverviewCharts();
     updateMetrics();
+    // Load events into the bottom table
+    fetchAndRenderEventsTable();
   } catch (error) {
     console.error('Error loading overview data:', error);
+  }
+}
+
+async function fetchAndRenderEventsTable() {
+  const container = document.getElementById('events-table-container');
+  if (!container) return;
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-4"><div class="loading-spinner me-2"></div><span class="text-muted">Events yükleniyor...</span></div>';
+  try {
+    const res = await fetch('/exec-events');
+    const data = await res.json();
+    const events = data.events || [];
+    if (events.length === 0) {
+      container.innerHTML = '<div class="empty-state"><i class="bi bi-bell"></i><h6>Event yok</h6><p class="text-muted">Gösterilecek event bulunmuyor.</p></div>';
+      return;
+    }
+    let html = '<div class="table-responsive"><table class="table table-modern table-hover"><thead><tr><th>Time</th><th>Namespace</th><th>Name</th><th>Kind</th><th>Type</th><th>Reason</th><th>Message</th><th>Source</th></tr></thead><tbody>';
+    events.forEach(ev => {
+      const time = ev.time ? new Date(ev.time).toLocaleString('tr-TR') : '-';
+      html += `<tr><td>${time}</td><td><span class="badge bg-secondary">${ev.namespace || ''}</span></td><td>${ev.name || ''}</td><td>${ev.kind || ''}</td><td>${ev.type || ''}</td><td>${ev.reason || ''}</td><td style="max-width:400px; white-space:pre-wrap;">${ev.message || ''}</td><td>${ev.source || ''}</td></tr>`;
+    });
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = '<div class="alert alert-danger">Events yüklenirken hata oluştu: ' + e + '</div>';
   }
 }
 

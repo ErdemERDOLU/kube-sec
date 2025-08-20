@@ -1,0 +1,1100 @@
+{% extends "base.html" %}
+
+{% block title %}Config - Kubernetes Security Checker{% endblock %}
+
+{% block content %}
+<style>
+  :root {
+    --primary-gradient: linear-gradient(135deg, #059669 0%, #047857 100%);
+    --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    --danger-gradient: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    --info-gradient: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    --dark-gradient: linear-gradient(135deg, #475569 0%, #334155 100%);
+    --purple-gradient: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    --indigo-gradient: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    --emerald-gradient: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  }
+
+  .config-card {
+    border: none;
+    border-radius: 1.25rem;
+    box-shadow: 0 4px 25px rgba(5, 150, 105, 0.08);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    background: #ffffff;
+    border: 1px solid rgba(5, 150, 105, 0.1);
+  }
+
+  .config-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(5, 150, 105, 0.15);
+    border-color: rgba(5, 150, 105, 0.2);
+  }
+
+  .chart-container {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-top: 1px solid rgba(5, 150, 105, 0.1);
+  }
+
+  .loading-spinner {
+    display: inline-block;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 3px solid #ecfeff;
+    border-top: 3px solid #059669;
+    border-radius: 50%;
+    animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .nav-pills .nav-link {
+    border-radius: 1rem;
+    font-weight: 600;
+    padding: 1rem 1.75rem;
+    margin: 0 0.375rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #64748b;
+    background: transparent;
+    border: 2px solid transparent;
+    font-size: 0.875rem;
+    letter-spacing: 0.025em;
+  }
+
+  .nav-pills .nav-link:hover {
+    background: rgba(5, 150, 105, 0.08);
+    color: #059669;
+    transform: translateY(-2px);
+    border-color: rgba(5, 150, 105, 0.2);
+  }
+
+  .nav-pills .nav-link.active {
+    background: var(--primary-gradient);
+    color: white;
+    box-shadow: 0 8px 25px rgba(5, 150, 105, 0.3);
+    border-color: #047857;
+  }
+
+  .table-responsive {
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  }
+
+  .table th {
+    background: var(--dark-gradient);
+    color: white;
+    font-weight: 700;
+    border: none;
+    padding: 1.25rem;
+    font-size: 0.875rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .table td {
+    padding: 1.25rem;
+    border-color: #e2e8f0;
+    vertical-align: middle;
+    font-weight: 500;
+  }
+
+  .table tbody tr:hover {
+    background-color: rgba(5, 150, 105, 0.02);
+    transform: scale(1.001);
+    transition: all 0.2s ease;
+  }
+
+  .badge {
+    font-weight: 600;
+    padding: 0.625rem 1rem;
+    border-radius: 0.75rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+  }
+
+  .btn {
+    border-radius: 0.75rem;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+    letter-spacing: 0.025em;
+  }
+
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  }
+
+  .btn-outline-primary {
+    border: 2px solid #059669;
+    color: #059669;
+  }
+
+  .btn-outline-primary:hover {
+    background: #059669;
+    border-color: #047857;
+    color: white;
+  }
+
+  .page-header h1 {
+    font-weight: 800;
+    color: #1e293b;
+    font-size: 2.25rem;
+    letter-spacing: -0.025em;
+  }
+
+  .page-header p {
+    font-size: 1.125rem;
+    color: #64748b;
+    font-weight: 500;
+  }
+
+  .config-card .card-header {
+    padding: 1.5rem;
+    border: none;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .config-card .card-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    pointer-events: none;
+  }
+
+  .status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+
+  .status-active {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+  }
+
+  .status-inactive {
+    background: rgba(107, 114, 128, 0.1);
+    color: #4b5563;
+    border: 1px solid rgba(107, 114, 128, 0.2);
+  }
+
+  .status-error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-5 page-header">
+  <div>
+    <h1 class="h1 mb-2 fw-bold">
+      <i class="bi bi-gear me-3" style="color: #059669;"></i>Kubernetes Configuration
+    </h1>
+    <p class="mb-0">Modern cluster configuration management and monitoring dashboard</p>
+  </div>
+  <div class="d-flex gap-3">
+    <button class="btn btn-outline-primary" onclick="refreshAllData()">
+      <i class="bi bi-arrow-clockwise me-2"></i>Tümünü Yenile
+    </button>
+    <button class="btn btn-primary" style="background: var(--primary-gradient); border: none;">
+      <i class="bi bi-plus-circle me-2"></i>Yeni Ekle
+    </button>
+  </div>
+</div>
+
+<div class="card config-card mb-5" id="config-navigation">
+  <div class="card-header bg-white border-0 pt-4">
+    <ul class="nav nav-pills nav-fill justify-content-center" id="configTab" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+          <i class="bi bi-grid-3x3-gap me-2"></i>Genel Bakış
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="configmaps-tab" data-bs-toggle="tab" data-bs-target="#configmaps" type="button" role="tab">
+          <i class="bi bi-file-text me-2"></i>ConfigMaps
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="secrets-tab" data-bs-toggle="tab" data-bs-target="#secrets" type="button" role="tab">
+          <i class="bi bi-shield-lock me-2"></i>Secrets
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="resource-quotas-tab" data-bs-toggle="tab" data-bs-target="#resource-quotas" type="button" role="tab">
+          <i class="bi bi-speedometer2 me-2"></i>Resource Quotas
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="limit-ranges-tab" data-bs-toggle="tab" data-bs-target="#limit-ranges" type="button" role="tab">
+          <i class="bi bi-bar-chart me-2"></i>Limit Ranges
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="hpa-tab" data-bs-toggle="tab" data-bs-target="#hpa" type="button" role="tab">
+          <i class="bi bi-arrows-expand me-2"></i>HPA
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="pdb-tab" data-bs-toggle="tab" data-bs-target="#pdb" type="button" role="tab">
+          <i class="bi bi-shield-check me-2"></i>PDB
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="priority-classes-tab" data-bs-toggle="tab" data-bs-target="#priority-classes" type="button" role="tab">
+          <i class="bi bi-sort-numeric-down me-2"></i>Priority Classes
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="runtime-classes-tab" data-bs-toggle="tab" data-bs-target="#runtime-classes" type="button" role="tab">
+          <i class="bi bi-cpu me-2"></i>Runtime Classes
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="leases-tab" data-bs-toggle="tab" data-bs-target="#leases" type="button" role="tab">
+          <i class="bi bi-clock-history me-2"></i>Leases
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="webhooks-tab" data-bs-toggle="tab" data-bs-target="#webhooks" type="button" role="tab">
+          <i class="bi bi-webhook me-2"></i>Webhooks
+        </button>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="tab-content" id="configTabContent">
+  <div class="tab-pane fade show active" id="overview" role="tabpanel">
+    <div class="row g-4 mb-5">
+      <div class="col-lg-3 col-md-6">
+        <div class="config-card h-100">
+          <div class="card-header text-white" style="background: var(--primary-gradient);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-file-text me-3" style="font-size: 1.5rem;"></i>
+              <div>
+                <h5 class="mb-0 fw-bold">ConfigMaps</h5>
+                <small class="opacity-90">Configuration Data</small>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-configmaps" style="width: 100%; height: 200px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-6">
+        <div class="config-card h-100">
+          <div class="card-header text-white" style="background: var(--danger-gradient);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-shield-lock me-3" style="font-size: 1.5rem;"></i>
+              <div>
+                <h5 class="mb-0 fw-bold">Secrets</h5>
+                <small class="opacity-90">Sensitive Data</small>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-secrets" style="width: 100%; height: 200px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-6">
+        <div class="config-card h-100">
+          <div class="card-header text-white" style="background: var(--warning-gradient);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-speedometer2 me-3" style="font-size: 1.5rem;"></i>
+              <div>
+                <h5 class="mb-0 fw-bold">Resource Quotas</h5>
+                <small class="opacity-90">Resource Limits</small>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-resource-quotas" style="width: 100%; height: 200px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-6">
+        <div class="config-card h-100">
+          <div class="card-header text-white" style="background: var(--info-gradient);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-bar-chart me-3" style="font-size: 1.5rem;"></i>
+              <div>
+                <h5 class="mb-0 fw-bold">Limit Ranges</h5>
+                <small class="opacity-90">Default Limits</small>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-limit-ranges" style="width: 100%; height: 200px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-6">
+        <div class="config-card h-100">
+          <div class="card-header text-white" style="background: var(--success-gradient);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-arrows-expand me-3" style="font-size: 1.5rem;"></i>
+              <div>
+                <h5 class="mb-0 fw-bold">HPA</h5>
+                <small class="opacity-90">Auto Scaling</small>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-hpa" style="width: 100%; height: 200px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-6">
+        <div class="config-card h-100">
+          <div class="card-header text-white" style="background: var(--purple-gradient);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-shield-check me-3" style="font-size: 1.5rem;"></i>
+              <div>
+                <h5 class="mb-0 fw-bold">PDB</h5>
+                <small class="opacity-90">Disruption Budget</small>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-pdb" style="width: 100%; height: 200px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-6">
+        <div class="config-card h-100">
+          <div class="card-header text-white" style="background: var(--indigo-gradient);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-sort-numeric-down me-3" style="font-size: 1.5rem;"></i>
+              <div>
+                <h5 class="mb-0 fw-bold">Priority Classes</h5>
+                <small class="opacity-90">Pod Priority</small>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-priority-classes" style="width: 100%; height: 200px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-6">
+        <div class="config-card h-100">
+          <div class="card-header text-white" style="background: var(--dark-gradient);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-cpu me-3" style="font-size: 1.5rem;"></i>
+              <div>
+                <h5 class="mb-0 fw-bold">Runtime Classes</h5>
+                <small class="opacity-90">Container Runtime</small>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-runtime-classes" style="width: 100%; height: 200px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="configmaps" role="tabpanel">
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="config-card">
+          <div class="card-header text-white" style="background: var(--primary-gradient);">
+            <h5 class="mb-0 fw-bold">
+              <i class="bi bi-file-text me-2"></i>ConfigMaps Listesi
+            </h5>
+          </div>
+          <div class="card-body p-0">
+            <div id="configmaps-table-container">
+              <div class="d-flex align-items-center justify-content-center py-5">
+                <div class="loading-spinner me-2"></div>
+                <span class="text-muted">ConfigMap listesi yükleniyor...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="config-card">
+          <div class="card-header text-white" style="background: var(--primary-gradient);">
+            <h6 class="mb-0 fw-bold">ConfigMap Durumları</h6>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-configmaps-tab" style="width: 100%; height: 280px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="secrets" role="tabpanel">
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="config-card">
+          <div class="card-header text-white" style="background: var(--danger-gradient);">
+            <h5 class="mb-0 fw-bold">
+              <i class="bi bi-shield-lock me-2"></i>Secrets Listesi
+            </h5>
+          </div>
+          <div class="card-body p-0">
+            <div id="secrets-table-container">
+              <div class="d-flex align-items-center justify-content-center py-5">
+                <div class="loading-spinner me-2"></div>
+                <span class="text-muted">Secret listesi yükleniyor...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="config-card">
+          <div class="card-header text-white" style="background: var(--danger-gradient);">
+            <h6 class="mb-0 fw-bold">Secret Türleri</h6>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-secrets-tab" style="width: 100%; height: 280px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="resource-quotas" role="tabpanel">
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="config-card">
+          <div class="card-header text-white" style="background: var(--warning-gradient);">
+            <h5 class="mb-0 fw-bold">
+              <i class="bi bi-speedometer2 me-2"></i>Resource Quotas Listesi
+            </h5>
+          </div>
+          <div class="card-body p-0">
+            <div id="resource-quotas-table-container">
+              <div class="d-flex align-items-center justify-content-center py-5">
+                <div class="loading-spinner me-2"></div>
+                <span class="text-muted">Resource Quota listesi yükleniyor...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="config-card">
+          <div class="card-header text-white" style="background: var(--warning-gradient);">
+            <h6 class="mb-0 fw-bold">Quota Durumları</h6>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-resource-quotas-tab" style="width: 100%; height: 280px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="limit-ranges" role="tabpanel">
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="config-card">
+          <div class="card-header text-white" style="background: var(--info-gradient);">
+            <h5 class="mb-0 fw-bold">
+              <i class="bi bi-bar-chart me-2"></i>Limit Ranges Listesi
+            </h5>
+          </div>
+          <div class="card-body p-0">
+            <div id="limit-ranges-table-container">
+              <div class="d-flex align-items-center justify-content-center py-5">
+                <div class="loading-spinner me-2"></div>
+                <span class="text-muted">Limit Range listesi yükleniyor...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="config-card">
+          <div class="card-header text-white" style="background: var(--info-gradient);">
+            <h6 class="mb-0 fw-bold">Limit Range Durumları</h6>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-limit-ranges-tab" style="width: 100%; height: 280px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="hpa" role="tabpanel">
+    <div class="config-card">
+      <div class="card-header text-white" style="background: var(--success-gradient);">
+        <h5 class="mb-0 fw-bold">
+          <i class="bi bi-arrows-expand me-2"></i>Horizontal Pod Autoscaler
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="text-center py-5">
+          <i class="bi bi-arrows-expand text-muted" style="font-size: 4rem;"></i>
+          <h4 class="mt-3 text-muted">HPA Simulation</h4>
+          <p class="text-muted">Horizontal Pod Autoscaler yapılandırması ve simülasyonu</p>
+          <button class="btn btn-success">
+            <i class="bi bi-play-circle me-2"></i>HPA Simülasyonu Başlat
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="pdb" role="tabpanel">
+    <div class="config-card">
+      <div class="card-header text-white" style="background: var(--purple-gradient);">
+        <h5 class="mb-0 fw-bold">
+          <i class="bi bi-shield-check me-2"></i>Pod Disruption Budget
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="text-center py-5">
+          <i class="bi bi-shield-check text-muted" style="font-size: 4rem;"></i>
+          <h4 class="mt-3 text-muted">PDB Simulation</h4>
+          <p class="text-muted">Pod Disruption Budget yapılandırması ve simülasyonu</p>
+          <button class="btn btn-primary" style="background: var(--purple-gradient); border: none;">
+            <i class="bi bi-play-circle me-2"></i>PDB Simülasyonu Başlat
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="priority-classes" role="tabpanel">
+    <div class="config-card">
+      <div class="card-header text-white" style="background: var(--indigo-gradient);">
+        <h5 class="mb-0 fw-bold">
+          <i class="bi bi-sort-numeric-down me-2"></i>Priority Classes
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="text-center py-5">
+          <i class="bi bi-sort-numeric-down text-muted" style="font-size: 4rem;"></i>
+          <h4 class="mt-3 text-muted">Priority Classes Simulation</h4>
+          <p class="text-muted">Pod öncelik sınıfları yapılandırması ve simülasyonu</p>
+          <button class="btn btn-primary" style="background: var(--indigo-gradient); border: none;">
+            <i class="bi bi-play-circle me-2"></i>Priority Simülasyonu Başlat
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="runtime-classes" role="tabpanel">
+    <div class="config-card">
+      <div class="card-header text-white" style="background: var(--dark-gradient);">
+        <h5 class="mb-0 fw-bold">
+          <i class="bi bi-cpu me-2"></i>Runtime Classes
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="text-center py-5">
+          <i class="bi bi-cpu text-muted" style="font-size: 4rem;"></i>
+          <h4 class="mt-3 text-muted">Runtime Classes Simulation</h4>
+          <p class="text-muted">Container runtime sınıfları yapılandırması ve simülasyonu</p>
+          <button class="btn btn-dark">
+            <i class="bi bi-play-circle me-2"></i>Runtime Simülasyonu Başlat
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="leases" role="tabpanel">
+    <div class="config-card">
+      <div class="card-header text-white" style="background: var(--info-gradient);">
+        <h5 class="mb-0 fw-bold">
+          <i class="bi bi-clock-history me-2"></i>Leases
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="text-center py-5">
+          <i class="bi bi-clock-history text-muted" style="font-size: 4rem;"></i>
+          <h4 class="mt-3 text-muted">Leases Simulation</h4>
+          <p class="text-muted">Kubernetes lease objelerinin yapılandırması ve simülasyonu</p>
+          <button class="btn btn-info">
+            <i class="bi bi-play-circle me-2"></i>Lease Simülasyonu Başlat
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="webhooks" role="tabpanel">
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <div class="config-card">
+          <div class="card-header text-white" style="background: var(--warning-gradient);">
+            <h5 class="mb-0 fw-bold">
+              <i class="bi bi-webhook me-2"></i>Mutating Admission Webhooks
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="text-center py-4">
+              <i class="bi bi-webhook text-muted" style="font-size: 3rem;"></i>
+              <h5 class="mt-3 text-muted">Mutation Webhooks</h5>
+              <p class="text-muted">Kubernetes kaynaklarını değiştiren webhook'lar</p>
+              <button class="btn btn-warning">
+                <i class="bi bi-play-circle me-2"></i>Mutation Simülasyonu
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="config-card">
+          <div class="card-header text-white" style="background: var(--danger-gradient);">
+            <h5 class="mb-0 fw-bold">
+              <i class="bi bi-shield-exclamation me-2"></i>Validating Admission Webhooks
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="text-center py-4">
+              <i class="bi bi-shield-exclamation text-muted" style="font-size: 3rem;"></i>
+              <h5 class="mt-3 text-muted">Validation Webhooks</h5>
+              <p class="text-muted">Kubernetes kaynaklarını doğrulayan webhook'lar</p>
+              <button class="btn btn-danger">
+                <i class="bi bi-play-circle me-2"></i>Validation Simülasyonu
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script>
+let allConfigData = {
+  configmaps: [],
+  secrets: [],
+  resource_quotas: [],
+  limit_ranges: []
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+  loadOverviewData();
+  
+  document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+    tab.addEventListener('shown.bs.tab', function(e) {
+      const targetId = e.target.getAttribute('data-bs-target').replace('#', '');
+      handleTabChange(targetId);
+      
+      setTimeout(() => {
+        document.getElementById('config-navigation').scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }, 100);
+    });
+  });
+});
+
+async function loadOverviewData() {
+  try {
+    const [configmapsData, secretsData, resourceQuotasData, limitRangesData] = await Promise.all([
+      fetch('/k8s-explorer/configmaps-summary').then(r => r.json()),
+      fetch('/k8s-explorer/secrets-summary').then(r => r.json()),
+      fetch('/k8s-explorer/resource-quotas-summary').then(r => r.json()),
+      fetch('/k8s-explorer/limit-ranges-summary').then(r => r.json())
+    ]);
+
+    allConfigData.configmaps = configmapsData.configmaps || [];
+    allConfigData.secrets = secretsData.secrets || [];
+    allConfigData.resource_quotas = resourceQuotasData.resource_quotas || [];
+    allConfigData.limit_ranges = limitRangesData.limit_ranges || [];
+
+    updateOverviewCharts();
+  } catch (error) {
+    console.error('Error loading overview data:', error);
+  }
+}
+
+function updateOverviewCharts() {
+  const configmapsChart = echarts.init(document.getElementById('pie-configmaps'));
+  const configmapsData = allConfigData.configmaps;
+  const configmapsNamespaces = [...new Set(configmapsData.map(cm => cm.namespace))];
+  
+  configmapsChart.setOption({
+    tooltip: { trigger: 'item' },
+    series: [{
+      type: 'pie',
+      radius: '70%',
+      data: configmapsNamespaces.map(ns => ({
+        value: configmapsData.filter(cm => cm.namespace === ns).length,
+        name: ns
+      })),
+      emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }}
+    }]
+  });
+
+  const secretsChart = echarts.init(document.getElementById('pie-secrets'));
+  const secretsData = allConfigData.secrets;
+  const secretTypes = [...new Set(secretsData.map(s => s.type))];
+  
+  secretsChart.setOption({
+    tooltip: { trigger: 'item' },
+    series: [{
+      type: 'pie',
+      radius: '70%',
+      data: secretTypes.map(type => ({
+        value: secretsData.filter(s => s.type === type).length,
+        name: type
+      })),
+      emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }}
+    }]
+  });
+
+  const quotasChart = echarts.init(document.getElementById('pie-resource-quotas'));
+  const quotasData = allConfigData.resource_quotas;
+  const quotasNamespaces = [...new Set(quotasData.map(q => q.namespace))];
+  
+  quotasChart.setOption({
+    tooltip: { trigger: 'item' },
+    series: [{
+      type: 'pie',
+      radius: '70%',
+      data: quotasNamespaces.map(ns => ({
+        value: quotasData.filter(q => q.namespace === ns).length,
+        name: ns
+      })),
+      emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }}
+    }]
+  });
+
+  const limitRangesChart = echarts.init(document.getElementById('pie-limit-ranges'));
+  const limitRangesData = allConfigData.limit_ranges;
+  const limitRangesNamespaces = [...new Set(limitRangesData.map(lr => lr.namespace))];
+  
+  limitRangesChart.setOption({
+    tooltip: { trigger: 'item' },
+    series: [{
+      type: 'pie',
+      radius: '70%',
+      data: limitRangesNamespaces.map(ns => ({
+        value: limitRangesData.filter(lr => lr.namespace === ns).length,
+        name: ns
+      })),
+      emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }}
+    }]
+  });
+
+  ['hpa', 'pdb', 'priority-classes', 'runtime-classes'].forEach(type => {
+    const chart = echarts.init(document.getElementById(`pie-${type}`));
+    chart.setOption({
+      tooltip: { trigger: 'item' },
+      series: [{
+        type: 'pie',
+        radius: '70%',
+        data: [
+          { value: 1, name: 'Simülasyon Modu' }
+        ],
+        emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }}
+      }]
+    });
+  });
+}
+
+function handleTabChange(tabId) {
+  switch(tabId) {
+    case 'configmaps':
+      fetchAndRenderConfigMapsTable();
+      break;
+    case 'secrets':
+      fetchAndRenderSecretsTable();
+      break;
+    case 'resource-quotas':
+      fetchAndRenderResourceQuotasTable();
+      break;
+    case 'limit-ranges':
+      fetchAndRenderLimitRangesTable();
+      break;
+  }
+}
+
+async function fetchAndRenderConfigMapsTable() {
+  const container = document.getElementById('configmaps-table-container');
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">ConfigMap listesi yükleniyor...</span></div>';
+  
+  try {
+    const response = await fetch('/k8s-explorer/configmaps-summary');
+    const data = await response.json();
+    const configmaps = data.configmaps || [];
+    
+    let tableHtml = `
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Namespace</th>
+              <th>Name</th>
+              <th>Data Keys</th>
+              <th>Age</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    
+    configmaps.forEach(cm => {
+      const age = cm.creation_timestamp ? calculateAge(cm.creation_timestamp) : 'Unknown';
+      tableHtml += `
+        <tr>
+          <td><span class="badge bg-primary">${cm.namespace}</span></td>
+          <td><strong>${cm.name}</strong></td>
+          <td><span class="badge bg-info">${cm.data_count} keys</span></td>
+          <td>${age}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary me-1">
+              <i class="bi bi-eye"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-pencil"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+    
+    tableHtml += '</tbody></table></div>';
+    container.innerHTML = tableHtml;
+    
+  } catch (error) {
+    container.innerHTML = '<div class="alert alert-danger">ConfigMap listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+  }
+}
+
+async function fetchAndRenderSecretsTable() {
+  const container = document.getElementById('secrets-table-container');
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Secret listesi yükleniyor...</span></div>';
+  
+  try {
+    const response = await fetch('/k8s-explorer/secrets-summary');
+    const data = await response.json();
+    const secrets = data.secrets || [];
+    
+    let tableHtml = `
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Namespace</th>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Data Keys</th>
+              <th>Age</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    
+    secrets.forEach(secret => {
+      const age = secret.creation_timestamp ? calculateAge(secret.creation_timestamp) : 'Unknown';
+      const typeColor = secret.type === 'kubernetes.io/service-account-token' ? 'bg-success' : 
+                       secret.type === 'kubernetes.io/tls' ? 'bg-warning' : 'bg-secondary';
+      tableHtml += `
+        <tr>
+          <td><span class="badge bg-primary">${secret.namespace}</span></td>
+          <td><strong>${secret.name}</strong></td>
+          <td><span class="badge ${typeColor}">${secret.type}</span></td>
+          <td><span class="badge bg-info">${secret.data_count} keys</span></td>
+          <td>${age}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary me-1">
+              <i class="bi bi-eye"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-pencil"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+    
+    tableHtml += '</tbody></table></div>';
+    container.innerHTML = tableHtml;
+    
+  } catch (error) {
+    container.innerHTML = '<div class="alert alert-danger">Secret listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+  }
+}
+
+async function fetchAndRenderResourceQuotasTable() {
+  const container = document.getElementById('resource-quotas-table-container');
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Resource Quota listesi yükleniyor...</span></div>';
+  
+  try {
+    const response = await fetch('/k8s-explorer/resource-quotas-summary');
+    const data = await response.json();
+    const quotas = data.resource_quotas || [];
+    
+    let tableHtml = `
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Namespace</th>
+              <th>Name</th>
+              <th>Hard Limits</th>
+              <th>Used</th>
+              <th>Age</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    
+    quotas.forEach(quota => {
+      const age = quota.creation_timestamp ? calculateAge(quota.creation_timestamp) : 'Unknown';
+      const hardLimits = Object.keys(quota.hard).length;
+      const usedResources = Object.keys(quota.used).length;
+      tableHtml += `
+        <tr>
+          <td><span class="badge bg-primary">${quota.namespace}</span></td>
+          <td><strong>${quota.name}</strong></td>
+          <td><span class="badge bg-warning">${hardLimits} limits</span></td>
+          <td><span class="badge bg-info">${usedResources} used</span></td>
+          <td>${age}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary me-1">
+              <i class="bi bi-eye"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-pencil"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+    
+    tableHtml += '</tbody></table></div>';
+    container.innerHTML = tableHtml;
+    
+  } catch (error) {
+    container.innerHTML = '<div class="alert alert-danger">Resource Quota listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+  }
+}
+
+async function fetchAndRenderLimitRangesTable() {
+  const container = document.getElementById('limit-ranges-table-container');
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Limit Range listesi yükleniyor...</span></div>';
+  
+  try {
+    const response = await fetch('/k8s-explorer/limit-ranges-summary');
+    const data = await response.json();
+    const limitRanges = data.limit_ranges || [];
+    
+    let tableHtml = `
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Namespace</th>
+              <th>Name</th>
+              <th>Limits Count</th>
+              <th>Age</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    
+    limitRanges.forEach(lr => {
+      const age = lr.creation_timestamp ? calculateAge(lr.creation_timestamp) : 'Unknown';
+      tableHtml += `
+        <tr>
+          <td><span class="badge bg-primary">${lr.namespace}</span></td>
+          <td><strong>${lr.name}</strong></td>
+          <td><span class="badge bg-info">${lr.limits_count} limits</span></td>
+          <td>${age}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary me-1">
+              <i class="bi bi-eye"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-pencil"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+    
+    tableHtml += '</tbody></table></div>';
+    container.innerHTML = tableHtml;
+    
+  } catch (error) {
+    container.innerHTML = '<div class="alert alert-danger">Limit Range listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+  }
+}
+
+function calculateAge(timestamp) {
+  const now = new Date();
+  const created = new Date(timestamp);
+  const diffMs = now - created;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  
+  if (diffDays > 0) return `${diffDays}d`;
+  if (diffHours > 0) return `${diffHours}h`;
+  return `${diffMinutes}m`;
+}
+
+function refreshAllData() {
+  loadOverviewData();
+  const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+  handleTabChange(activeTab);
+}
+</script>
+{% endblock %}

@@ -1370,6 +1370,110 @@ def configmap_secrets_data():
 def workloads_page():
     return render_template('workloads.html')
 
+@app.route('/config')
+def config_page():
+    return render_template('config.html')
+
+@app.route('/k8s-explorer/configmaps-summary')
+def configmaps_summary():
+    try:
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        v1 = client.CoreV1Api()
+        configmaps = v1.list_config_map_for_all_namespaces().items
+        result = []
+        for cm in configmaps:
+            data_count = len(cm.data) if cm.data else 0
+            creation_timestamp = getattr(cm.metadata, 'creation_timestamp', None)
+            result.append({
+                'namespace': cm.metadata.namespace,
+                'name': cm.metadata.name,
+                'data_count': data_count,
+                'creation_timestamp': creation_timestamp.isoformat() if creation_timestamp else None
+            })
+        return jsonify({'configmaps': result})
+    except Exception as e:
+        return jsonify({'configmaps': [], 'error': str(e)})
+
+@app.route('/k8s-explorer/secrets-summary')
+def secrets_summary():
+    try:
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        v1 = client.CoreV1Api()
+        secrets = v1.list_secret_for_all_namespaces().items
+        result = []
+        for secret in secrets:
+            data_count = len(secret.data) if secret.data else 0
+            secret_type = secret.type if secret.type else 'Opaque'
+            creation_timestamp = getattr(secret.metadata, 'creation_timestamp', None)
+            result.append({
+                'namespace': secret.metadata.namespace,
+                'name': secret.metadata.name,
+                'type': secret_type,
+                'data_count': data_count,
+                'creation_timestamp': creation_timestamp.isoformat() if creation_timestamp else None
+            })
+        return jsonify({'secrets': result})
+    except Exception as e:
+        return jsonify({'secrets': [], 'error': str(e)})
+
+@app.route('/k8s-explorer/resource-quotas-summary')
+def resource_quotas_summary():
+    try:
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        v1 = client.CoreV1Api()
+        quotas = v1.list_resource_quota_for_all_namespaces().items
+        result = []
+        for quota in quotas:
+            hard = quota.status.hard if quota.status and quota.status.hard else {}
+            used = quota.status.used if quota.status and quota.status.used else {}
+            creation_timestamp = getattr(quota.metadata, 'creation_timestamp', None)
+            result.append({
+                'namespace': quota.metadata.namespace,
+                'name': quota.metadata.name,
+                'hard': dict(hard),
+                'used': dict(used),
+                'creation_timestamp': creation_timestamp.isoformat() if creation_timestamp else None
+            })
+        return jsonify({'resource_quotas': result})
+    except Exception as e:
+        return jsonify({'resource_quotas': [], 'error': str(e)})
+
+@app.route('/k8s-explorer/limit-ranges-summary')
+def limit_ranges_summary():
+    try:
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        v1 = client.CoreV1Api()
+        limit_ranges = v1.list_limit_range_for_all_namespaces().items
+        result = []
+        for lr in limit_ranges:
+            limits_count = len(lr.spec.limits) if lr.spec and lr.spec.limits else 0
+            creation_timestamp = getattr(lr.metadata, 'creation_timestamp', None)
+            result.append({
+                'namespace': lr.metadata.namespace,
+                'name': lr.metadata.name,
+                'limits_count': limits_count,
+                'creation_timestamp': creation_timestamp.isoformat() if creation_timestamp else None
+            })
+        return jsonify({'limit_ranges': result})
+    except Exception as e:
+        return jsonify({'limit_ranges': [], 'error': str(e)})
+
 # Workloads page (moved below app initialization)
 
 # Node uncordon endpoint

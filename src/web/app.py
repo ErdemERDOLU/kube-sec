@@ -549,10 +549,132 @@ def scale_deployment():
         # Patch the deployment with new replica count
         body = {"spec": {"replicas": int(replicas)}}
         apps_v1.patch_namespaced_deployment_scale(name, namespace, body)
+        # Immediately refresh pods and workload stats caches so frontend reflects new replica count
+        try:
+            update_pods_summary_cache()
+        except Exception:
+            pass
+        try:
+            update_workload_stats_cache()
+        except Exception:
+            pass
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/k8s-explorer/restart-pod', methods=['POST'])
+def restart_pod():
+    try:
+        data = request.get_json(force=True)
+        namespace = data.get('namespace')
+        name = data.get('name')
+        if not namespace or not name:
+            return jsonify({'error': 'namespace ve name zorunlu'}), 400
+        
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        
+        v1 = client.CoreV1Api()
+        # Delete the pod to restart it (it will be recreated by the controller)
+        v1.delete_namespaced_pod(name=name, namespace=namespace)
+        # Update pods summary cache immediately so frontend sees change
+        try:
+            update_pods_summary_cache()
+        except Exception:
+            pass
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/k8s-explorer/restart-deployment', methods=['POST'])
+def restart_deployment():
+    try:
+        data = request.get_json(force=True)
+        namespace = data.get('namespace')
+        name = data.get('name')
+        if not namespace or not name:
+            return jsonify({'error': 'namespace ve name zorunlu'}), 400
+        
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        
+        apps_v1 = client.AppsV1Api()
+        # Patch deployment's pod template annotation to trigger restart
+        now = datetime.utcnow().isoformat() + 'Z'
+        patch = {
+            "spec": {
+                "template": {
+                    "metadata": {
+                        "annotations": {
+                            "kubectl.kubernetes.io/restartedAt": now
+                        }
+                    }
+                }
+            }
+        }
+        apps_v1.patch_namespaced_deployment(name, namespace, patch)
+        # Immediately refresh pods and workload stats caches so frontend reflects restarted pods
+        try:
+            update_pods_summary_cache()
+        except Exception:
+            pass
+        try:
+            update_workload_stats_cache()
+        except Exception:
+            pass
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/k8s-explorer/pod-properties')
+def pod_properties():
+    """Return detailed properties for a single Pod."""
+    namespace = request.args.get('namespace')
+    name = request.args.get('name')
+    if not namespace or not name:
+        return jsonify({'error': 'namespace ve name zorunlu'}), 400
+    
+    try:
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        
+        v1 = client.CoreV1Api()
+        pod = v1.read_namespaced_pod(name=name, namespace=namespace)
+        
+        containers = []
+        if pod.spec.containers:
+            for container in pod.spec.containers:
+                container_status = None
+                if pod.status.container_statuses:
+                    container_status = next((cs for cs in pod.status.container_statuses if cs.name == container.name), None)
+                
+                containers.append({
+                    'name': container.name,
+                    'image': container.image,
+                    'restart_count': container_status.restart_count if container_status else 0
+                })
+        
+        result = {
+            'namespace': pod.metadata.namespace,
+            'name': pod.metadata.name,
+            'status': pod.status.phase,
+            'node': pod.spec.node_name,
+            'creation_timestamp': pod.metadata.creation_timestamp.isoformat() if pod.metadata.creation_timestamp else None,
+            'containers': containers
+        }
+        
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/k8s-explorer/describe')
@@ -849,10 +971,28 @@ def update_pods_summary_cache():
         pods = core_v1.list_pod_for_all_namespaces().items
         result = []
         for pod in pods:
+            # Skip pods that are terminating/deleting so frontend doesn't show them
+            if getattr(pod.metadata, 'deletion_timestamp', None):
+                continue
+            ready_containers = 0
+            total_containers = 0
+            restart_count = 0
+            
+            if pod.status.container_statuses:
+                total_containers = len(pod.status.container_statuses)
+                for container_status in pod.status.container_statuses:
+                    if container_status.ready:
+                        ready_containers += 1
+                    if container_status.restart_count:
+                        restart_count += container_status.restart_count
+            
             result.append({
                 'namespace': pod.metadata.namespace,
                 'name': pod.metadata.name,
-                'status': pod.status.phase
+                'status': pod.status.phase,
+                'ready': f"{ready_containers}/{total_containers}",
+                'restarts': restart_count,
+                'creation_timestamp': pod.metadata.creation_timestamp.isoformat() if pod.metadata.creation_timestamp else None
             })
         pods_summary_cache = {'pods': result}
         pods_summary_cache_time = time.time()
@@ -905,6 +1045,8 @@ def deployments_summary():
                 'namespace': dep.metadata.namespace,
                 'name': dep.metadata.name,
                 'ready': ready_str,
+                'replicas': replicas,
+                'ready_replicas': ready_replicas,
                 'updated_replicas': updated_replicas,
                 'available_replicas': available_replicas,
                 'creation_timestamp': creation_timestamp.isoformat() if creation_timestamp else None

@@ -25,6 +25,24 @@
   </div>
 </div>
 
+<!-- Pod Logs Modal -->
+<div class="modal fade" id="podLogsModal" tabindex="-1" aria-labelledby="podLogsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="podLogsModalLabel">Pod Logs</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <pre id="podLogsModalBody" style="font-family:'Fira Code', 'Monaco', monospace; font-size:0.9em; white-space:pre-wrap; max-height:70vh; overflow:auto; background:#000; color:#e6e6e6; padding:12px; border-radius:6px;"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- YAML Edit Modal -->
 <div class="modal fade" id="yamlEditModal" tabindex="-1" aria-labelledby="yamlEditModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-xl">
@@ -229,7 +247,7 @@
 }
 
 .table-modern thead th {
-  background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+  background: linear-gradient(45deg, #f8f9fa, #1c446d);
   border: none;
   font-weight: 600;
   text-transform: uppercase;
@@ -968,6 +986,9 @@ async function fetchAndRenderPodsTable() {
             <button class="btn btn-action btn-outline-info btn-sm" onclick="showPodProperties('${pod.name}','${pod.namespace}')">
               <i class="bi bi-info-circle me-1"></i>Properties
             </button>
+            <button class="btn btn-action btn-outline-secondary btn-sm" title="Logs" onclick="showPodLogs('${pod.name}','${pod.namespace}')">
+              <i class="bi bi-file-earmark-text me-1"></i>Logs
+            </button>
             <button class="btn btn-action btn-outline-warning btn-sm" onclick="restartPod('${pod.name}','${pod.namespace}')">
               <i class="bi bi-arrow-clockwise me-1"></i>Restart
             </button>
@@ -1003,13 +1024,15 @@ async function fetchAndRenderDeploymentsTable() {
     
     deployments.forEach(dep => {
       const age = calculateAge(dep.creation_timestamp);
-      const readyStatus = dep.ready_replicas === dep.replicas ? 'status-running' : 'status-pending';
+      const ready_replicas = (dep.ready_replicas !== undefined && dep.ready_replicas !== null) ? dep.ready_replicas : (dep.ready ? (dep.ready.split('/')[0]||0) : 0);
+      const replicas = (dep.replicas !== undefined && dep.replicas !== null) ? dep.replicas : (dep.ready ? (dep.ready.split('/')[1]||0) : 0);
+      const readyStatus = (parseInt(ready_replicas) === parseInt(replicas) && parseInt(replicas) > 0) ? 'status-running' : 'status-pending';
       
       html += `
         <tr>
           <td><span class="badge bg-secondary">${dep.namespace}</span></td>
           <td><strong>${dep.name}</strong></td>
-          <td><span class="status-badge ${readyStatus}">${dep.ready_replicas}/${dep.replicas}</span></td>
+          <td><span class="status-badge ${readyStatus}">${ready_replicas}/${replicas}</span></td>
           <td>${dep.updated_replicas}</td>
           <td>${dep.available_replicas}</td>
           <td>${age}</td>
@@ -1465,40 +1488,271 @@ function calculateAge(timestamp) {
 }
 
 // Action functions (placeholders - implement based on existing patterns)
+// Action functions (implemented)
 function showDaemonSetProperties(name, namespace) {
-  // Implement similar to existing showPodProperties function
-  alert(`DaemonSet Properties: ${namespace}/${name}`);
+  // Reuse the pod properties modal to display daemonset properties (simple JSON view)
+  const modalEl = document.getElementById('podPropertiesModal');
+  const label = document.getElementById('podPropertiesModalLabel');
+  const body = document.getElementById('podPropertiesModalBody');
+  if (!modalEl || !label || !body) {
+    alert('Properties modal bulunamadı.');
+    return;
+  }
+  label.textContent = `DaemonSet Properties: ${namespace}/${name}`;
+  body.textContent = 'Yükleniyor...';
+  if (!document.body.contains(modalEl)) document.body.appendChild(modalEl);
+  const bs = bootstrap.Modal.getOrCreateInstance(modalEl);
+  bs.show();
+  fetch(`/k8s-explorer/daemonset-properties?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        body.innerHTML = `<div class="text-danger">Properties alınamadı: ${data.error}</div>`;
+        return;
+      }
+      // show readable JSON
+      body.innerHTML = `<pre style="white-space:pre-wrap;">${JSON.stringify(data.daemonset || data, null, 2)}</pre>`;
+    }).catch(e => {
+      body.innerHTML = `<div class="text-danger">Properties alınırken hata oluştu: ${e}</div>`;
+    });
 }
 
 function restartDaemonSet(name, namespace) {
-  // Implement restart functionality
-  if (confirm(`${namespace}/${name} DaemonSet'ini yeniden başlatmak istediğinizden emin misiniz?`)) {
-    // Call restart API
-    alert('Restart functionality will be implemented');
+  if (!confirm(`${namespace}/${name} DaemonSet'ini yeniden başlatmak istediğinizden emin misiniz?`)) return;
+  fetch('/k8s-explorer/restart-daemonset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, namespace })
+  }).then(async (r) => {
+    if (r.ok) {
+      alert('DaemonSet restart talebi gönderildi.');
+      // Refresh daemonsets, pods and overview so UI reflects restarted pods immediately
+      if (typeof fetchAndRenderDaemonSetsTable === 'function') fetchAndRenderDaemonSetsTable();
+      if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
+      if (typeof loadOverviewData === 'function') loadOverviewData();
+    } else {
+      const txt = await r.text();
+      alert('Restart başarısız: ' + txt);
+    }
+  }).catch(e => alert('Restart isteği başarısız: ' + e));
+}
+
+function showPodLogs(name, namespace) {
+  const modalEl = document.getElementById('podLogsModal');
+  const body = document.getElementById('podLogsModalBody');
+  const label = document.getElementById('podLogsModalLabel');
+  if (!modalEl || !body || !label) {
+    alert('Logs modal bulunamadı.');
+    return;
   }
+  label.textContent = `Pod Logs: ${namespace}/${name}`;
+  body.textContent = 'Yükleniyor...';
+  if (!document.body.contains(modalEl)) document.body.appendChild(modalEl);
+  const bs = bootstrap.Modal.getOrCreateInstance(modalEl);
+  bs.show();
+  fetch(`/k8s-explorer/logs?type=pod&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`)
+    .then(async r => {
+      if (!r.ok) {
+        const txt = await r.text();
+        body.textContent = 'Log alınamadı: ' + txt;
+        return;
+      }
+      const txt = await r.text();
+      body.textContent = txt || '(Boş log)';
+    }).catch(e => {
+      body.textContent = 'Log alınırken hata oluştu: ' + e;
+    });
 }
 
 function showStatefulSetProperties(name, namespace) {
-  alert(`StatefulSet Properties: ${namespace}/${name}`);
+  const modalEl = document.getElementById('podPropertiesModal');
+  const label = document.getElementById('podPropertiesModalLabel');
+  const body = document.getElementById('podPropertiesModalBody');
+  if (!modalEl || !label || !body) {
+    alert('Properties modal bulunamadı.');
+    return;
+  }
+  label.textContent = `StatefulSet Properties: ${namespace}/${name}`;
+  body.textContent = 'Yükleniyor...';
+  if (!document.body.contains(modalEl)) document.body.appendChild(modalEl);
+  const bs = bootstrap.Modal.getOrCreateInstance(modalEl);
+  bs.show();
+  fetch(`/k8s-explorer/statefulset-properties?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        body.innerHTML = `<div class="text-danger">Properties alınamadı: ${data.error}</div>`;
+        return;
+      }
+      body.innerHTML = `<pre style="white-space:pre-wrap;">${JSON.stringify(data.statefulset || data, null, 2)}</pre>`;
+    }).catch(e => {
+      body.innerHTML = `<div class="text-danger">Properties alınırken hata oluştu: ${e}</div>`;
+    });
 }
 
 function restartStatefulSet(name, namespace) {
-  if (confirm(`${namespace}/${name} StatefulSet'ini yeniden başlatmak istediğinizden emin misiniz?`)) {
-    alert('Restart functionality will be implemented');
+  if (!confirm(`${namespace}/${name} StatefulSet'ini yeniden başlatmak istediğinizden emin misiniz?`)) return;
+  fetch('/k8s-explorer/restart-statefulset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, namespace })
+  }).then(async (r) => {
+    if (r.ok) {
+      alert('StatefulSet restart talebi gönderildi.');
+      if (typeof fetchAndRenderStatefulSetsTable === 'function') fetchAndRenderStatefulSetsTable();
+      if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
+      if (typeof loadOverviewData === 'function') loadOverviewData();
+    } else {
+      const txt = await r.text();
+      alert('Restart başarısız: ' + txt);
+    }
+  }).catch(e => alert('Restart isteği başarısız: ' + e));
+}
+
+// Deployment: scale and restart
+function showScaleDeploymentModal(name, namespace, replicas) {
+  const input = prompt(`${namespace}/${name} için yeni replica sayısını girin:`, replicas);
+  if (input === null) return; // cancelled
+  const newReplicas = parseInt(input);
+  if (isNaN(newReplicas) || newReplicas < 0) { alert('Geçerli bir sayı girin'); return; }
+  // Call backend scale API
+  fetch('/k8s-explorer/scale-deployment', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, namespace, replicas: newReplicas })
+  }).then(async r => {
+    if (r.ok) {
+      alert('Deployment replica sayısı güncellendi.');
+      // Refresh deployments table, pods table and overview charts so UI reflects new state
+      if (typeof fetchAndRenderDeploymentsTable === 'function') fetchAndRenderDeploymentsTable();
+      if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
+      if (typeof loadOverviewData === 'function') loadOverviewData();
+    } else {
+      const txt = await r.text();
+      alert('Scale başarısız: ' + txt);
+    }
+  }).catch(e => alert('Scale isteği başarısız: ' + e));
+}
+
+function restartDeployment(name, namespace) {
+  if (!confirm(`${namespace}/${name} Deployment'ını yeniden başlatmak istediğinizden emin misiniz?`)) return;
+  fetch('/k8s-explorer/restart-deployment', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, namespace })
+  }).then(async r => {
+    if (r.ok) {
+  alert('Deployment restart talebi gönderildi.');
+  // Refresh deployments, pods and overview so the UI reflects restarted pods immediately
+  if (typeof fetchAndRenderDeploymentsTable === 'function') fetchAndRenderDeploymentsTable();
+  if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
+  if (typeof loadOverviewData === 'function') loadOverviewData();
+    } else {
+      const txt = await r.text();
+      alert('Restart başarısız: ' + txt);
+    }
+  }).catch(e => alert('Restart isteği başarısız: ' + e));
+}
+
+// Pod actions: properties modal and restart
+function showPodProperties(name, namespace) {
+  const modalEl = document.getElementById('podPropertiesModal');
+  const label = document.getElementById('podPropertiesModalLabel');
+  const body = document.getElementById('podPropertiesModalBody');
+  if (!modalEl || !label || !body) {
+    alert('Pod properties modal yapılandırması eksik.');
+    return;
   }
+  label.textContent = `Pod Properties: ${namespace}/${name}`;
+  body.textContent = 'Yükleniyor...';
+  // Ensure modal is attached to body (Bootstrap quirk)
+  if (!document.body.contains(modalEl)) document.body.appendChild(modalEl);
+  const bs = bootstrap.Modal.getOrCreateInstance(modalEl);
+  bs.show();
+  fetch(`/k8s-explorer/pod-properties?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        body.innerHTML = `<div class="text-danger">Properties alınamadı: ${data.error}</div>`;
+        return;
+      }
+      body.innerHTML = `<pre style="white-space:pre-wrap;">${JSON.stringify(data, null, 2)}</pre>`;
+    }).catch(e => {
+      body.innerHTML = `<div class="text-danger">Properties alınırken hata oluştu: ${e}</div>`;
+    });
+}
+
+function restartPod(name, namespace) {
+  if (!confirm(`${namespace}/${name} podunu yeniden başlatmak istediğinize emin misiniz?`)) return;
+  fetch('/k8s-explorer/restart-pod', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, namespace })
+  }).then(async r => {
+    if (r.ok) {
+      alert('Pod restart edildi (silme talebi gönderildi).');
+      if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
+    } else {
+      const txt = await r.text();
+      alert('Restart başarısız: ' + txt);
+    }
+  }).catch(e => alert('Restart isteği başarısız: ' + e));
 }
 
 function showScaleStatefulSetModal(name, namespace, replicas) {
-  const newReplicas = prompt(`${namespace}/${name} için yeni replica sayısını girin:`, replicas);
-  if (newReplicas !== null && newReplicas !== replicas.toString()) {
-    alert(`Scale functionality will be implemented: ${newReplicas} replicas`);
-  }
+  const input = prompt(`${namespace}/${name} için yeni replica sayısını girin:`, replicas);
+  if (input === null) return; // canceled
+  const newReplicas = parseInt(input);
+  if (isNaN(newReplicas) || newReplicas < 0) { alert('Geçerli bir sayı girin'); return; }
+  fetch('/k8s-explorer/scale-statefulset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, namespace, replicas: newReplicas })
+  }).then(async r => {
+    if (r.ok) {
+      alert('StatefulSet replica sayısı güncellendi.');
+      if (typeof fetchAndRenderStatefulSetsTable === 'function') fetchAndRenderStatefulSetsTable();
+      if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
+      if (typeof loadOverviewData === 'function') loadOverviewData();
+    } else {
+      const txt = await r.text();
+      alert('Scale başarısız: ' + txt);
+    }
+  }).catch(e => alert('Scale isteği başarısız: ' + e));
 }
 
 function deleteReplicaSet(name, namespace) {
-  if (confirm(`${namespace}/${name} ReplicaSet'ini silmek istediğinizden emin misiniz?`)) {
-    alert('Delete functionality will be implemented');
-  }
+  if (!confirm(`${namespace}/${name} ReplicaSet'ini silmek istediğinizden emin misiniz?`)) return;
+  // Call backend bulk delete endpoint with a single item
+  fetch('/k8s-explorer/delete-replicasets', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items: [{ namespace: namespace, name: name }] })
+  }).then(async r => {
+    let txt = '';
+    try { txt = await r.text(); } catch(e){ txt = '' + e; }
+    if (!r.ok && r.status !== 207) {
+      alert('Delete başarısız: ' + txt);
+      return;
+    }
+    let json = {};
+    try { json = JSON.parse(txt || '{}'); } catch(e) { json = { deleted: [], errors: [{ error: txt }] }; }
+    const deleted = json.deleted || [];
+    const errors = json.errors || [];
+    if (deleted.length > 0) {
+      alert(`ReplicaSet silindi: ${name} (ns: ${namespace})`);
+    }
+    if (errors.length > 0) {
+      console.warn('Delete errors:', errors);
+      alert('Bazı hatalar oluştu. Konsolu kontrol edin.');
+    }
+    // Refresh UI
+    if (typeof fetchAndRenderReplicaSetsTable === 'function') fetchAndRenderReplicaSetsTable();
+    if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
+    if (typeof loadOverviewData === 'function') loadOverviewData();
+  }).catch(e => {
+    alert('Delete isteği başarısız: ' + e);
+  });
 }
 
 function deleteJob(name, namespace) {
@@ -1544,6 +1798,8 @@ function updateDeploymentsPieChart(deployments, containerId) {
     { name: 'Not Ready', y: notReady, color: '#FF9800' }
   ]);
 }
-</script>
 
+</script>
+<!-- Added missing endblock tag to close the content block -->
 {% endblock %}
+</html>

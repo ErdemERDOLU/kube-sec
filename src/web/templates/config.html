@@ -202,6 +202,34 @@
     color: #dc2626;
     border: 1px solid rgba(239, 68, 68, 0.2);
   }
+  /* Inline select helpers for small filter controls */
+  .secrets-filter { display: inline-flex; align-items: center; gap: 0.5rem; }
+  .form-select-inline { display: inline-block; width: 220px; max-width: 100%; }
+
+/* Added toast notification styles */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+}
+
+.toast {
+  min-width: 300px;
+  margin-bottom: 10px;
+}
+
+.toast.success {
+  background-color: #d4edda;
+  border-color: #c3e6cb;
+  color: #155724;
+}
+
+.toast.error {
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
+}
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-5 page-header">
@@ -224,13 +252,9 @@
 <div class="card config-card mb-5" id="config-navigation">
   <div class="card-header bg-white border-0 pt-4">
     <ul class="nav nav-pills nav-fill justify-content-center" id="configTab" role="tablist">
+  <!-- "Genel Bakış" tab removed per request -->
       <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
-          <i class="bi bi-grid-3x3-gap me-2"></i>Genel Bakış
-        </button>
-      </li>
-      <li class="nav-item" role="presentation">
-        <button class="nav-link" id="configmaps-tab" data-bs-toggle="tab" data-bs-target="#configmaps" type="button" role="tab">
+        <button class="nav-link active" id="configmaps-tab" data-bs-toggle="tab" data-bs-target="#configmaps" type="button" role="tab">
           <i class="bi bi-file-text me-2"></i>ConfigMaps
         </button>
       </li>
@@ -284,158 +308,11 @@
 </div>
 
 <div class="tab-content" id="configTabContent">
-  <div class="tab-pane fade show active" id="overview" role="tabpanel">
-    <div class="row g-4 mb-5">
-      <div class="col-lg-3 col-md-6">
-        <div class="config-card h-100">
-          <div class="card-header text-white" style="background: var(--primary-gradient);">
-            <div class="d-flex align-items-center">
-              <i class="bi bi-file-text me-3" style="font-size: 1.5rem;"></i>
-              <div>
-                <h5 class="mb-0 fw-bold">ConfigMaps</h5>
-                <small class="opacity-90">Configuration Data</small>
-              </div>
-            </div>
-          </div>
-          <div class="card-body p-0">
-            <div class="chart-container">
-              <div id="pie-configmaps" style="width: 100%; height: 200px;"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-6">
-        <div class="config-card h-100">
-          <div class="card-header text-white" style="background: var(--danger-gradient);">
-            <div class="d-flex align-items-center">
-              <i class="bi bi-shield-lock me-3" style="font-size: 1.5rem;"></i>
-              <div>
-                <h5 class="mb-0 fw-bold">Secrets</h5>
-                <small class="opacity-90">Sensitive Data</small>
-              </div>
-            </div>
-          </div>
-          <div class="card-body p-0">
-            <div class="chart-container">
-              <div id="pie-secrets" style="width: 100%; height: 200px;"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-6">
-        <div class="config-card h-100">
-          <div class="card-header text-white" style="background: var(--warning-gradient);">
-            <div class="d-flex align-items-center">
-              <i class="bi bi-speedometer2 me-3" style="font-size: 1.5rem;"></i>
-              <div>
-                <h5 class="mb-0 fw-bold">Resource Quotas</h5>
-                <small class="opacity-90">Resource Limits</small>
-              </div>
-            </div>
-          </div>
-          <div class="card-body p-0">
-            <div class="chart-container">
-              <div id="pie-resource-quotas" style="width: 100%; height: 200px;"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-6">
-        <div class="config-card h-100">
-          <div class="card-header text-white" style="background: var(--info-gradient);">
-            <div class="d-flex align-items-center">
-              <i class="bi bi-bar-chart me-3" style="font-size: 1.5rem;"></i>
-              <div>
-                <h5 class="mb-0 fw-bold">Limit Ranges</h5>
-                <small class="opacity-90">Default Limits</small>
-              </div>
-            </div>
-          </div>
-          <div class="card-body p-0">
-            <div class="chart-container">
-              <div id="pie-limit-ranges" style="width: 100%; height: 200px;"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-6">
-        <div class="config-card h-100">
-          <div class="card-header text-white" style="background: var(--success-gradient);">
-            <div class="d-flex align-items-center">
-              <i class="bi bi-arrows-expand me-3" style="font-size: 1.5rem;"></i>
-              <div>
-                <h5 class="mb-0 fw-bold">HPA</h5>
-                <small class="opacity-90">Auto Scaling</small>
-              </div>
-            </div>
-          </div>
-          <div class="card-body p-0">
-            <div class="chart-container">
-              <div id="pie-hpa" style="width: 100%; height: 200px;"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-6">
-        <div class="config-card h-100">
-          <div class="card-header text-white" style="background: var(--purple-gradient);">
-            <div class="d-flex align-items-center">
-              <i class="bi bi-shield-check me-3" style="font-size: 1.5rem;"></i>
-              <div>
-                <h5 class="mb-0 fw-bold">PDB</h5>
-                <small class="opacity-90">Disruption Budget</small>
-              </div>
-            </div>
-          </div>
-          <div class="card-body p-0">
-            <div class="chart-container">
-              <div id="pie-pdb" style="width: 100%; height: 200px;"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-6">
-        <div class="config-card h-100">
-          <div class="card-header text-white" style="background: var(--indigo-gradient);">
-            <div class="d-flex align-items-center">
-              <i class="bi bi-sort-numeric-down me-3" style="font-size: 1.5rem;"></i>
-              <div>
-                <h5 class="mb-0 fw-bold">Priority Classes</h5>
-                <small class="opacity-90">Pod Priority</small>
-              </div>
-            </div>
-          </div>
-          <div class="card-body p-0">
-            <div class="chart-container">
-              <div id="pie-priority-classes" style="width: 100%; height: 200px;"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="col-lg-3 col-md-6">
-        <div class="config-card h-100">
-          <div class="card-header text-white" style="background: var(--dark-gradient);">
-            <div class="d-flex align-items-center">
-              <i class="bi bi-cpu me-3" style="font-size: 1.5rem;"></i>
-              <div>
-                <h5 class="mb-0 fw-bold">Runtime Classes</h5>
-                <small class="opacity-90">Container Runtime</small>
-              </div>
-            </div>
-          </div>
-          <div class="card-body p-0">
-            <div class="chart-container">
-              <div id="pie-runtime-classes" style="width: 100%; height: 200px;"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- "Genel Bakış" pane removed per request -->
 
-  <div class="tab-pane fade" id="configmaps" role="tabpanel">
+  <div class="tab-pane fade show active" id="configmaps" role="tabpanel">
     <div class="row g-4">
-      <div class="col-lg-8">
+  <div class="col-lg-12">
         <div class="config-card">
           <div class="card-header text-white" style="background: var(--primary-gradient);">
             <h5 class="mb-0 fw-bold">
@@ -443,13 +320,25 @@
             </h5>
           </div>
           <div class="card-body p-0">
-            <div id="configmaps-table-container">
-              <div class="d-flex align-items-center justify-content-center py-5">
-                <div class="loading-spinner me-2"></div>
-                <span class="text-muted">ConfigMap listesi yükleniyor...</span>
-              </div>
-            </div>
-          </div>
+                  <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                    <div>
+                      <small class="text-muted">Namespace filtresi</small>
+                      <select id="configNamespaceSelect" class="form-select form-select-sm form-select-inline d-inline-block ms-2" aria-label="Namespace filtre">
+                        <option value="default">default</option>
+                        <option value="all">Tümü</option>
+                      </select>
+                    </div>
+                    <div>
+                      <button id="clearConfigNsFilter" class="btn btn-outline-secondary btn-sm d-none">Filtreyi Temizle</button>
+                    </div>
+                  </div>
+                  <div id="configmaps-table-container">
+                    <div class="d-flex align-items-center justify-content-center py-5">
+                      <div class="loading-spinner me-2"></div>
+                      <span class="text-muted">ConfigMap listesi yükleniyor...</span>
+                    </div>
+                  </div>
+                </div>
         </div>
       </div>
       <div class="col-lg-4">
@@ -469,7 +358,7 @@
 
   <div class="tab-pane fade" id="secrets" role="tabpanel">
     <div class="row g-4">
-      <div class="col-lg-8">
+  <div class="col-lg-12">
         <div class="config-card">
           <div class="card-header text-white" style="background: var(--danger-gradient);">
             <h5 class="mb-0 fw-bold">
@@ -477,6 +366,20 @@
             </h5>
           </div>
           <div class="card-body p-0">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+              <div>
+                <small class="text-muted">Namespace filtresi</small>
+                <span class="secrets-filter ms-2">
+                  <select id="secretsNamespaceSelect" class="form-select form-select-sm form-select-inline" aria-label="Namespace filtre">
+                  <option value="default">default</option>
+                  <option value="all">Tümü</option>
+                  </select>
+                </span>
+              </div>
+              <div>
+                <button id="clearSecretsNsFilter" class="btn btn-outline-secondary btn-sm d-none">Filtreyi Temizle</button>
+              </div>
+            </div>
             <div id="secrets-table-container">
               <div class="d-flex align-items-center justify-content-center py-5">
                 <div class="loading-spinner me-2"></div>
@@ -485,19 +388,7 @@
             </div>
           </div>
         </div>
-      </div>
-      <div class="col-lg-4">
-        <div class="config-card">
-          <div class="card-header text-white" style="background: var(--danger-gradient);">
-            <h6 class="mb-0 fw-bold">Secret Türleri</h6>
-          </div>
-          <div class="card-body p-0">
-            <div class="chart-container">
-              <div id="pie-secrets-tab" style="width: 100%; height: 280px;"></div>
-            </div>
-          </div>
-        </div>
-      </div>
+  </div>
     </div>
   </div>
 
@@ -715,6 +606,447 @@
 
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 <script>
+// Ensure global handlers exist before dynamic table renders to avoid ReferenceError from inline onclicks
+window.showConfigMap = window.showConfigMap || function(name, namespace) { console.debug('showConfigMap called early', name, namespace); };
+window.editConfigMap = window.editConfigMap || function(name, namespace) { console.debug('editConfigMap called early', name, namespace); };
+// Secret handler stubs to avoid ReferenceError when buttons are clicked before full script loads
+window.showSecret = window.showSecret || function(name, namespace) { console.debug('showSecret called early', name, namespace); };
+window.editSecret = window.editSecret || function(name, namespace) { console.debug('editSecret called early', name, namespace); };
+window.deleteSecret = window.deleteSecret || function(name, namespace) { console.debug('deleteSecret called early', name, namespace); };
+
+// Click proxy fallback defined early so inline onclicks won't fail
+window.__config_clickProxy = window.__config_clickProxy || function(action, name, namespace) {
+  try {
+    console.debug('__config_clickProxy', action, name, namespace);
+    if (action === 'view' && window.showConfigMap) {
+      try { window.showConfigMap(name, namespace); } catch (e) { console.error('showConfigMap error from proxy', e); }
+    }
+    if (action === 'edit' && window.editConfigMap) {
+      try { window.editConfigMap(name, namespace); } catch (e) { console.error('editConfigMap error from proxy', e); }
+    }
+    // Secret actions
+    if (action === 'view-secret' && window.showSecret) {
+      try { window.showSecret(name, namespace); } catch (e) { console.error('showSecret error from proxy', e); }
+    }
+    if (action === 'edit-secret' && window.editSecret) {
+      try { window.editSecret(name, namespace); } catch (e) { console.error('editSecret error from proxy', e); }
+    }
+    if (action === 'delete-secret' && window.deleteSecret) {
+      try { window.deleteSecret(name, namespace); } catch (e) { console.error('deleteSecret error from proxy', e); }
+    }
+  } catch (e) { console.debug('config click proxy top error', e); }
+};
+
+// Small visible debug helper so clicks are visible even if console is filtered
+window.__showDebugMessage = window.__showDebugMessage || function(msg, timeout = 2000) {
+  try {
+    let el = document.getElementById('__kubesec_debug_msg');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = '__kubesec_debug_msg';
+      el.style.position = 'fixed';
+      el.style.right = '1rem';
+      el.style.bottom = '1rem';
+      el.style.zIndex = 2000;
+      document.body.appendChild(el);
+    }
+    const msgEl = document.createElement('div');
+    msgEl.textContent = msg;
+    msgEl.style.background = 'rgba(37,99,235,0.95)';
+    msgEl.style.color = 'white';
+    msgEl.style.padding = '0.5rem 0.75rem';
+    msgEl.style.marginTop = '0.4rem';
+    msgEl.style.borderRadius = '0.5rem';
+    msgEl.style.boxShadow = '0 6px 18px rgba(0,0,0,0.15)';
+    el.appendChild(msgEl);
+    setTimeout(() => { try { el.removeChild(msgEl); } catch(_){} }, timeout);
+  } catch (e) { console.debug('debugMessage error', e); }
+};
+
+function showToast(message, type = 'success') {
+  // Create toast container if it doesn't exist
+  let toastContainer = document.querySelector('.toast-container');
+  if (!toastContainer) {
+    toastContainer = document.createElement('div');
+    toastContainer.className = 'toast-container';
+    document.body.appendChild(toastContainer);
+  }
+  
+  // Create toast element
+  const toastId = 'toast-' + Date.now();
+  const toastHtml = `
+    <div class="toast ${type}" id="${toastId}" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="toast-header">
+        <strong class="me-auto">${type === 'success' ? 'Başarılı' : 'Hata'}</strong>
+        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+      <div class="toast-body">
+        ${message}
+      </div>
+    </div>
+  `;
+  
+  toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+  
+  // Initialize and show toast
+  const toastElement = document.getElementById(toastId);
+  const toast = new bootstrap.Toast(toastElement, {
+    autohide: true,
+    delay: 4000
+  });
+  
+  // Remove toast element after it's hidden
+  toastElement.addEventListener('hidden.bs.toast', function() {
+    toastElement.remove();
+  });
+  
+  toast.show();
+}
+
+window.showConfigMap = function(name, namespace) {
+  console.debug('showConfigMap called:', name, namespace);
+  
+  const requestKey = `show-configmap-${name}-${namespace}`;
+  if (isRequestActive(requestKey)) {
+    console.debug('Request already active:', requestKey);
+    return;
+  }
+  
+  setRequestActive(requestKey);
+  
+  const existingViewModal = document.getElementById('configMapViewModal');
+  if (existingViewModal) {
+    const existingInstance = bootstrap.Modal.getInstance(existingViewModal);
+    if (existingInstance) {
+      existingInstance.dispose();
+    }
+    existingViewModal.remove();
+  }
+  
+  fetch(`/k8s-explorer/configmap?name=${encodeURIComponent(name)}&namespace=${encodeURIComponent(namespace)}`)
+    .then(response => response.json())
+    .then(data => {
+      setRequestInactive(requestKey);
+      
+      if (data.error) {
+        showToast('ConfigMap yüklenirken hata: ' + data.error, 'error');
+        return;
+      }
+      
+      const configmap = data.configmap;
+      const modalHtml = `
+        <div class="modal fade" id="configMapViewModal" tabindex="-1">
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">ConfigMap: ${configmap.name}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <strong>Namespace:</strong> <span class="badge bg-primary">${configmap.namespace}</span>
+                </div>
+                <div class="mb-3">
+                  <strong>Data:</strong>
+                </div>
+                <div class="table-responsive">
+                  <table class="table table-bordered">
+                    <thead>
+                      <tr>
+                        <th>Key</th>
+                        <th>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${Object.entries(configmap.data || {}).map(([key, value]) => `
+                        <tr>
+                          <td><code>${key}</code></td>
+                          <td><pre class="mb-0" style="max-height: 200px; overflow-y: auto;">${value}</pre></td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="event.stopPropagation(); window.editConfigMap('${configmap.name}', '${configmap.namespace}');">Edit</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Add modal to body and show
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      const modalElement = document.getElementById('configMapViewModal');
+      const modal = new bootstrap.Modal(modalElement);
+      
+      modalElement.addEventListener('hidden.bs.modal', function () {
+        modal.dispose();
+        modalElement.remove();
+      });
+      
+      modal.show();
+    })
+    .catch(error => {
+      setRequestInactive(requestKey);
+      console.error('Error fetching ConfigMap:', error);
+      showToast('ConfigMap yüklenirken hata: ' + error.message, 'error');
+    });
+};
+
+window.editConfigMap = function(name, namespace) {
+  console.debug('editConfigMap called:', name, namespace);
+  
+  const requestKey = `edit-configmap-${name}-${namespace}`;
+  if (isRequestActive(requestKey)) {
+    console.debug('Request already active:', requestKey);
+    return;
+  }
+  
+  setRequestActive(requestKey);
+  
+  // Clean up any existing modals
+  const existingEditModal = document.getElementById('configMapEditModal');
+  if (existingEditModal) {
+    const existingInstance = bootstrap.Modal.getInstance(existingEditModal);
+    if (existingInstance) {
+      existingInstance.dispose();
+    }
+    existingEditModal.remove();
+  }
+  
+  const existingViewModal = document.getElementById('configMapViewModal');
+  if (existingViewModal) {
+    const viewInstance = bootstrap.Modal.getInstance(existingViewModal);
+    if (viewInstance) {
+      viewInstance.hide();
+    }
+  }
+  
+  // Clean up fallback panel if exists
+  const fallbackPanel = document.getElementById('__config_fallback_panel');
+  if (fallbackPanel) {
+    fallbackPanel.remove();
+  }
+  
+  fetch(`/k8s-explorer/configmap?name=${encodeURIComponent(name)}&namespace=${encodeURIComponent(namespace)}`)
+    .then(response => response.json())
+    .then(data => {
+      setRequestInactive(requestKey);
+      
+      if (data.error) {
+        showToast('ConfigMap yüklenirken hata: ' + data.error, 'error');
+        return;
+      }
+      
+      const configmap = data.configmap;
+      const modalHtml = `
+        <div class="modal fade" id="configMapEditModal" tabindex="-1">
+          <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Edit ConfigMap: ${configmap.name}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <strong>Namespace:</strong> <span class="badge bg-primary">${configmap.namespace}</span>
+                </div>
+                <div class="mb-3">
+                  <strong>Data:</strong>
+                  <small class="text-muted ms-2">Edit the key-value pairs below</small>
+                </div>
+                <div id="configMapDataEditor">
+                  ${Object.entries(configmap.data || {}).map(([key, value], index) => `
+                    <div class="row mb-3 config-data-row">
+                      <div class="col-md-3">
+                        <label class="form-label">Key</label>
+                        <input type="text" class="form-control config-key" value="${key}" data-original-key="${key}">
+                      </div>
+                      <div class="col-md-8">
+                        <label class="form-label">Value</label>
+                        <textarea class="form-control config-value" rows="3" style="font-family: monospace;">${value}</textarea>
+                      </div>
+                      <div class="col-md-1 d-flex align-items-end">
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-config-row">
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+                <button type="button" class="btn btn-outline-success btn-sm" id="addConfigRow">
+                  <i class="fas fa-plus"></i> Add New Key-Value Pair
+                </button>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveConfigMapBtn">Save Changes</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Add modal to body and show
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      const modalElement = document.getElementById('configMapEditModal');
+      const modal = new bootstrap.Modal(modalElement);
+      
+      modalElement.addEventListener('hidden.bs.modal', function () {
+        modal.dispose();
+        modalElement.remove();
+        // Restore body scroll
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+      });
+      
+      modal.show();
+      
+      const addRowBtn = document.getElementById('addConfigRow');
+      const saveBtn = document.getElementById('saveConfigMapBtn');
+      const editor = document.getElementById('configMapDataEditor');
+      
+      // Add new row functionality
+      addRowBtn.addEventListener('click', function() {
+        const newRowHtml = `
+          <div class="row mb-3 config-data-row">
+            <div class="col-md-3">
+              <label class="form-label">Key</label>
+              <input type="text" class="form-control config-key" value="" data-original-key="">
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Value</label>
+              <textarea class="form-control config-value" rows="3" style="font-family: monospace;"></textarea>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+              <button type="button" class="btn btn-outline-danger btn-sm remove-config-row">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        `;
+        editor.insertAdjacentHTML('beforeend', newRowHtml);
+      });
+      
+      // Remove row functionality with event delegation
+      editor.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-config-row')) {
+          const rowToRemove = e.target.closest('.config-data-row');
+          if (rowToRemove) {
+            rowToRemove.remove();
+          }
+        }
+      });
+      
+      // Add save functionality
+      saveBtn.addEventListener('click', function(event) {
+        event.stopPropagation();
+        
+        const saveRequestKey = `save-configmap-${configmap.name}-${configmap.namespace}`;
+        if (isRequestActive(saveRequestKey)) {
+          console.debug('Save request already active:', saveRequestKey);
+          return;
+        }
+        
+        setRequestActive(saveRequestKey);
+        
+        // Collect data from form
+        const rows = document.querySelectorAll('#configMapDataEditor .config-data-row');
+        const newData = {};
+        let hasError = false;
+        
+        rows.forEach(row => {
+          const keyInput = row.querySelector('.config-key');
+          const valueInput = row.querySelector('.config-value');
+          const key = keyInput.value.trim();
+          const value = valueInput.value;
+          
+          if (key === '') {
+            keyInput.classList.add('is-invalid');
+            hasError = true;
+            return;
+          }
+          
+          if (newData.hasOwnProperty(key)) {
+            showToast('Tekrarlanan anahtar bulundu: ' + key, 'error');
+            hasError = true;
+            return;
+          }
+          
+          newData[key] = value;
+        });
+        
+        if (hasError) {
+          setRequestInactive(saveRequestKey);
+          return;
+        }
+        
+        // Send update request
+        fetch('/k8s-explorer/update-configmap', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: configmap.name,
+            namespace: configmap.namespace,
+            data: newData
+          })
+        })
+        .then(response => response.json())
+        .then(result => {
+          setRequestInactive(saveRequestKey);
+          
+          if (result.error) {
+            showToast('ConfigMap güncellenirken hata: ' + result.error, 'error');
+          } else {
+            showToast('ConfigMap başarıyla güncellendi', 'success');
+            modal.hide();
+            // Refresh the page to show updated data
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
+          }
+        })
+        .catch(error => {
+          setRequestInactive(saveRequestKey);
+          console.error('Error updating configmap:', error);
+          showToast('ConfigMap güncellenirken hata oluştu', 'error');
+        });
+      });
+    })
+    .catch(error => {
+      setRequestInactive(requestKey);
+      console.error('Error fetching configmap:', error);
+      showToast('ConfigMap yüklenirken hata oluştu', 'error');
+    });
+};
+
+
+document.addEventListener('click', function(event) {
+  if (event.target.matches('[data-action="view-configmap"]')) {
+    event.stopPropagation();
+    const name = event.target.getAttribute('data-name');
+    const namespace = event.target.getAttribute('data-namespace');
+    if (name && namespace) {
+      window.showConfigMap(name, namespace);
+    }
+  }
+  
+  if (event.target.matches('[data-action="edit-configmap"]')) {
+    event.stopPropagation();
+    const name = event.target.getAttribute('data-name');
+    const namespace = event.target.getAttribute('data-namespace');
+    if (name && namespace) {
+      window.editConfigMap(name, namespace);
+    }
+  }
+  
+});
+
 let allConfigData = {
   configmaps: [],
   secrets: [],
@@ -724,6 +1056,68 @@ let allConfigData = {
 
 document.addEventListener('DOMContentLoaded', function() {
   loadOverviewData();
+  // fetch namespaces for config page filter
+  fetch('/k8s-explorer/namespaces').then(r => r.json()).then(j => {
+    if (j.namespaces) {
+      const sel = document.getElementById('configNamespaceSelect');
+      // insert namespaces (avoid duplicates)
+      j.namespaces.forEach(ns => {
+        if (![...sel.options].some(o => o.value === ns)) {
+          const opt = document.createElement('option');
+          opt.value = ns;
+          opt.text = ns;
+          sel.appendChild(opt);
+        }
+      });
+      // default selection: use 'default' if present, otherwise 'all'
+      sel.value = j.namespaces.includes('default') ? 'default' : 'all';
+      sel.addEventListener('change', () => {
+        const v = sel.value;
+        document.getElementById('clearConfigNsFilter').classList.toggle('d-none', v === 'all');
+        // if currently on configmaps tab, refresh it
+        const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+        if (activeTab === 'configmaps') fetchAndRenderConfigMapsTable();
+      });
+      document.getElementById('clearConfigNsFilter').addEventListener('click', () => {
+        document.getElementById('configNamespaceSelect').value = 'all';
+        document.getElementById('clearConfigNsFilter').classList.add('d-none');
+        fetchAndRenderConfigMapsTable();
+      });
+      // populate secrets namespace select as well (if present)
+      const secretsSel = document.getElementById('secretsNamespaceSelect');
+      if (secretsSel) {
+        j.namespaces.forEach(ns => {
+          if (![...secretsSel.options].some(o => o.value === ns)) {
+            const opt = document.createElement('option');
+            opt.value = ns;
+            opt.text = ns;
+            secretsSel.appendChild(opt);
+          }
+        });
+        secretsSel.value = j.namespaces.includes('default') ? 'default' : 'all';
+        secretsSel.addEventListener('change', () => {
+          const v = secretsSel.value;
+          document.getElementById('clearSecretsNsFilter').classList.toggle('d-none', v === 'all');
+          const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+          if (activeTab === 'secrets') fetchAndRenderSecretsTable();
+        });
+        document.getElementById('clearSecretsNsFilter').addEventListener('click', () => {
+          document.getElementById('secretsNamespaceSelect').value = 'all';
+          document.getElementById('clearSecretsNsFilter').classList.add('d-none');
+          fetchAndRenderSecretsTable();
+        });
+      }
+    }
+    // trigger initial render for the active tab (configmaps by default)
+    const activeTabAfterNs = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+    if (activeTabAfterNs === 'configmaps') {
+      setTimeout(fetchAndRenderConfigMapsTable, 50);
+    }
+  }).catch(() => {
+    // if namespace list fetch fails, still try to render active tab
+    const activeTabAfterNs = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+    if (activeTabAfterNs === 'configmaps') setTimeout(fetchAndRenderConfigMapsTable, 50);
+  });
   
   document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
     tab.addEventListener('shown.bs.tab', function(e) {
@@ -737,6 +1131,66 @@ document.addEventListener('DOMContentLoaded', function() {
         });
       }, 100);
     });
+  });
+  // Fallback: trigger initial render for the active tab immediately
+  try {
+    const initialActive = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+    if (initialActive === 'configmaps') setTimeout(fetchAndRenderConfigMapsTable, 50);
+  } catch (e) {
+    // ignore
+  }
+
+  // Delegated handlers for configmap view/edit buttons - works even after the table is re-rendered
+  document.addEventListener('click', function(e) {
+    try {
+    // DEBUG: log delegated clicks
+    // console.debug('delegated click:', e.target);
+      const viewBtn = e.target.closest && e.target.closest('.btn-view-configmap');
+      if (viewBtn) {
+        const name = viewBtn.getAttribute('data-name');
+        const namespace = viewBtn.getAttribute('data-namespace');
+        if (window.showConfigMap) {
+          try { console.debug('invoking showConfigMap', name, namespace); window.__showDebugMessage && window.__showDebugMessage('show: ' + name + ' / ' + namespace); window.showConfigMap(name, namespace); } catch (err) { console.error('showConfigMap handler error', err); }
+        }
+        return;
+      }
+      const editBtn = e.target.closest && e.target.closest('.btn-edit-configmap');
+      if (editBtn) {
+        const name = editBtn.getAttribute('data-name');
+        const namespace = editBtn.getAttribute('data-namespace');
+        if (window.editConfigMap) {
+          try { console.debug('invoking editConfigMap', name, namespace); window.__showDebugMessage && window.__showDebugMessage('edit: ' + name + ' / ' + namespace); window.editConfigMap(name, namespace); } catch (err) { console.error('editConfigMap handler error', err); }
+        }
+      }
+      // Secret buttons: delegated handler ensures clicks are caught after re-renders
+      const viewSecretBtn = e.target.closest && e.target.closest('.btn-view-secret');
+      if (viewSecretBtn) {
+        const name = viewSecretBtn.getAttribute('data-name');
+        const namespace = viewSecretBtn.getAttribute('data-namespace');
+        if (window.showSecret) {
+          try { console.debug('invoking showSecret', name, namespace); window.__showDebugMessage && window.__showDebugMessage('show-secret: ' + name + ' / ' + namespace); window.showSecret(name, namespace); } catch (err) { console.error('showSecret handler error', err); }
+        }
+        return;
+      }
+      const editSecretBtn = e.target.closest && e.target.closest('.btn-edit-secret');
+      if (editSecretBtn) {
+        const name = editSecretBtn.getAttribute('data-name');
+        const namespace = editSecretBtn.getAttribute('data-namespace');
+        if (window.editSecret) {
+          try { console.debug('invoking editSecret', name, namespace); window.__showDebugMessage && window.__showDebugMessage('edit-secret: ' + name + ' / ' + namespace); window.editSecret(name, namespace); } catch (err) { console.error('editSecret handler error', err); }
+        }
+        return;
+      }
+      const deleteSecretBtn = e.target.closest && e.target.closest('.btn-delete-secret');
+      if (deleteSecretBtn) {
+        const name = deleteSecretBtn.getAttribute('data-name');
+        const namespace = deleteSecretBtn.getAttribute('data-namespace');
+        if (window.deleteSecret) {
+          try { console.debug('invoking deleteSecret', name, namespace); window.__showDebugMessage && window.__showDebugMessage('delete-secret: ' + name + ' / ' + namespace); window.deleteSecret(name, namespace); } catch (err) { console.error('deleteSecret handler error', err); }
+        }
+        return;
+      }
+    } catch (err) { console.debug('delegated configmap click handler error', err); }
   });
 });
 
@@ -761,88 +1215,113 @@ async function loadOverviewData() {
 }
 
 function updateOverviewCharts() {
-  const configmapsChart = echarts.init(document.getElementById('pie-configmaps'));
-  const configmapsData = allConfigData.configmaps;
-  const configmapsNamespaces = [...new Set(configmapsData.map(cm => cm.namespace))];
-  
-  configmapsChart.setOption({
-    tooltip: { trigger: 'item' },
-    series: [{
-      type: 'pie',
-      radius: '70%',
-      data: configmapsNamespaces.map(ns => ({
-        value: configmapsData.filter(cm => cm.namespace === ns).length,
-        name: ns
-      })),
-      emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }}
-    }]
-  });
+  // If Overview charts were removed from the page, skip initialization to avoid errors
+  try {
+    const cfgEl = document.getElementById('pie-configmaps');
+    if (cfgEl) {
+      try {
+        const configmapsChart = echarts.init(cfgEl);
+        const configmapsData = allConfigData.configmaps;
+        const configmapsNamespaces = [...new Set(configmapsData.map(cm => cm.namespace))];
+        configmapsChart.setOption({
+          tooltip: { trigger: 'item' },
+          series: [{
+            type: 'pie',
+            radius: '70%',
+            data: configmapsNamespaces.map(ns => ({
+              value: configmapsData.filter(cm => cm.namespace === ns).length,
+              name: ns
+            })),
+            emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }}
+          }]
+        });
+      } catch (e) { console.debug('configmaps chart init failed', e); }
+    }
 
-  const secretsChart = echarts.init(document.getElementById('pie-secrets'));
-  const secretsData = allConfigData.secrets;
-  const secretTypes = [...new Set(secretsData.map(s => s.type))];
-  
-  secretsChart.setOption({
-    tooltip: { trigger: 'item' },
-    series: [{
-      type: 'pie',
-      radius: '70%',
-      data: secretTypes.map(type => ({
-        value: secretsData.filter(s => s.type === type).length,
-        name: type
-      })),
-      emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }}
-    }]
-  });
+    const secEl = document.getElementById('pie-secrets');
+    if (secEl) {
+      try {
+        const secretsChart = echarts.init(secEl);
+        const secretsData = allConfigData.secrets;
+        const secretTypes = [...new Set(secretsData.map(s => s.type))];
+        secretsChart.setOption({
+          tooltip: { trigger: 'item' },
+          series: [{
+            type: 'pie',
+            radius: '70%',
+            data: secretTypes.map(type => ({
+              value: secretsData.filter(s => s.type === type).length,
+              name: type
+            })),
+            emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }}
+          }]
+        });
+      } catch (e) { console.debug('secrets chart init failed', e); }
+    }
 
-  const quotasChart = echarts.init(document.getElementById('pie-resource-quotas'));
-  const quotasData = allConfigData.resource_quotas;
-  const quotasNamespaces = [...new Set(quotasData.map(q => q.namespace))];
-  
-  quotasChart.setOption({
-    tooltip: { trigger: 'item' },
-    series: [{
-      type: 'pie',
-      radius: '70%',
-      data: quotasNamespaces.map(ns => ({
-        value: quotasData.filter(q => q.namespace === ns).length,
-        name: ns
-      })),
-      emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }}
-    }]
-  });
+    const quotasEl = document.getElementById('pie-resource-quotas');
+    if (quotasEl) {
+      try {
+        const quotasChart = echarts.init(quotasEl);
+        const quotasData = allConfigData.resource_quotas;
+        const quotasNamespaces = [...new Set(quotasData.map(q => q.namespace))];
+        quotasChart.setOption({
+          tooltip: { trigger: 'item' },
+          series: [{
+            type: 'pie',
+            radius: '70%',
+            data: quotasNamespaces.map(ns => ({
+              value: quotasData.filter(q => q.namespace === ns).length,
+              name: ns
+            })),
+            emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }}
+          }]
+        });
+      } catch (e) { console.debug('resource quotas chart init failed', e); }
+    }
 
-  const limitRangesChart = echarts.init(document.getElementById('pie-limit-ranges'));
-  const limitRangesData = allConfigData.limit_ranges;
-  const limitRangesNamespaces = [...new Set(limitRangesData.map(lr => lr.namespace))];
-  
-  limitRangesChart.setOption({
-    tooltip: { trigger: 'item' },
-    series: [{
-      type: 'pie',
-      radius: '70%',
-      data: limitRangesNamespaces.map(ns => ({
-        value: limitRangesData.filter(lr => lr.namespace === ns).length,
-        name: ns
-      })),
-      emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }}
-    }]
-  });
+    const lrEl = document.getElementById('pie-limit-ranges');
+    if (lrEl) {
+      try {
+        const limitRangesChart = echarts.init(lrEl);
+        const limitRangesData = allConfigData.limit_ranges;
+        const limitRangesNamespaces = [...new Set(limitRangesData.map(lr => lr.namespace))];
+        limitRangesChart.setOption({
+          tooltip: { trigger: 'item' },
+          series: [{
+            type: 'pie',
+            radius: '70%',
+            data: limitRangesNamespaces.map(ns => ({
+              value: limitRangesData.filter(lr => lr.namespace === ns).length,
+              name: ns
+            })),
+            emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }}
+          }]
+        });
+      } catch (e) { console.debug('limit ranges chart init failed', e); }
+    }
+  } catch (e) {
+    console.debug('updateOverviewCharts top-level error', e);
+  }
 
-  ['hpa', 'pdb', 'priority-classes', 'runtime-classes'].forEach(type => {
-    const chart = echarts.init(document.getElementById(`pie-${type}`));
-    chart.setOption({
-      tooltip: { trigger: 'item' },
-      series: [{
-        type: 'pie',
-        radius: '70%',
-        data: [
-          { value: 1, name: 'Simülasyon Modu' }
-        ],
-        emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }}
-      }]
+  try {
+    ['hpa', 'pdb', 'priority-classes', 'runtime-classes'].forEach(type => {
+      const el = document.getElementById(`pie-${type}`);
+      if (!el) return;
+      try {
+        const chart = echarts.init(el);
+        chart.setOption({
+          tooltip: { trigger: 'item' },
+          series: [{
+            type: 'pie',
+            radius: '70%',
+            data: [ { value: 1, name: 'Simülasyon Modu' } ],
+            emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }}
+          }]
+        });
+      } catch (e) { console.debug(type + ' chart init failed', e); }
     });
-  });
+  } catch (e) { console.debug('extra charts block failed', e); }
 }
 
 function handleTabChange(tabId) {
@@ -867,7 +1346,8 @@ async function fetchAndRenderConfigMapsTable() {
   container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">ConfigMap listesi yükleniyor...</span></div>';
   
   try {
-    const response = await fetch('/k8s-explorer/configmaps-summary');
+  const ns = document.getElementById('configNamespaceSelect') ? document.getElementById('configNamespaceSelect').value : 'all';
+  const response = await fetch('/k8s-explorer/configmaps-summary' + (ns ? ('?namespace=' + encodeURIComponent(ns)) : ''));
     const data = await response.json();
     const configmaps = data.configmaps || [];
     
@@ -895,12 +1375,12 @@ async function fetchAndRenderConfigMapsTable() {
           <td><span class="badge bg-info">${cm.data_count} keys</span></td>
           <td>${age}</td>
           <td>
-            <button class="btn btn-sm btn-outline-primary me-1">
-              <i class="bi bi-eye"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-secondary">
-              <i class="bi bi-pencil"></i>
-            </button>
+                <button type="button" class="btn btn-sm btn-outline-primary me-1 btn-view-configmap" data-name="${cm.name}" data-namespace="${cm.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('view', '${cm.name}', '${cm.namespace}')">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-configmap" data-name="${cm.name}" data-namespace="${cm.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('edit', '${cm.name}', '${cm.namespace}')">
+                  <i class="bi bi-pencil"></i>
+                </button>
           </td>
         </tr>
       `;
@@ -908,6 +1388,21 @@ async function fetchAndRenderConfigMapsTable() {
     
     tableHtml += '</tbody></table></div>';
     container.innerHTML = tableHtml;
+    // Attach click handlers to newly rendered buttons (use delegation-safe attachment)
+    container.querySelectorAll('.btn-view-configmap').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const name = btn.getAttribute('data-name');
+        const namespace = btn.getAttribute('data-namespace');
+        try { window.showConfigMap(name, namespace); } catch (err) { console.error('showConfigMap handler error', err); }
+      });
+    });
+    container.querySelectorAll('.btn-edit-configmap').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const name = btn.getAttribute('data-name');
+        const namespace = btn.getAttribute('data-namespace');
+        try { window.editConfigMap(name, namespace); } catch (err) { console.error('editConfigMap handler error', err); }
+      });
+    });
     
   } catch (error) {
     container.innerHTML = '<div class="alert alert-danger">ConfigMap listesi yüklenirken hata oluştu: ' + error.message + '</div>';
@@ -919,7 +1414,8 @@ async function fetchAndRenderSecretsTable() {
   container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Secret listesi yükleniyor...</span></div>';
   
   try {
-    const response = await fetch('/k8s-explorer/secrets-summary');
+  const ns = document.getElementById('secretsNamespaceSelect') ? document.getElementById('secretsNamespaceSelect').value : 'all';
+  const response = await fetch('/k8s-explorer/secrets-summary' + (ns ? ('?namespace=' + encodeURIComponent(ns)) : ''));
     const data = await response.json();
     const secrets = data.secrets || [];
     
@@ -950,20 +1446,27 @@ async function fetchAndRenderSecretsTable() {
           <td><span class="badge ${typeColor}">${secret.type}</span></td>
           <td><span class="badge bg-info">${secret.data_count} keys</span></td>
           <td>${age}</td>
-          <td>
-            <button class="btn btn-sm btn-outline-primary me-1">
-              <i class="bi bi-eye"></i>
-            </button>
-            <button class="btn btn-sm btn-outline-secondary">
-              <i class="bi bi-pencil"></i>
-            </button>
-          </td>
+              <td>
+                <button type="button" class="btn btn-sm btn-outline-primary me-1 btn-view-secret" data-name="${secret.name}" data-namespace="${secret.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('view-secret', '${secret.name}', '${secret.namespace}')">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary me-1 btn-edit-secret" data-name="${secret.name}" data-namespace="${secret.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('edit-secret', '${secret.name}', '${secret.namespace}')">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-secret" data-name="${secret.name}" data-namespace="${secret.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('delete-secret', '${secret.name}', '${secret.namespace}')">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
         </tr>
       `;
     });
     
     tableHtml += '</tbody></table></div>';
     container.innerHTML = tableHtml;
+  // Attach click handlers to newly rendered buttons (delegation exists globally; also attach direct handlers for redundancy)
+  container.querySelectorAll('.btn-view-secret').forEach(btn => btn.addEventListener('click', () => { const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.showSecret && window.showSecret(name, namespace); } catch(e){console.error(e);} }));
+  container.querySelectorAll('.btn-edit-secret').forEach(btn => btn.addEventListener('click', () => { const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.editSecret && window.editSecret(name, namespace); } catch(e){console.error(e);} }));
+  container.querySelectorAll('.btn-delete-secret').forEach(btn => btn.addEventListener('click', () => { const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.deleteSecret && window.deleteSecret(name, namespace); } catch(e){console.error(e);} }));
     
   } catch (error) {
     container.innerHTML = '<div class="alert alert-danger">Secret listesi yüklenirken hata oluştu: ' + error.message + '</div>';
@@ -1096,5 +1599,556 @@ function refreshAllData() {
   const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
   handleTabChange(activeTab);
 }
+// The second function only supported JSON editing and was preventing key deletion from working properly
+
+window.showSecret = function(name, namespace) {
+  console.debug('showSecret called:', name, namespace);
+  
+  const existingViewModal = document.getElementById('secretViewModal');
+  if (existingViewModal) {
+    const existingInstance = bootstrap.Modal.getInstance(existingViewModal);
+    if (existingInstance) {
+      existingInstance.dispose();
+    }
+    existingViewModal.remove();
+  }
+  
+  fetch(`/k8s-explorer/secret?name=${encodeURIComponent(name)}&namespace=${encodeURIComponent(namespace)}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        showToast('Secret yüklenirken hata: ' + data.error, 'error');
+        return;
+      }
+      
+      const secret = data.secret;
+      const modalHtml = `
+        <div class="modal fade" id="secretViewModal" tabindex="-1">
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Secret: ${secret.name}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <strong>Namespace:</strong> <span class="badge bg-primary">${secret.namespace}</span>
+                </div>
+                <div class="mb-3">
+                  <strong>Type:</strong> <span class="badge bg-info">${secret.type || 'Opaque'}</span>
+                </div>
+                <div class="mb-3">
+                  <strong>Data:</strong>
+                </div>
+                <div class="table-responsive">
+                  <table class="table table-bordered">
+                    <thead>
+                      <tr>
+                        <th>Key</th>
+                        <th>Value</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${Object.entries(secret.data || {}).map(([key, value]) => `
+                        <tr>
+                          <td><code>${key}</code></td>
+                          <td>
+                            <div class="secret-value-container">
+                              <span class="secret-value-hidden">••••••••</span>
+                              <pre class="secret-value-shown mb-0 d-none" style="max-height: 200px; overflow-y: auto;">${value}</pre>
+                            </div>
+                          </td>
+                          <td>
+                            <button type="button" class="btn btn-sm btn-outline-secondary toggle-secret-value">
+                              <i class="bi bi-eye"></i> Show
+                            </button>
+                          </td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="window.editSecret('${secret.name}', '${secret.namespace}');">Edit</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Add modal to body and show
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      const modalElement = document.getElementById('secretViewModal');
+      const modal = new bootstrap.Modal(modalElement);
+      
+      // Add toggle functionality for secret values
+      modalElement.addEventListener('click', function(e) {
+        if (e.target.closest('.toggle-secret-value')) {
+          const btn = e.target.closest('tr').querySelector('.secret-value-container');
+          const hiddenSpan = container.querySelector('.secret-value-hidden');
+          const shownPre = container.querySelector('.secret-value-shown');
+          const icon = btn.querySelector('i');
+          
+          if (hiddenSpan.classList.contains('d-none')) {
+            // Currently showing, hide it
+            hiddenSpan.classList.remove('d-none');
+            shownPre.classList.add('d-none');
+            btn.innerHTML = '<i class="bi bi-eye"></i> Show';
+          } else {
+            // Currently hidden, show it
+            hiddenSpan.classList.add('d-none');
+            shownPre.classList.remove('d-none');
+            btn.innerHTML = '<i class="bi bi-eye-slash"></i> Hide';
+          }
+        }
+      });
+      
+      modalElement.addEventListener('hidden.bs.modal', function () {
+        modal.dispose();
+        modalElement.remove();
+        // Restore body scroll
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+      });
+      
+      modal.show();
+    })
+    .catch(error => {
+      console.error('Error fetching Secret:', error);
+      showToast('Secret yüklenirken hata: ' + error.message, 'error');
+    });
+};
+
+let activeRequests = new Set();
+
+function isRequestActive(key) {
+  return activeRequests.has(key);
+}
+
+function setRequestActive(key) {
+  activeRequests.add(key);
+}
+
+function setRequestInactive(key) {
+  activeRequests.delete(key);
+}
+
+window.editSecret = function(name, namespace) {
+  console.debug('editSecret called:', name, namespace);
+  
+  const requestKey = `edit-secret-${name}-${namespace}`;
+  if (isRequestActive(requestKey)) {
+    console.debug('editSecret already in progress, ignoring');
+    return;
+  }
+  setRequestActive(requestKey);
+  
+  // Clean up any existing modals
+  const existingEditModal = document.getElementById('secretEditModal');
+  if (existingEditModal) {
+    const existingInstance = bootstrap.Modal.getInstance(existingEditModal);
+    if (existingInstance) {
+      existingInstance.dispose();
+    }
+    existingEditModal.remove();
+  }
+  
+  const existingViewModal = document.getElementById('secretViewModal');
+  if (existingViewModal) {
+    const viewInstance = bootstrap.Modal.getInstance(existingViewModal);
+    if (viewInstance) {
+      viewInstance.hide();
+    }
+  }
+  
+  fetch(`/k8s-explorer/secret?name=${encodeURIComponent(name)}&namespace=${encodeURIComponent(namespace)}`)
+    .then(response => response.json())
+    .then(data => {
+      setRequestInactive(requestKey);
+      
+      if (data.error) {
+        showToast('Secret yüklenirken hata: ' + data.error, 'error');
+        return;
+      }
+      
+      const secret = data.secret;
+      const modalHtml = `
+        <div class="modal fade" id="secretEditModal" tabindex="-1">
+          <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Edit Secret: ${secret.name}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <strong>Namespace:</strong> <span class="badge bg-primary">${secret.namespace}</span>
+                </div>
+                <div class="mb-3">
+                  <strong>Type:</strong> <span class="badge bg-info">${secret.type || 'Opaque'}</span>
+                </div>
+                <div class="mb-3">
+                  <strong>Data:</strong>
+                  <small class="text-muted ms-2">Edit the key-value pairs below</small>
+                </div>
+                <div id="secretDataEditor">
+                  ${Object.entries(secret.data || {}).map(([key, value], index) => `
+                    <div class="row mb-3 secret-data-row">
+                      <div class="col-md-3">
+                        <label class="form-label">Key</label>
+                        <input type="text" class="form-control secret-key" value="${key}" data-original-key="${key}">
+                      </div>
+                      <div class="col-md-8">
+                        <label class="form-label">Value</label>
+                        <textarea class="form-control secret-value" rows="3" style="font-family: monospace;">${value}</textarea>
+                      </div>
+                      <div class="col-md-1 d-flex align-items-end">
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-secret-row">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+                <button type="button" class="btn btn-outline-success btn-sm" id="addSecretRow">
+                  <i class="bi bi-plus"></i> Add New Key-Value Pair
+                </button>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveSecret">Save Changes</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Add modal to body and show
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      const modalElement = document.getElementById('secretEditModal');
+      const modal = new bootstrap.Modal(modalElement);
+      
+      modalElement.addEventListener('hidden.bs.modal', function () {
+        modal.dispose();
+        modalElement.remove();
+        // Restore body scroll
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+      });
+      
+      modal.show();
+      
+      const addRowBtn = document.getElementById('addSecretRow');
+      const saveBtn = document.getElementById('saveSecret');
+      const editor = document.getElementById('secretDataEditor');
+      
+      // Add new row functionality
+      addRowBtn.addEventListener('click', function addNewRow() {
+        const newRowHtml = `
+          <div class="row mb-3 secret-data-row">
+            <div class="col-md-3">
+              <label class="form-label">Key</label>
+              <input type="text" class="form-control secret-key" value="" data-original-key="">
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Value</label>
+              <textarea class="form-control secret-value" rows="3" style="font-family: monospace;"></textarea>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+              <button type="button" class="btn btn-outline-danger btn-sm remove-secret-row">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+        `;
+        editor.insertAdjacentHTML('beforeend', newRowHtml);
+      });
+      
+      // Remove row functionality with event delegation
+      editor.addEventListener('click', function handleRowRemoval(e) {
+        if (e.target.closest('.remove-secret-row')) {
+          const rowToRemove = e.target.closest('.secret-data-row');
+          if (rowToRemove) {
+            rowToRemove.remove();
+          }
+        }
+      });
+      
+      saveBtn.addEventListener('click', function saveSecretData() {
+        const rows = editor.querySelectorAll('.secret-data-row');
+        const newData = {};
+        const seenKeys = new Set();
+        let hasError = false;
+        
+        // Only process visible rows that are still in the DOM
+        const validRows = Array.from(rows).filter(row => 
+          row.parentNode && 
+          row.offsetParent !== null && 
+          !row.hasAttribute('data-removed')
+        );
+        
+        validRows.forEach((row) => {
+          const keyInput = row.querySelector('.secret-key');
+          const valueInput = row.querySelector('.secret-value');
+          
+          if (!keyInput || !valueInput) {
+            return;
+          }
+          
+          const key = keyInput.value.trim();
+          const value = valueInput.value;
+          
+          if (key === '') {
+            showToast('Tüm anahtarların değeri olmalıdır', 'error');
+            hasError = true;
+            return;
+          }
+          
+          if (seenKeys.has(key)) {
+            showToast('Tekrarlanan anahtar bulundu: ' + key, 'error');
+            hasError = true;
+            return;
+          }
+          
+          seenKeys.add(key);
+          newData[key] = value;
+        });
+        
+        if (hasError) return;
+
+        const saveRequestKey = `save-secret-${secret.name}-${secret.namespace}`;
+        if (isRequestActive(saveRequestKey)) {
+          console.debug('Save already in progress, ignoring');
+          return;
+        }
+        setRequestActive(saveRequestKey);
+        
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Kaydediliyor...';
+        
+        // Save to backend
+        fetch('/k8s-explorer/update-secret', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: secret.name,
+            namespace: secret.namespace,
+            data: newData
+          })
+        })
+        .then(response => response.json())
+        .then(result => {
+          setRequestInactive(saveRequestKey);
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Kaydet';
+          
+          if (result.error) {
+            showToast('Secret kaydedilirken hata: ' + result.error, 'error');
+          } else {
+            showToast('Secret başarıyla kaydedildi!', 'success');
+            modal.hide();
+            // Refresh the table
+            if (typeof fetchAndRenderSecretsTable === 'function') {
+              fetchAndRenderSecretsTable();
+            }
+          }
+        })
+        .catch(error => {
+          setRequestInactive(saveRequestKey);
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Kaydet';
+          console.error('Error saving Secret:', error);
+          showToast('Secret kaydedilirken hata: ' + error.message, 'error');
+        })
+        .finally(() => {
+          // Re-enable save button
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Değişiklikleri Kaydet';
+        });
+      });
+    })
+    .catch(error => {
+      setRequestInactive(requestKey);
+      console.error('Error fetching Secret:', error);
+      showToast('Secret yüklenirken hata: ' + error.message, 'error');
+    });
+};
+
+window.deleteSecret = function(name, namespace) {
+  console.debug('deleteSecret called:', name, namespace);
+  
+  const requestKey = `delete-secret-${name}-${namespace}`;
+  if (isRequestActive(requestKey)) {
+    console.debug('deleteSecret already in progress, ignoring');
+    return;
+  }
+  
+  if (!confirm(`"${name}" Secret'ını "${namespace}" namespace'inde silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
+    return;
+  }
+  
+  setRequestActive(requestKey);
+  
+  fetch('/k8s-explorer/delete-secret', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: name,
+      namespace: namespace
+    })
+  })
+  .then(response => response.json())
+  .then(result => {
+    setRequestInactive(requestKey);
+    
+    if (result.error) {
+      showToast('Secret silinirken hata: ' + result.error, 'error');
+    } else {
+      showToast('Secret başarıyla silindi!', 'success');
+      // Refresh the table
+      if (typeof fetchAndRenderSecretsTable === 'function') {
+        fetchAndRenderSecretsTable();
+      }
+    }
+  })
+  .catch(error => {
+    setRequestInactive(requestKey);
+    console.error('Error deleting Secret:', error);
+    showToast('Secret silinirken hata: ' + error.message, 'error');
+  });
+};
+
+  container.querySelectorAll('.btn-view-secret').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.showSecret && window.showSecret(name, namespace); } catch(e){console.error(e);} }));
+  container.querySelectorAll('.btn-edit-secret').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.editSecret && window.editSecret(name, namespace); } catch(e){console.error(e);} }));
+  container.querySelectorAll('.btn-delete-secret').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.deleteSecret && window.deleteSecret(name, namespace); } catch(e){console.error(e);} }));
+
+document.addEventListener('click', function(event) {
+  if (event.target.matches('[data-action="view-configmap"]')) {
+    event.stopPropagation();
+    const name = event.target.getAttribute('data-name');
+    const namespace = event.target.getAttribute('data-namespace');
+    if (name && namespace) {
+      window.showConfigMap(name, namespace);
+    }
+  }
+  
+  if (event.target.matches('[data-action="edit-configmap"]')) {
+    event.stopPropagation();
+    const name = event.target.getAttribute('data-name');
+    const namespace = event.target.getAttribute('data-namespace');
+    if (name && namespace) {
+      window.editConfigMap(name, namespace);
+    }
+  }
+  
+    if (event.target.matches('[data-action="view-secret"]')) {
+    event.stopPropagation();
+    const name = event.target.getAttribute('data-name');
+    const namespace = event.target.getAttribute('data-namespace');
+    if (name && namespace) {
+      window.showSecret(name, namespace);
+    }
+  }
+  
+  if (event.target.matches('[data-action="edit-secret"]')) {
+    event.stopPropagation();
+    const name = event.target.getAttribute('data-name');
+    const namespace = event.target.getAttribute('data-namespace');
+    if (name && namespace) {
+      window.editSecret(name, namespace);
+    }
+  }
+    if (event.target.matches('[data-action="delete-secret"]')) {
+    event.stopPropagation();
+    const name = event.target.getAttribute('data-name');
+    const namespace = event.target.getAttribute('data-namespace');
+    if (name && namespace) {
+      window.deleteSecret(name, namespace);
+    }
+  }
+});
+
 </script>
+
+<!-- Moving modals inside the content block before endblock -->
+<!-- ConfigMap view and edit modals -->
+<div class="modal fade" id="configMapViewModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="configMapViewModalLabel">ConfigMap</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="configMapViewBody">Yükleniyor...</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="configMapEditModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="configMapEditModalLabel">ConfigMap Düzenle</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="configMapEditBody">Yükleniyor...</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+        <button type="button" class="btn btn-primary" onclick="saveConfigMap()">Kaydet</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Secret view and edit modals -->
+<div class="modal fade" id="secretViewModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="secretViewModalLabel">Secret</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="secretViewBody">Yükleniyor...</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="secretEditModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="secretEditModalLabel">Secret Düzenle</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="secretEditBody">Yükleniyor...</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+        <button type="button" class="btn btn-primary" onclick="saveSecret()">Kaydet</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
+</html>

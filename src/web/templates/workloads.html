@@ -1,19 +1,140 @@
 <!-- Pod Properties Modal -->
 <div class="modal fade" id="podPropertiesModal" tabindex="-1" aria-labelledby="podPropertiesModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="podPropertiesModalLabel">Pod Properties</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="podPropertiesModalLabel">
+          <i class="bi bi-box me-2"></i>Pod Properties
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <div id="podPropertiesModalBody"></div>
-        <hr>
-        <h6>Kaynak Kullanımı</h6>
+        <hr class="my-4">
+        <h6 class="fw-semibold mb-3">
+          <i class="bi bi-graph-up me-2"></i>Kaynak Kullanımı
+        </h6>
         <div id="podResourceChart" style="min-height:300px;"></div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle me-1"></i>Kapat
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- Kubernetes Events Table -->
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="workload-card">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 fw-bold">Kubernetes Events (Son 100)</h6>
+        </div>
+        <div class="card-body">
+          <div id="events-table-container">
+            <div class="d-flex align-items-center justify-content-center py-4">
+              <div class="loading-spinner me-2"></div>
+              <span class="text-muted">Events yükleniyor...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Pod Logs Modal -->
+<div class="modal fade" id="podLogsModal" tabindex="-1" aria-labelledby="podLogsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="podLogsModalLabel">Pod Logs</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <pre id="podLogsModalBody" style="font-family:'Fira Code', 'Monaco', monospace; font-size:0.9em; white-space:pre-wrap; max-height:70vh; overflow:auto; background:#000; color:#e6e6e6; padding:12px; border-radius:6px;"></pre>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- YAML Edit Modal -->
+<div class="modal fade" id="yamlEditModal" tabindex="-1" aria-labelledby="yamlEditModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title" id="yamlEditModalLabel">
+          <i class="bi bi-code-slash me-2"></i>YAML Edit
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <textarea id="yamlEditArea" class="form-control border-0 shadow-sm" rows="20" 
+                  style="font-family:'Fira Code', 'Monaco', 'Consolas', monospace; font-size:0.9em; min-height:400px; background:#f8f9fa;"></textarea>
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-primary rounded-pill" id="saveYamlBtn">
+          <i class="bi bi-check-circle me-1"></i>Kaydet
+        </button>
+        <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle me-1"></i>Kapat
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Describe Modal -->
+<div class="modal fade" id="describeModal" tabindex="-1" aria-labelledby="describeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-info text-white">
+        <h5 class="modal-title" id="describeModalLabel">
+          <i class="bi bi-info-circle me-2"></i>Resource Describe
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <pre id="describeModalBody" style="font-family:'Fira Code', 'Monaco', 'Consolas', monospace; font-size:0.9em; white-space:pre-wrap; max-height:70vh; overflow:auto; background:#f8f9fa; border-radius:8px; border:1px solid #dee2e6; padding:20px;"></pre>
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle me-1"></i>Kapat
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scale Deployment Modal -->
+<div class="modal fade" id="scaleDeploymentModal" tabindex="-1" aria-labelledby="scaleDeploymentModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-warning text-white">
+        <h5 class="modal-title" id="scaleDeploymentModalLabel">
+          <i class="bi bi-arrows-expand me-2"></i>Deployment Scale
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <strong id="scaleDeploymentName" class="text-primary"></strong>
+        </div>
+        <div class="mb-3">
+          <label for="scaleReplicasInput" class="form-label fw-semibold">Replica Sayısı:</label>
+          <input type="number" min="0" class="form-control border-0 shadow-sm" id="scaleReplicasInput" style="width:120px;">
+        </div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-primary rounded-pill" id="scaleDeploymentSaveBtn">
+          <i class="bi bi-check-circle me-1"></i>Kaydet
+        </button>
+        <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle me-1"></i>Kapat
+        </button>
       </div>
     </div>
   </div>
@@ -21,2151 +142,1708 @@
 {% extends "base.html" %}
 {% block title %}Workloads{% endblock %}
 {% block content %}
-<ul class="nav nav-tabs" id="workloadsTab" role="tablist">
-  <li class="nav-item" role="presentation">
-    <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Overview</button>
-  </li>
-  <li class="nav-item" role="presentation">
-    <button class="nav-link" id="pods-tab" data-bs-toggle="tab" data-bs-target="#pods" type="button" role="tab">Pods</button>
-  </li>
-  <li class="nav-item" role="presentation">
-    <button class="nav-link" id="deployments-tab" data-bs-toggle="tab" data-bs-target="#deployments" type="button" role="tab">Deployments</button>
-  </li>
-  <li class="nav-item" role="presentation">
-    <button class="nav-link" id="daemonsets-tab" data-bs-toggle="tab" data-bs-target="#daemonsets" type="button" role="tab">Daemon Sets</button>
-  </li>
-  <li class="nav-item" role="presentation">
-    <button class="nav-link" id="statefulsets-tab" data-bs-toggle="tab" data-bs-target="#statefulsets" type="button" role="tab">Stateful Sets</button>
-  </li>
-  <li class="nav-item" role="presentation">
-    <button class="nav-link" id="replicasets-tab" data-bs-toggle="tab" data-bs-target="#replicasets" type="button" role="tab">Replica Sets</button>
-  </li>
-  <li class="nav-item" role="presentation">
-    <button class="nav-link" id="replicationcontrollers-tab" data-bs-toggle="tab" data-bs-target="#replicationcontrollers" type="button" role="tab">Replication Controller</button>
-  </li>
-  <li class="nav-item" role="presentation">
-    <button class="nav-link" id="jobs-tab" data-bs-toggle="tab" data-bs-target="#jobs" type="button" role="tab">Jobs</button>
-  </li>
-  <li class="nav-item" role="presentation">
-    <button class="nav-link" id="cronjobs-tab" data-bs-toggle="tab" data-bs-target="#cronjobs" type="button" role="tab">CronJobs</button>
-  </li>
-</ul>
-<div class="tab-content mt-3" id="workloadsTabContent">
+
+<style>
+/* Adding modern CSS styling for beautiful interface */
+:root {
+  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+  --info-gradient: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+  --danger-gradient: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+  --dark-gradient: linear-gradient(135deg, #434343 0%, #000000 100%);
+}
+
+.hero-card {
+  background: var(--primary-gradient);
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(102, 126, 234, 0.3);
+  border: none;
+  overflow: hidden;
+  position: relative;
+}
+
+.hero-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+  pointer-events: none;
+}
+
+.workload-card {
+  border-radius: 15px;
+  border: none;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+  overflow: hidden;
+  position: relative;
+}
+
+.workload-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+
+.workload-card .card-header {
+  border: none;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.workload-card .card-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+  pointer-events: none;
+}
+
+.nav-pills .nav-link {
+  border-radius: 25px;
+  padding: 12px 24px;
+  margin: 0 5px;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  font-weight: 600;
+  position: relative;
+  overflow: hidden;
+}
+
+.nav-pills .nav-link:not(.active):hover {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: rgba(102, 126, 234, 0.3);
+  transform: translateY(-2px);
+}
+
+.nav-pills .nav-link.active {
+  background: var(--primary-gradient);
+  border-color: transparent;
+  color: white;
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-running { background: linear-gradient(45deg, #4CAF50, #8BC34A); color: white; }
+.status-pending { background: linear-gradient(45deg, #FF9800, #FFC107); color: white; }
+.status-failed { background: linear-gradient(45deg, #F44336, #E91E63); color: white; }
+.status-succeeded { background: linear-gradient(45deg, #2196F3, #03DAC6); color: white; }
+
+.table-modern {
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+}
+
+.table-modern thead th {
+  background: linear-gradient(45deg, #f8f9fa, #1c446d);
+  border: none;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+  padding: 1rem;
+}
+
+.table-modern tbody tr {
+  transition: all 0.2s ease;
+}
+
+.table-modern tbody tr:hover {
+  background: rgba(102, 126, 234, 0.05);
+  transform: scale(1.01);
+}
+
+.btn-action {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin: 2px;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.btn-action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.chart-container {
+  background: white;
+  border-radius: 10px;
+  padding: 1rem;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: #6c757d;
+}
+
+.empty-state i {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.metric-card {
+  background: white;
+  border-radius: 15px;
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+  transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+.metric-number {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.metric-label {
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  opacity: 0.7;
+}
+</style>
+
+<!-- Hero Header Section -->
+<div class="row mb-5">
+  <div class="col-12">
+    <div class="card hero-card">
+      <div class="card-body text-white py-5">
+        <div class="row align-items-center">
+          <div class="col-lg-8">
+            <h1 class="display-4 fw-bold mb-3">
+              <i class="bi bi-layers me-3"></i>Kubernetes Workloads
+            </h1>
+            <p class="lead mb-0 opacity-90">
+              Cluster'ınızdaki tüm workload'ları yönetin ve izleyin
+            </p>
+          </div>
+          <div class="col-lg-4">
+            <div class="row g-3">
+              <div class="col-6">
+                <div class="metric-card bg-white bg-opacity-10 text-white">
+                  <!-- Fixed text color to be dark instead of white -->
+                  <div class="metric-number text-dark" id="total-workloads">0</div>
+                  <div class="metric-label text-dark">Toplam Workload</div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="metric-card bg-white bg-opacity-10 text-white">
+                  <!-- Fixed text color to be dark instead of white -->
+                  <div class="metric-number text-dark" id="active-workloads">0</div>
+                  <div class="metric-label text-dark">Aktif Workload</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Navigation Tabs -->
+<div class="card workload-card mb-5" id="workload-navigation">
+  <div class="card-header bg-white border-0 pt-4">
+    <ul class="nav nav-pills nav-fill justify-content-center" id="workloadsTab" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
+          <i class="bi bi-grid-3x3-gap me-2"></i>Genel Bakış
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="pods-tab" data-bs-toggle="tab" data-bs-target="#pods" type="button" role="tab">
+          <i class="bi bi-box me-2"></i>Pods
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="deployments-tab" data-bs-toggle="tab" data-bs-target="#deployments" type="button" role="tab">
+          <i class="bi bi-arrow-repeat me-2"></i>Deployments
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="daemonsets-tab" data-bs-toggle="tab" data-bs-target="#daemonsets" type="button" role="tab">
+          <i class="bi bi-cpu me-2"></i>DaemonSets
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="statefulsets-tab" data-bs-toggle="tab" data-bs-target="#statefulsets" type="button" role="tab">
+          <i class="bi bi-database me-2"></i>StatefulSets
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="replicasets-tab" data-bs-toggle="tab" data-bs-target="#replicasets" type="button" role="tab">
+          <i class="bi bi-collection me-2"></i>ReplicaSets
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="jobs-tab" data-bs-toggle="tab" data-bs-target="#jobs" type="button" role="tab">
+          <i class="bi bi-play-circle me-2"></i>Jobs
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="cronjobs-tab" data-bs-toggle="tab" data-bs-target="#cronjobs" type="button" role="tab">
+          <i class="bi bi-clock me-2"></i>CronJobs
+        </button>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<!-- Tab Content -->
+<div class="tab-content" id="workloadsTabContent">
+  <!-- Overview Tab -->
   <div class="tab-pane fade show active" id="overview" role="tabpanel">
-    <div class="row">
-      <div class="col-md-4 mb-4"><div id="pie-pods" style="cursor:pointer;"></div></div>
-      <div class="col-md-4 mb-4"><div id="pie-deployments"></div></div>
-      <div class="col-md-4 mb-4"><div id="pie-daemonsets"></div></div>
-      <div class="col-md-4 mb-4"><div id="pie-statefulsets"></div></div>
-      <div class="col-md-4 mb-4"><div id="pie-replicasets"></div></div>
-      <div class="col-md-4 mb-4"><div id="pie-jobs"></div></div>
-      <div class="col-md-4 mb-4"><div id="pie-cronjobs"></div></div>
-    </div>
-    <div class="mt-4">
-      <!-- Event logları göster butonu kaldırıldı -->
-    </div>
-    <div class="card mt-4">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <span><b>Event Logları</b></span>
-        <button class="btn btn-sm btn-secondary" id="toggleLiveBtn">Canlı Takip Et</button>
+    <div class="row g-4 mb-5">
+      <div class="col-lg-4 col-md-6">
+        <div class="workload-card h-100">
+          <div class="card-header text-white" style="background: var(--success-gradient);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-box me-3" style="font-size: 1.5rem;"></i>
+              <div>
+                <h5 class="mb-0 fw-bold">Pods</h5>
+                <small class="opacity-90">Container Instances</small>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-pods" style="width: 100%; height: 280px;"></div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="card-body p-2">
-        <div id="eventLogContent" style="max-height:400px; overflow-y:auto; font-size:0.95em; background:#f8f9fa; padding:10px; border-radius:4px; border:1px solid #dee2e6;">Yükleniyor...</div>
+      <div class="col-lg-4 col-md-6">
+        <div class="workload-card h-100">
+          <div class="card-header text-white" style="background: var(--primary-gradient);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-arrow-repeat me-3" style="font-size: 1.5rem;"></i>
+              <div>
+                <h5 class="mb-0 fw-bold">Deployments</h5>
+                <small class="opacity-90">Application Deployments</small>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-deployments" style="width: 100%; height: 280px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4 col-md-6">
+        <div class="workload-card h-100">
+          <div class="card-header text-white" style="background: var(--info-gradient);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-cpu me-3" style="font-size: 1.5rem;"></i>
+              <div>
+                <h5 class="mb-0 fw-bold">DaemonSets</h5>
+                <small class="opacity-90">Node Services</small>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-daemonsets" style="width: 100%; height: 280px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4 col-md-6">
+        <div class="workload-card h-100">
+          <div class="card-header text-white" style="background: var(--warning-gradient);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-database me-3" style="font-size: 1.5rem;"></i>
+              <div>
+                <h5 class="mb-0 fw-bold">StatefulSets</h5>
+                <small class="opacity-90">Stateful Applications</small>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-statefulsets" style="width: 100%; height: 280px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4 col-md-6">
+        <div class="workload-card h-100">
+          <div class="card-header text-white" style="background: var(--danger-gradient);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-collection me-3" style="font-size: 1.5rem;"></i>
+              <div>
+                <h5 class="mb-0 fw-bold">ReplicaSets</h5>
+                <small class="opacity-90">Pod Replicas</small>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-replicasets" style="width: 100%; height: 280px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4 col-md-6">
+        <div class="workload-card h-100">
+          <div class="card-header text-white" style="background: var(--dark-gradient);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-play-circle me-3" style="font-size: 1.5rem;"></i>
+              <div>
+                <h5 class="mb-0 fw-bold">Jobs & CronJobs</h5>
+                <small class="opacity-90">Batch Processing</small>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div class="row g-0 h-100">
+                <div class="col-6 border-end">
+                  <div id="pie-jobs" style="width: 100%; height: 140px;"></div>
+                </div>
+                <div class="col-6">
+                  <div id="pie-cronjobs" style="width: 100%; height: 140px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-    <script>
-    let liveInterval = null;
-    async function fetchEventLogs() {
-      const content = document.getElementById('eventLogContent');
-      content.innerHTML = 'Yükleniyor...';
-      try {
-        const resp = await fetch('/exec-events');
-        const data = await resp.json();
-        if (data.events && data.events.length > 0) {
-          let html = '<table class="table table-sm table-bordered"><thead><tr><th>Zaman</th><th>Namespace</th><th>Kind</th><th>İsim</th><th>Tip</th><th>Reason</th><th>Message</th></tr></thead><tbody>';
-          for (const ev of data.events) {
-            html += `<tr><td>${ev.time}</td><td>${ev.namespace}</td><td>${ev.kind || ''}</td><td>${ev.name || ''}</td><td>${ev.type || ''}</td><td>${ev.reason || ''}</td><td>${ev.message || ''}</td></tr>`;
-          }
-          html += '</tbody></table>';
-          content.innerHTML = html;
-        } else {
-          content.innerHTML = '<div class="text-muted">Event logu bulunamadı.</div>';
-        }
-      } catch (e) {
-        content.innerHTML = '<div class="text-danger">Event logları alınırken hata oluştu.</div>';
-      }
-    }
-    // Sayfa yüklendiğinde event logunu getir
-    document.addEventListener('DOMContentLoaded', function() {
-      fetchEventLogs();
-    });
-    document.getElementById('toggleLiveBtn').addEventListener('click', function() {
-      const btn = this;
-      if (liveInterval) {
-        clearInterval(liveInterval);
-        liveInterval = null;
-        btn.textContent = 'Canlı Takip Et';
-      } else {
-        fetchEventLogs();
-        liveInterval = setInterval(fetchEventLogs, 3000);
-        btn.textContent = 'Canlı Takibi Durdur';
-      }
-    });
-    </script>
   </div>
+
+  <!-- Pods Tab -->
   <div class="tab-pane fade" id="pods" role="tabpanel">
-    <div id="pie-pods-tab" style="min-height:300px;"></div>
-    <div class="mt-3">
-      <h5>Pod Listesi</h5>
-      <div class="mb-2">
-        <label for="namespaceFilter" class="form-label mb-0">Namespace Filtrele:</label>
-        <select id="namespaceFilter" class="form-select form-select-sm" style="width:auto; display:inline-block;"></select>
-      </div>
-      <div id="pods-table-container">
-        <div class="text-muted">Yükleniyor...</div>
-      </div>
-  <div id="pods-pagination" class="mt-2"></div>
-
-        <!-- YAML Edit Modal -->
-        <div class="modal fade" id="yamlEditModal" tabindex="-1" aria-labelledby="yamlEditModalLabel" aria-hidden="true">
-          <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title" id="yamlEditModalLabel">Pod YAML Edit</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-              </div>
-              <div class="modal-body">
-                <textarea id="yamlEditArea" class="form-control" rows="18" style="font-family:monospace; font-size:0.95em; min-height:300px;"></textarea>
-              </div>
-              <div class="modal-footer">
-                <button type="button" class="btn btn-primary" id="saveYamlBtn">Kaydet</button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="workload-card">
+          <div class="card-header text-white" style="background: var(--success-gradient);">
+            <h5 class="mb-0 fw-bold">
+              <i class="bi bi-box me-2"></i>Pods Listesi
+            </h5>
+          </div>
+          <div class="card-body p-0">
+            <div id="pods-table-container">
+              <div class="d-flex align-items-center justify-content-center py-5">
+                <div class="loading-spinner me-2"></div>
+                <span class="text-muted">Pod listesi yükleniyor...</span>
               </div>
             </div>
           </div>
         </div>
-
-      <!-- Describe Modal -->
-      <div class="modal fade" id="describeModal" tabindex="-1" aria-labelledby="describeModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="describeModalLabel">Pod Describe</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-              <pre id="describeModalBody" style="font-size:0.95em; white-space:pre-wrap; max-height:60vh; overflow:auto; background:#f8f9fa; border-radius:4px; border:1px solid #dee2e6; padding:10px;"></pre>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+      </div>
+      <div class="col-lg-4">
+        <div class="workload-card">
+          <div class="card-header text-white" style="background: var(--success-gradient);">
+            <h6 class="mb-0 fw-bold">Pod Durumları</h6>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-pods-tab" style="width: 100%; height: 280px;"></div>
             </div>
           </div>
         </div>
       </div>
-
-      <!-- Scale Deployment Modal -->
-      <div class="modal fade" id="scaleDeploymentModal" tabindex="-1" aria-labelledby="scaleDeploymentModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="scaleDeploymentModalLabel">Deployment Scale</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-              <div class="mb-2"><b id="scaleDeploymentName"></b></div>
-              <label for="scaleReplicasInput" class="form-label">Replica Sayısı:</label>
-              <input type="number" min="0" class="form-control" id="scaleReplicasInput" style="width:120px; display:inline-block;">
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-primary" id="scaleDeploymentSaveBtn">Kaydet</button>
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
+
+  <!-- Deployments Tab -->
   <div class="tab-pane fade" id="deployments" role="tabpanel">
-    <div id="pie-deployments-tab" style="min-height:300px;"></div>
-    <div class="mt-3">
-      <h5>Deployment Listesi</h5>
-      <div class="mb-2">
-        <label for="deploymentNameFilter" class="form-label mb-0">Deployment Filtrele:</label>
-        <select id="deploymentNameFilter" class="form-select form-select-sm" style="width:auto; display:inline-block;"></select>
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="workload-card">
+          <div class="card-header text-white" style="background: var(--primary-gradient);">
+            <h5 class="mb-0 fw-bold">
+              <i class="bi bi-arrow-repeat me-2"></i>Deployments Listesi
+            </h5>
+          </div>
+          <div class="card-body p-0">
+            <div id="deployments-table-container">
+              <div class="d-flex align-items-center justify-content-center py-5">
+                <div class="loading-spinner me-2"></div>
+                <span class="text-muted">Deployment listesi yükleniyor...</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div id="deployments-table-container">
-        <div class="text-muted">Yükleniyor...</div>
+      <div class="col-lg-4">
+        <div class="workload-card">
+          <div class="card-header text-white" style="background: var(--primary-gradient);">
+            <h6 class="mb-0 fw-bold">Deployment Durumları</h6>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-deployments-tab" style="width: 100%; height: 280px;"></div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
+
+  <!-- DaemonSets Tab -->
   <div class="tab-pane fade" id="daemonsets" role="tabpanel">
-    <div id="pie-daemonsets-tab" style="min-height:300px;"></div>
-    <div class="mt-3">
-      <h5>Daemon Set Listesi</h5>
-      <div id="daemonsets-table-container">
-        <div class="text-muted">Yükleniyor...</div>
-      </div>
-    </div>
-  </div>
-  <!-- DaemonSet Logs Modal -->
-<div class="modal fade" id="daemonSetLogsModal" tabindex="-1" aria-labelledby="daemonSetLogsModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-xl">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="daemonSetLogsModalLabel">DaemonSet Pod Logları</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-2">
-          <label for="daemonSetPodSelect" class="form-label mb-0">Pod Seç:</label>
-          <select id="daemonSetPodSelect" class="form-select form-select-sm" style="width:auto; display:inline-block;"></select>
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <div class="workload-card">
+          <div class="card-header text-white" style="background: var(--info-gradient);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-cpu me-2"></i>
+              <span class="fw-bold">DaemonSet Durumu</span>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-daemonsets-tab" style="width: 100%; height: 300px;"></div>
+            </div>
+          </div>
         </div>
-        <pre id="daemonSetLogsModalBody" style="font-size:0.95em; white-space:pre-wrap; max-height:70vh; overflow:auto; background:#f8f9fa; border-radius:4px; border:1px solid #dee2e6; padding:10px;"></pre>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+      <div class="col-lg-8">
+        <div class="workload-card">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-list-ul me-2 text-info"></i>
+              <span class="fw-bold">DaemonSet Listesi</span>
+            </div>
+            <button class="btn btn-outline-primary btn-sm" onclick="fetchAndRenderDaemonSetsTable()">
+              <i class="bi bi-arrow-clockwise me-1"></i>Yenile
+            </button>
+          </div>
+          <div class="card-body">
+            <div id="daemonsets-table-container">
+              <div class="d-flex align-items-center justify-content-center py-5">
+                <div class="loading-spinner me-2"></div>
+                <span class="text-muted">DaemonSet listesi yükleniyor...</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-</div>
+
+  <!-- StatefulSets Tab -->
   <div class="tab-pane fade" id="statefulsets" role="tabpanel">
-    <div id="pie-statefulsets-tab" style="min-height:300px;"></div>
-    <div class="mt-3">
-      <h5>StatefulSet Listesi</h5>
-      <div class="mb-2">
-        <label for="statefulsetNamespaceFilter" class="form-label mb-0">Namespace Filtrele:</label>
-        <select id="statefulsetNamespaceFilter" class="form-select form-select-sm" style="width:auto; display:inline-block;"></select>
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <div class="workload-card">
+          <div class="card-header text-white" style="background: var(--warning-gradient);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-database me-2"></i>
+              <span class="fw-bold">StatefulSet Durumu</span>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-statefulsets-tab" style="width: 100%; height: 300px;"></div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div id="statefulsets-table-container">
-        <div class="text-muted">Yükleniyor...</div>
+      <div class="col-lg-8">
+        <div class="workload-card">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-list-ul me-2 text-warning"></i>
+              <span class="fw-bold">StatefulSet Listesi</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <select id="statefulsetNamespaceFilter" class="form-select form-select-sm" style="width:200px;">
+                <option value="">Tüm Namespace'ler</option>
+              </select>
+              <button class="btn btn-outline-primary btn-sm" onclick="fetchAndRenderStatefulSetsTable()">
+                <i class="bi bi-arrow-clockwise me-1"></i>Yenile
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="statefulsets-table-container">
+              <div class="d-flex align-items-center justify-content-center py-5">
+                <div class="loading-spinner me-2"></div>
+                <span class="text-muted">StatefulSet listesi yükleniyor...</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-  <div class="modal fade" id="statefulSetLogsModal" tabindex="-1" aria-labelledby="statefulSetLogsModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-xl">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="statefulSetLogsModalLabel">StatefulSet Pod Logları</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-2">
-          <label for="statefulSetPodSelect" class="form-label mb-0">Pod Seç:</label>
-          <select id="statefulSetPodSelect" class="form-select form-select-sm" style="width:auto; display:inline-block;"></select>
+
+  <!-- ReplicaSets Tab -->
+  <div class="tab-pane fade" id="replicasets" role="tabpanel">
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <div class="workload-card">
+          <div class="card-header text-white" style="background: var(--danger-gradient);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-collection me-2"></i>
+              <span class="fw-bold">ReplicaSet Durumu</span>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-replicasets-tab" style="width: 100%; height: 300px;"></div>
+            </div>
+          </div>
         </div>
-        <pre id="statefulSetLogsModalBody" style="font-size:0.95em; white-space:pre-wrap; max-height:70vh; overflow:auto; background:#f8f9fa; border-radius:4px; border:1px solid #dee2e6; padding:10px;"></pre>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+      <div class="col-lg-8">
+        <div class="workload-card">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-list-ul me-2 text-danger"></i>
+              <span class="fw-bold">ReplicaSet Listesi</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <select id="replicasetsNamespaceFilter" class="form-select form-select-sm" style="width:150px;">
+                <option value="">Tüm Namespace'ler</option>
+              </select>
+              <button class="btn btn-outline-primary btn-sm" onclick="fetchAndRenderReplicaSetsTable()">
+                <i class="bi bi-arrow-clockwise me-1"></i>Yenile
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="replicasets-table-container">
+              <div class="d-flex align-items-center justify-content-center py-5">
+                <div class="loading-spinner me-2"></div>
+                <span class="text-muted">ReplicaSet listesi yükleniyor...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Jobs Tab -->
+  <div class="tab-pane fade" id="jobs" role="tabpanel">
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <div class="workload-card">
+          <div class="card-header text-white" style="background: var(--primary-gradient);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-play-circle me-2"></i>
+              <span class="fw-bold">Job Durumu</span>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-jobs-tab" style="width: 100%; height: 300px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-8">
+        <div class="workload-card">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-list-ul me-2 text-primary"></i>
+              <span class="fw-bold">Job Listesi</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <select id="jobsNamespaceFilter" class="form-select form-select-sm" style="width:200px;">
+                <option value="">Tüm Namespace'ler</option>
+              </select>
+              <button class="btn btn-outline-primary btn-sm" onclick="fetchAndRenderJobsTable()">
+                <i class="bi bi-arrow-clockwise me-1"></i>Yenile
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="jobs-table-container">
+              <div class="d-flex align-items-center justify-content-center py-5">
+                <div class="loading-spinner me-2"></div>
+                <span class="text-muted">Job listesi yükleniyor...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CronJobs Tab -->
+  <div class="tab-pane fade" id="cronjobs" role="tabpanel">
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <div class="workload-card">
+          <div class="card-header text-white" style="background: var(--dark-gradient);">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-clock me-2"></i>
+              <span class="fw-bold">CronJob Durumu</span>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-cronjobs-tab" style="width: 100%; height: 300px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-8">
+        <div class="workload-card">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-list-ul me-2 text-dark"></i>
+              <span class="fw-bold">CronJob Listesi</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <select id="cronjobsNamespaceFilter" class="form-select form-select-sm" style="width:200px;">
+                <option value="">Tüm Namespace'ler</option>
+              </select>
+              <button class="btn btn-outline-primary btn-sm" onclick="fetchAndRenderCronJobsTable()">
+                <i class="bi bi-arrow-clockwise me-1"></i>Yenile
+              </button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="cronjobs-table-container">
+              <div class="d-flex align-items-center justify-content-center py-5">
+                <div class="loading-spinner me-2"></div>
+                <span class="text-muted">CronJob listesi yükleniyor...</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Scale StatefulSet Modal -->
-<div class="modal fade" id="scaleStatefulSetModal" tabindex="-1" aria-labelledby="scaleStatefulSetModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="scaleStatefulSetModalLabel">StatefulSet Scale</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-2"><b id="scaleStatefulSetName"></b></div>
-        <label for="scaleStatefulSetReplicasInput" class="form-label">Replica Sayısı:</label>
-        <input type="number" min="0" class="form-control" id="scaleStatefulSetReplicasInput" style="width:120px; display:inline-block;"></input>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-primary" id="scaleStatefulSetSaveBtn">Kaydet</button>
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-      </div>
-    </div>
-  </div>
-</div>
+<script src="https://code.highcharts.com/highcharts.js"></script>
 <script>
-// StatefulSets tablosunu getir ve göster
+// Global variables
+let allWorkloadsData = {
+  pods: [],
+  deployments: [],
+  daemonsets: [],
+  statefulsets: [],
+  replicasets: [],
+  jobs: [],
+  cronjobs: []
+};
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+  loadOverviewData();
+  
+  document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+    tab.addEventListener('shown.bs.tab', function(e) {
+      const targetId = e.target.getAttribute('data-bs-target').replace('#', '');
+      handleTabChange(targetId);
+      
+      setTimeout(() => {
+        document.getElementById('workload-navigation').scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }, 100);
+    });
+  });
+});
+
+// Load overview data for all workload types
+async function loadOverviewData() {
+  try {
+    // Load all workload data in parallel
+    const [podsData, deploymentsData, daemonsetsData, statefulsetsData, replicasetsData, jobsData, cronjobsData] = await Promise.all([
+      fetch('/k8s-explorer/pods-summary').then(r => r.json()),
+      fetch('/k8s-explorer/deployments-summary').then(r => r.json()),
+      fetch('/k8s-explorer/daemonsets-summary').then(r => r.json()),
+      fetch('/k8s-explorer/statefulsets-summary').then(r => r.json()),
+      fetch('/k8s-explorer/replicasets-summary').then(r => r.json()),
+      fetch('/k8s-explorer/jobs-summary').then(r => r.json()),
+      fetch('/k8s-explorer/cronjobs-summary').then(r => r.json())
+    ]);
+
+    // Store data globally
+    allWorkloadsData.pods = podsData.pods || [];
+    allWorkloadsData.deployments = deploymentsData.deployments || [];
+    allWorkloadsData.daemonsets = daemonsetsData.daemonsets || [];
+    allWorkloadsData.statefulsets = statefulsetsData.statefulsets || [];
+    allWorkloadsData.replicasets = replicasetsData.replicasets || [];
+    allWorkloadsData.jobs = jobsData.jobs || [];
+    allWorkloadsData.cronjobs = cronjobsData.cronjobs || [];
+
+    // Update overview charts
+    updateOverviewCharts();
+    updateMetrics();
+    // Load events into the bottom table
+    fetchAndRenderEventsTable();
+  } catch (error) {
+    console.error('Error loading overview data:', error);
+  }
+}
+
+async function fetchAndRenderEventsTable() {
+  const container = document.getElementById('events-table-container');
+  if (!container) return;
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-4"><div class="loading-spinner me-2"></div><span class="text-muted">Events yükleniyor...</span></div>';
+  try {
+    const res = await fetch('/exec-events');
+    const data = await res.json();
+    const events = data.events || [];
+    if (events.length === 0) {
+      container.innerHTML = '<div class="empty-state"><i class="bi bi-bell"></i><h6>Event yok</h6><p class="text-muted">Gösterilecek event bulunmuyor.</p></div>';
+      return;
+    }
+    let html = '<div class="table-responsive"><table class="table table-modern table-hover"><thead><tr><th>Time</th><th>Namespace</th><th>Name</th><th>Kind</th><th>Type</th><th>Reason</th><th>Message</th><th>Source</th></tr></thead><tbody>';
+    events.forEach(ev => {
+      const time = ev.time ? new Date(ev.time).toLocaleString('tr-TR') : '-';
+      html += `<tr><td>${time}</td><td><span class="badge bg-secondary">${ev.namespace || ''}</span></td><td>${ev.name || ''}</td><td>${ev.kind || ''}</td><td>${ev.type || ''}</td><td>${ev.reason || ''}</td><td style="max-width:400px; white-space:pre-wrap;">${ev.message || ''}</td><td>${ev.source || ''}</td></tr>`;
+    });
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = '<div class="alert alert-danger">Events yüklenirken hata oluştu: ' + e + '</div>';
+  }
+}
+
+// Update overview charts
+function updateOverviewCharts() {
+  updatePodsPieChart(allWorkloadsData.pods, 'pie-pods');
+  updateDeploymentsPieChart(allWorkloadsData.deployments, 'pie-deployments');
+  updateDaemonSetsPieChart(allWorkloadsData.daemonsets, 'pie-daemonsets');
+  updateStatefulSetsPieChart(allWorkloadsData.statefulsets, 'pie-statefulsets');
+  updateReplicaSetsPieChart(allWorkloadsData.replicasets, 'pie-replicasets');
+  updateJobsPieChart(allWorkloadsData.jobs, 'pie-jobs');
+  updateCronJobsPieChart(allWorkloadsData.cronjobs, 'pie-cronjobs');
+}
+
+// Update metrics in hero section
+function updateMetrics() {
+  const totalWorkloads = Object.values(allWorkloadsData).reduce((sum, arr) => sum + arr.length, 0);
+  const activeWorkloads = allWorkloadsData.pods.filter(p => p.status === 'Running').length +
+                         allWorkloadsData.deployments.filter(d => d.ready_replicas > 0).length;
+  
+  document.getElementById('total-workloads').textContent = totalWorkloads;
+  document.getElementById('active-workloads').textContent = activeWorkloads;
+}
+
+function handleTabChange(tabId) {
+  switch(tabId) {
+    case 'pods':
+      fetchAndRenderPodsTable();
+      break;
+    case 'deployments':
+      fetchAndRenderDeploymentsTable();
+      break;
+    case 'daemonsets':
+      fetchAndRenderDaemonSetsTable();
+      break;
+    case 'statefulsets':
+      fetchAndRenderStatefulSetsTable();
+      break;
+    case 'replicasets':
+      fetchAndRenderReplicaSetsTable();
+      break;
+    case 'jobs':
+      fetchAndRenderJobsTable();
+      break;
+    case 'cronjobs':
+      fetchAndRenderCronJobsTable();
+      break;
+  }
+}
+
+async function fetchAndRenderPodsTable() {
+  const container = document.getElementById('pods-table-container');
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Pod listesi yükleniyor...</span></div>';
+  
+  try {
+    const response = await fetch('/k8s-explorer/pods-summary');
+    const data = await response.json();
+    const pods = data.pods || [];
+    
+    if (pods.length === 0) {
+      container.innerHTML = '<div class="empty-state"><i class="bi bi-box"></i><h5>Pod Bulunamadı</h5><p class="text-muted">Cluster\'da hiç Pod bulunmuyor.</p></div>';
+      updatePodsPieChart([], 'pie-pods-tab');
+      return;
+    }
+    
+    let html = '<div class="table-responsive"><table class="table table-modern table-hover"><thead><tr><th>Namespace</th><th>Name</th><th>Status</th><th>Ready</th><th>Restarts</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
+    
+    pods.forEach(pod => {
+      const age = calculateAge(pod.creation_timestamp);
+      const statusClass = pod.status === 'Running' ? 'status-running' : 
+                         pod.status === 'Pending' ? 'status-pending' : 
+                         pod.status === 'Failed' ? 'status-failed' : 'status-succeeded';
+      
+      html += `
+        <tr>
+          <td><span class="badge bg-secondary">${pod.namespace}</span></td>
+          <td><strong>${pod.name}</strong></td>
+          <td><span class="status-badge ${statusClass}">${pod.status}</span></td>
+          <td>${pod.ready}</td>
+          <td>${pod.restarts}</td>
+          <td>${age}</td>
+          <td>
+            <button class="btn btn-action btn-outline-info btn-sm" onclick="showPodProperties('${pod.name}','${pod.namespace}')">
+              <i class="bi bi-info-circle me-1"></i>Properties
+            </button>
+            <button class="btn btn-action btn-outline-secondary btn-sm" title="Logs" onclick="showPodLogs('${pod.name}','${pod.namespace}')">
+              <i class="bi bi-file-earmark-text me-1"></i>Logs
+            </button>
+            <button class="btn btn-action btn-outline-warning btn-sm" onclick="restartPod('${pod.name}','${pod.namespace}')">
+              <i class="bi bi-arrow-clockwise me-1"></i>Restart
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+    
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+    updatePodsPieChart(pods, 'pie-pods-tab');
+  } catch (error) {
+    container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>Pod listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+  }
+}
+
+async function fetchAndRenderDeploymentsTable() {
+  const container = document.getElementById('deployments-table-container');
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Deployment listesi yükleniyor...</span></div>';
+  
+  try {
+    const response = await fetch('/k8s-explorer/deployments-summary');
+    const data = await response.json();
+    const deployments = data.deployments || [];
+    
+    if (deployments.length === 0) {
+      container.innerHTML = '<div class="empty-state"><i class="bi bi-arrow-repeat"></i><h5>Deployment Bulunamadı</h5><p class="text-muted">Cluster\'da hiç Deployment bulunmuyor.</p></div>';
+      updateDeploymentsPieChart([], 'pie-deployments-tab');
+      return;
+    }
+    
+    let html = '<div class="table-responsive"><table class="table table-modern table-hover"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Up-to-date</th><th>Available</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
+    
+    deployments.forEach(dep => {
+      const age = calculateAge(dep.creation_timestamp);
+      const ready_replicas = (dep.ready_replicas !== undefined && dep.ready_replicas !== null) ? dep.ready_replicas : (dep.ready ? (dep.ready.split('/')[0]||0) : 0);
+      const replicas = (dep.replicas !== undefined && dep.replicas !== null) ? dep.replicas : (dep.ready ? (dep.ready.split('/')[1]||0) : 0);
+      const readyStatus = (parseInt(ready_replicas) === parseInt(replicas) && parseInt(replicas) > 0) ? 'status-running' : 'status-pending';
+      
+      html += `
+        <tr>
+          <td><span class="badge bg-secondary">${dep.namespace}</span></td>
+          <td><strong>${dep.name}</strong></td>
+          <td><span class="status-badge ${readyStatus}">${ready_replicas}/${replicas}</span></td>
+          <td>${dep.updated_replicas}</td>
+          <td>${dep.available_replicas}</td>
+          <td>${age}</td>
+          <td>
+            <button class="btn btn-action btn-outline-primary btn-sm" onclick="showScaleDeploymentModal('${dep.name}','${dep.namespace}',${dep.replicas})">
+              <i class="bi bi-arrows-expand me-1"></i>Scale
+            </button>
+            <button class="btn btn-action btn-outline-warning btn-sm" onclick="restartDeployment('${dep.name}','${dep.namespace}')">
+              <i class="bi bi-arrow-clockwise me-1"></i>Restart
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+    
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+    updateDeploymentsPieChart(deployments, 'pie-deployments-tab');
+  } catch (error) {
+    container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>Deployment listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+  }
+}
+
+// DaemonSets functions
+async function fetchAndRenderDaemonSetsTable() {
+  const container = document.getElementById('daemonsets-table-container');
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">DaemonSet listesi yükleniyor...</span></div>';
+  
+  try {
+    const response = await fetch('/k8s-explorer/daemonsets-summary');
+    const data = await response.json();
+    const daemonsets = data.daemonsets || [];
+    
+    if (daemonsets.length === 0) {
+      container.innerHTML = '<div class="empty-state"><i class="bi bi-cpu"></i><h5>DaemonSet Bulunamadı</h5><p class="text-muted">Cluster\'da hiç DaemonSet bulunmuyor.</p></div>';
+      updateDaemonSetsPieChart([], 'pie-daemonsets-tab');
+      return;
+    }
+    
+    let html = '<div class="table-responsive"><table class="table table-modern table-hover"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Current</th><th>Desired</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
+    
+    daemonsets.forEach(ds => {
+      const age = calculateAge(ds.creation_timestamp);
+      const readyStatus = ds.ready === ds.desired ? 'status-running' : 'status-pending';
+      
+      html += `
+        <tr>
+          <td><span class="badge bg-secondary">${ds.namespace}</span></td>
+          <td><strong>${ds.name}</strong></td>
+          <td><span class="status-badge ${readyStatus}">${ds.ready}</span></td>
+          <td>${ds.current}</td>
+          <td>${ds.desired}</td>
+          <td>${age}</td>
+          <td>
+            <button class="btn btn-action btn-outline-info btn-sm" onclick="showDaemonSetProperties('${ds.name}','${ds.namespace}')">
+              <i class="bi bi-info-circle me-1"></i>Properties
+            </button>
+            <button class="btn btn-action btn-outline-warning btn-sm" onclick="restartDaemonSet('${ds.name}','${ds.namespace}')">
+              <i class="bi bi-arrow-clockwise me-1"></i>Restart
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+    
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+    updateDaemonSetsPieChart(daemonsets, 'pie-daemonsets-tab');
+  } catch (error) {
+    container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>DaemonSet listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+  }
+}
+
+// StatefulSets functions
 async function fetchAndRenderStatefulSetsTable() {
   const container = document.getElementById('statefulsets-table-container');
-  container.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">StatefulSet listesi yükleniyor...</span></div>';
+  
   try {
     const nsFilter = document.getElementById('statefulsetNamespaceFilter');
     const selectedNs = nsFilter.value;
     let url = '/k8s-explorer/statefulsets-summary';
     if (selectedNs) url += `?namespace=${encodeURIComponent(selectedNs)}`;
-    const resp = await fetch(url);
-    const data = await resp.json();
-    const statefulsets = Array.isArray(data.statefulsets) ? data.statefulsets : [];
-    // Namespace dropdownu doldur
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    const statefulsets = data.statefulsets || [];
+    
+    // Populate namespace filter
     if (!nsFilter.dataset.filled) {
-      // Tüm namespace'leri topla
-      const allNs = [...new Set(statefulsets.map(ss => ss.namespace))];
-      nsFilter.innerHTML = '<option value="">(Tümü)</option>' + allNs.map(ns => `<option value="${ns}">${ns}</option>`).join('');
+      const namespaces = [...new Set(statefulsets.map(ss => ss.namespace))];
+      nsFilter.innerHTML = '<option value="">Tüm Namespace\'ler</option>' + 
+        namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
       nsFilter.dataset.filled = '1';
+      nsFilter.addEventListener('change', fetchAndRenderStatefulSetsTable);
     }
+    
     if (statefulsets.length === 0) {
-      container.innerHTML = '<div class="text-muted">StatefulSet bulunamadı.</div>';
-      updateStatefulSetsPieChart([]);
+      container.innerHTML = '<div class="empty-state"><i class="bi bi-database"></i><h5>StatefulSet Bulunamadı</h5><p class="text-muted">Seçilen namespace\'de hiç StatefulSet bulunmuyor.</p></div>';
+      updateStatefulSetsPieChart([], 'pie-statefulsets-tab');
       return;
     }
-    let html = '<table class="table table-sm table-bordered"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Replicas</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
-    for (const ss of statefulsets) {
-      let age = '-';
-      if (ss.creation_timestamp) {
-        const created = new Date(ss.creation_timestamp);
-        const now = new Date();
-        const diffMs = now - created;
-        const diffDays = Math.floor(diffMs / (1000*60*60*24));
-        const diffHrs = Math.floor((diffMs % (1000*60*60*24)) / (1000*60*60));
-        const diffMin = Math.floor((diffMs % (1000*60*60)) / (1000*60));
-        if (diffDays > 0) age = diffDays + 'd';
-        else if (diffHrs > 0) age = diffHrs + 'h';
-        else age = diffMin + 'm';
-      }
-      html += `<tr><td>${ss.namespace}</td><td>${ss.name}</td><td>${ss.ready}</td><td>${ss.replicas}</td><td>${age}</td><td>
-        <button class="btn btn-sm btn-secondary" onclick="showStatefulSetProperties('${ss.name}','${ss.namespace}')">Properties</button>
-        <button class="btn btn-sm btn-warning" onclick="restartStatefulSet('${ss.name}','${ss.namespace}')">Restart</button>
-        <button class="btn btn-sm btn-info ms-1" onclick="showScaleStatefulSetModal('${ss.name}','${ss.namespace}',${ss.replicas})">Scale</button>
-        <button class="btn btn-sm btn-success ms-1" onclick="editStatefulSetYaml('${ss.name}','${ss.namespace}')">Edit</button>
-        <button class="btn btn-sm btn-secondary ms-1" onclick="showStatefulSetLogs('${ss.name}','${ss.namespace}')">Logs</button>
-      </td></tr>`;
-// StatefulSet Edit fonksiyonu (global)
-window.editStatefulSetYaml = async function(name, namespace) {
-  let modal = document.getElementById('yamlEditModal');
-  let label = document.getElementById('yamlEditModalLabel');
-  let area = document.getElementById('yamlEditArea');
-  let saveBtn = document.getElementById('saveYamlBtn');
-  if (!modal || !label || !area || !saveBtn) {
-    alert('YAML edit modalı eksik. Lütfen HTML içinde yamlEditModal, yamlEditModalLabel, yamlEditArea, saveYamlBtn id\'li elemanların olduğundan emin olun.');
-    return;
-  }
-  label.textContent = `StatefulSet YAML Edit: ${namespace}/${name}`;
-  area.value = 'Yükleniyor...';
-  // Modalı body'ye ekle ve göster (Bootstrap 5 uyumlu)
-  if (!document.body.contains(modal)) {
-    document.body.appendChild(modal);
-  }
-  if (modal.style.display === 'none' || (modal.classList.contains('fade') && !modal.classList.contains('show'))) {
-    try {
-      modal.parentNode.removeChild(modal);
-      document.body.appendChild(modal);
-    } catch (e) { /* ignore */ }
-  }
-  let bsModal = bootstrap.Modal.getInstance(modal);
-  if (!bsModal) bsModal = new bootstrap.Modal(modal);
-  bsModal.show();
-  try {
-    const resp = await fetch(`/k8s-explorer/yaml?type=statefulset&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`);
-    if (resp.ok) {
-      area.value = await resp.text();
-    } else {
-      area.value = 'YAML alınamadı: ' + (await resp.text());
-    }
-  } catch (e) {
-    area.value = 'YAML alınırken hata oluştu.';
-  }
-  saveBtn.onclick = async function() {
-    saveBtn.disabled = true;
-    try {
-      const yaml = area.value;
-      const resp = await fetch('/k8s-explorer/yaml', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'statefulset', namespace, name, yaml })
-      });
-      if (resp.ok) {
-        alert('YAML kaydedildi.');
-        if (typeof fetchAndRenderStatefulSetsTable === 'function') fetchAndRenderStatefulSetsTable();
-        bsModal.hide();
-      } else {
-        alert('Kaydetme başarısız: ' + (await resp.text()));
-      }
-    } catch (e) {
-      alert('Kaydetme sırasında hata: ' + e);
-    } finally {
-      saveBtn.disabled = false;
-    }
-  };
-};
-// StatefulSet Properties Modal
-function ensureStatefulSetPropertiesModal() {
-  let modal = document.getElementById('statefulSetPropertiesModal');
-  if (modal) return modal;
-  const html = `
-  <div class="modal fade" id="statefulSetPropertiesModal" tabindex="-1" aria-labelledby="statefulSetPropertiesModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="statefulSetPropertiesModalLabel">StatefulSet Properties</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body" style="max-height:70vh; overflow:auto;">
-          <pre id="statefulSetPropertiesBody" style="font-size:0.9em; white-space:pre-wrap; background:#f8f9fa; border:1px solid #dee2e6; padding:10px; border-radius:4px;">Yükleniyor...</pre>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-        </div>
-      </div>
-    </div>
-  </div>`;
-  const div = document.createElement('div');
-  div.innerHTML = html;
-  document.body.appendChild(div.firstElementChild);
-  return document.getElementById('statefulSetPropertiesModal');
-}
-
-async function showStatefulSetProperties(name, namespace) {
-  const modalEl = ensureStatefulSetPropertiesModal();
-  const bodyEl = document.getElementById('statefulSetPropertiesBody');
-  const labelEl = document.getElementById('statefulSetPropertiesModalLabel');
-  if (!modalEl || !bodyEl || !labelEl) {
-    alert('Properties modal oluşturulamadı.');
-    return;
-  }
-  labelEl.textContent = `StatefulSet Properties: ${namespace}/${name}`;
-  bodyEl.textContent = 'Yükleniyor...';
-  let bsModal = bootstrap.Modal.getInstance(modalEl);
-  if (!bsModal) bsModal = new bootstrap.Modal(modalEl);
-  bsModal.show();
-  try {
-    const resp = await fetch(`/k8s-explorer/statefulset-properties?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`);
-    const data = await resp.json();
-    if (resp.ok && data.statefulset) {
-      bodyEl.textContent = JSON.stringify(data.statefulset, null, 2);
-    } else {
-      bodyEl.textContent = 'Properties alınamadı: ' + (data.error || 'Bilinmeyen hata');
-    }
-  } catch (e) {
-    bodyEl.textContent = 'İstek sırasında hata oluştu: ' + e;
-  }
-}
-window.showStatefulSetProperties = showStatefulSetProperties;
-// StatefulSet Scale fonksiyonu (global)
-window.showScaleStatefulSetModal = function(name, namespace, currentReplicas) {
-  let modal = document.getElementById('scaleStatefulSetModal');
-  let label = document.getElementById('scaleStatefulSetModalLabel');
-  let nameSpan = document.getElementById('scaleStatefulSetName');
-  let input = document.getElementById('scaleStatefulSetReplicasInput');
-  let saveBtn = document.getElementById('scaleStatefulSetSaveBtn');
-  if (!modal || !label || !nameSpan || !input || !saveBtn) {
-    alert('Scale modalı eksik. Lütfen HTML içinde scaleStatefulSetModal, scaleStatefulSetModalLabel, scaleStatefulSetName, scaleStatefulSetReplicasInput, scaleStatefulSetSaveBtn id\'li elemanların olduğundan emin olun.');
-    return;
-  }
-  label.textContent = `StatefulSet Scale: ${namespace}/${name}`;
-  nameSpan.textContent = `${namespace}/${name}`;
-  input.value = currentReplicas;
-  let bsModal = bootstrap.Modal.getInstance(modal);
-  if (!bsModal) bsModal = new bootstrap.Modal(modal);
-  bsModal.show();
-  saveBtn.onclick = async function() {
-    const replicas = parseInt(input.value);
-    if (isNaN(replicas) || replicas < 0) {
-      alert('Geçerli bir replica sayısı girin.');
-      return;
-    }
-    saveBtn.disabled = true;
-    try {
-      const resp = await fetch('/k8s-explorer/scale-statefulset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, namespace, replicas })
-      });
-      if (resp.ok) {
-        alert('StatefulSet scale edildi.');
-        if (typeof fetchAndRenderStatefulSetsTable === 'function') fetchAndRenderStatefulSetsTable();
-        bsModal.hide();
-      } else {
-        alert('Scale başarısız: ' + (await resp.text()));
-      }
-    } catch (e) {
-      alert('Scale sırasında hata: ' + e);
-    } finally {
-      saveBtn.disabled = false;
-    }
-  };
-};
-    }
-    html += '</tbody></table>';
-    container.innerHTML = html;
-    updateStatefulSetsPieChart(statefulsets);
-// StatefulSet Logs fonksiyonu (global)
-window.showStatefulSetLogs = async function(name, namespace) {
-  let modal = document.getElementById('statefulSetLogsModal');
-  let body = document.getElementById('statefulSetLogsModalBody');
-  let label = document.getElementById('statefulSetLogsModalLabel');
-  let podSelect = document.getElementById('statefulSetPodSelect');
-  if (!modal || !body || !label || !podSelect) {
-    alert('Logs modalı veya pod seçici bulunamadı. Lütfen HTML içinde statefulSetLogsModal, statefulSetLogsModalBody, statefulSetLogsModalLabel ve statefulSetPodSelect id\'li elemanların olduğundan emin olun.');
-    return;
-  }
-  if (!document.body.contains(modal)) {
-    document.body.appendChild(modal);
-  }
-  if (modal.style.display === 'none' || (modal.classList.contains('fade') && !modal.classList.contains('show'))) {
-    try {
-      modal.parentNode.removeChild(modal);
-      document.body.appendChild(modal);
-    } catch (e) { /* ignore */ }
-  }
-  label.textContent = `StatefulSet Pod Logları: ${namespace}/${name}`;
-  body.textContent = 'Yükleniyor...';
-  podSelect.innerHTML = '<option>Yükleniyor...</option>';
-  let bsModal = bootstrap.Modal.getInstance(modal);
-  if (!bsModal) bsModal = new bootstrap.Modal(modal);
-  bsModal.show();
-  try {
-    const resp = await fetch(`/k8s-explorer/statefulset-logs?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}&mode=perpod`);
-    if (!resp.ok) {
-      body.textContent = 'Loglar alınamadı: ' + (await resp.text());
-      podSelect.innerHTML = '<option>Hata</option>';
-      return;
-    }
-    const data = await resp.json();
-    if (data && data.pod_logs && Object.keys(data.pod_logs).length > 0) {
-      // Fill pod selector
-      podSelect.innerHTML = '<option value="__all__">Tümü</option>' + Object.keys(data.pod_logs).map(pod => `<option value="${pod}">${pod}</option>`).join('');
-      // Show all pod logs by default
-      let allLogs = Object.entries(data.pod_logs).map(([pod, log]) => `--- ${pod} ---\n${log || '(Log yok)'}`).join('\n\n');
-      body.textContent = allLogs;
-      podSelect.onchange = function() {
-        const selectedPod = podSelect.value;
-        if (selectedPod === '__all__') {
-          body.textContent = allLogs;
-        } else {
-          body.textContent = data.pod_logs[selectedPod] || '(Log yok)';
-        }
-      };
-    } else if (data && data.error) {
-      body.textContent = 'Loglar alınamadı: ' + data.error;
-      podSelect.innerHTML = '<option>Hata</option>';
-    } else {
-      body.textContent = 'Loglar alınamadı: Beklenmeyen yanıt.';
-      podSelect.innerHTML = '<option>Yok</option>';
-    }
-  } catch (e) {
-    body.textContent = 'Loglar alınırken hata oluştu.';
-    podSelect.innerHTML = '<option>Hata</option>';
-  }
-};
-// StatefulSet Restart fonksiyonu (global)
-window.restartStatefulSet = async function(name, namespace) {
-  if (!confirm(`${namespace}/${name} StatefulSet'i restart edilsin mi?`)) return;
-  try {
-    const resp = await fetch('/k8s-explorer/restart-statefulset', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, namespace })
+    
+    let html = '<div class="table-responsive"><table class="table table-modern table-hover"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Replicas</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
+    
+    statefulsets.forEach(ss => {
+      const age = calculateAge(ss.creation_timestamp);
+      const [ready, total] = ss.ready.split('/').map(Number);
+      const readyStatus = ready === total ? 'status-running' : 'status-pending';
+      
+      html += `
+        <tr>
+          <td><span class="badge bg-secondary">${ss.namespace}</span></td>
+          <td><strong>${ss.name}</strong></td>
+          <td><span class="status-badge ${readyStatus}">${ss.ready}</span></td>
+          <td>${ss.replicas}</td>
+          <td>${age}</td>
+          <td>
+            <button class="btn btn-action btn-outline-info btn-sm" onclick="showStatefulSetProperties('${ss.name}','${ss.namespace}')">
+              <i class="bi bi-info-circle me-1"></i>Properties
+            </button>
+            <button class="btn btn-action btn-outline-warning btn-sm" onclick="restartStatefulSet('${ss.name}','${ss.namespace}')">
+              <i class="bi bi-arrow-clockwise me-1"></i>Restart
+            </button>
+            <button class="btn btn-action btn-outline-primary btn-sm" onclick="showScaleStatefulSetModal('${ss.name}','${ss.namespace}',${ss.replicas})">
+              <i class="bi bi-arrows-expand me-1"></i>Scale
+            </button>
+          </td>
+        </tr>
+      `;
     });
-    if (resp.ok) {
-      alert('StatefulSet restart edildi.');
-      if (typeof fetchAndRenderStatefulSetsTable === 'function') fetchAndRenderStatefulSetsTable();
-    } else {
-      alert('Restart başarısız: ' + (await resp.text()));
+    
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+    updateStatefulSetsPieChart(statefulsets, 'pie-statefulsets-tab');
+  } catch (error) {
+    container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>StatefulSet listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+  }
+}
+
+// ReplicaSets functions
+async function fetchAndRenderReplicaSetsTable() {
+  const container = document.getElementById('replicasets-table-container');
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">ReplicaSet listesi yükleniyor...</span></div>';
+  
+  try {
+    const response = await fetch('/k8s-explorer/replicasets-summary');
+    const data = await response.json();
+    const replicasets = data.replicasets || [];
+    
+    // Populate namespace filter
+    const nsFilter = document.getElementById('replicasetsNamespaceFilter');
+    if (!nsFilter.dataset.filled) {
+      const namespaces = [...new Set(replicasets.map(rs => rs.namespace))];
+      nsFilter.innerHTML = '<option value="">Tüm Namespace\'ler</option>' + 
+        namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
+      nsFilter.dataset.filled = '1';
+      nsFilter.addEventListener('change', () => {
+        const filtered = nsFilter.value ? replicasets.filter(rs => rs.namespace === nsFilter.value) : replicasets;
+        renderReplicaSetsTable(filtered);
+      });
     }
-  } catch (e) {
-    alert('Restart sırasında hata: ' + e);
-  }
-};
-  } catch (e) {
-    container.innerHTML = '<div class="text-danger">StatefulSetler alınırken hata oluştu.</div>';
+    
+    renderReplicaSetsTable(replicasets);
+    updateReplicaSetsPieChart(replicasets, 'pie-replicasets-tab');
+  } catch (error) {
+    container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>ReplicaSet listesi yüklenirken hata oluştu: ' + error.message + '</div>';
   }
 }
 
-// StatefulSets pie chart'ı güncelle
-function updateStatefulSetsPieChart(statefulsets) {
-  // Pie chart datasını hazırla
-  const statusCounts = { 'Ready': 0, 'NotReady': 0 };
-  for (const ss of statefulsets) {
-    const [ready, total] = (ss.ready || '').split('/').map(x => parseInt(x) || 0);
-    if (ready === total && total > 0) statusCounts['Ready']++;
-    else statusCounts['NotReady']++;
+function renderReplicaSetsTable(replicasets) {
+  const container = document.getElementById('replicasets-table-container');
+  
+  if (replicasets.length === 0) {
+    container.innerHTML = '<div class="empty-state"><i class="bi bi-collection"></i><h5>ReplicaSet Bulunamadı</h5><p class="text-muted">Seçilen kriterlerde hiç ReplicaSet bulunmuyor.</p></div>';
+    return;
   }
-  renderPieChart('pie-statefulsets-tab', 'Stateful Sets', statusCounts);
-}
-
-// Namespace değişince tablo ve pie chart güncelle
-document.addEventListener('DOMContentLoaded', function() {
-  const nsFilter = document.getElementById('statefulsetNamespaceFilter');
-  if (nsFilter) {
-    nsFilter.onchange = fetchAndRenderStatefulSetsTable;
-  }
-  document.querySelector('button[data-bs-target="#statefulsets"]').addEventListener('shown.bs.tab', function() {
-    // Dropdownu her açışta bir kez doldurmak için dataset.filled sıfırla
-    document.getElementById('statefulsetNamespaceFilter').dataset.filled = '';
-    fetchAndRenderStatefulSetsTable();
+  
+  let html = '<div class="table-responsive"><table class="table table-modern table-hover"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Desired</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
+  
+  replicasets.forEach(rs => {
+    const age = calculateAge(rs.creation_timestamp);
+    const readyStatus = rs.ready_replicas === rs.desired ? 'status-running' : 'status-pending';
+    
+    html += `
+      <tr>
+        <td><span class="badge bg-secondary">${rs.namespace}</span></td>
+        <td><strong>${rs.name}</strong></td>
+        <td><span class="status-badge ${readyStatus}">${rs.ready}</span></td>
+        <td>${rs.desired}</td>
+        <td>${age}</td>
+        <td>
+          <button class="btn btn-action btn-outline-danger btn-sm" onclick="deleteReplicaSet('${rs.name}','${rs.namespace}')">
+            <i class="bi bi-trash me-1"></i>Delete
+          </button>
+        </td>
+      </tr>
+    `;
   });
-});
-</script>
-  <div class="tab-pane fade" id="replicasets" role="tabpanel">
-    <div class="row">
-      <div class="col-md-6">
-        <div id="pie-replicasets-tab" style="min-height:300px;"></div>
-      </div>
-      <div class="col-md-6">
-        <h5 class="mt-2">ReplicaSet Listesi</h5>
-        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-          <label for="replicasetsNamespaceFilter" class="form-label mb-0">Namespace:</label>
-          <select id="replicasetsNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
-          <button class="btn btn-sm btn-outline-danger ms-auto" id="deleteSelectedReplicaSetsBtn" disabled>Seçili ReplicaSet'leri Sil</button>
-        </div>
-  <div id="replicasets-table-container"><div class="text-muted">Yükleniyor...</div></div>
-  <div id="replicasets-pagination" class="mt-2"></div>
-      </div>
-    </div>
-  </div>
-  <div class="tab-pane fade" id="replicationcontrollers" role="tabpanel">Replication Controller içeriği buraya gelecek.</div>
-  <div class="tab-pane fade" id="jobs" role="tabpanel">
-    <div class="row">
-      <div class="col-md-6">
-        <div id="pie-jobs-tab" style="min-height:300px;"></div>
-      </div>
-      <div class="col-md-6">
-        <h5 class="mt-2">Job Listesi</h5>
-        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-          <label for="jobsNamespaceFilter" class="form-label mb-0">Namespace:</label>
-          <select id="jobsNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
-        </div>
-        <div id="jobs-table-container"><div class="text-muted">Yükleniyor...</div></div>
-        <div id="jobs-pagination" class="mt-2"></div>
-      </div>
-    </div>
-  </div>
-  <div class="tab-pane fade" id="cronjobs" role="tabpanel">
-    <div class="row">
-      <div class="col-md-4">
-        <label for="cronjobsNamespaceFilter" class="form-label mb-0">Namespace:</label>
-        <select id="cronjobsNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
-      </div>
-      <div class="col-md-8 text-end">
-        <div id="pie-cronjobs-tab" style="height:200px; display:inline-block; min-width:200px;"></div>
-      </div>
-    </div>
-    <div class="mt-3">
-      <div id="cronjobs-table-container"><div class="text-muted">Yükleniyor...</div></div>
-      <nav>
-        <ul class="pagination" id="cronjobs-pagination"></ul>
-      </nav>
-    </div>
-  </div>
-</div>
-{% block scripts %}
-</script>
-<script src="/static/pod_describe.js"></script>
-<script src="https://code.highcharts.com/highcharts.js"></script>
-<!-- YAML parse için js-yaml -->
-<script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
-<script>
-// Highcharts yüklenmeden önce fonksiyonları çağırmak için yardımcı
-function ensureHighchartsAndRender(fn) {
-  if (typeof Highcharts !== 'undefined') {
-    fn();
-  } else {
-    const script = document.createElement('script');
-    script.src = 'https://code.highcharts.com/highcharts.js';
-    script.onload = fn;
-    document.head.appendChild(script);
-  }
+  
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
 }
 
-// Pie chart'taki Pods'a tıklanınca Pods sekmesine geç
-document.addEventListener('DOMContentLoaded', function() {
-  const piePods = document.getElementById('pie-pods');
-  if (piePods) {
-    piePods.addEventListener('click', function() {
-      const podsTabBtn = document.querySelector('button[data-bs-target="#pods"]');
-      if (podsTabBtn) podsTabBtn.click();
-    });
-  }
-});
-
-// Deployments tablosunu getir ve göster
-async function fetchAndRenderDeploymentsTable() {
-  const container = document.getElementById('deployments-table-container');
-  container.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
+// Jobs functions
+async function fetchAndRenderJobsTable() {
+  const container = document.getElementById('jobs-table-container');
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Job listesi yükleniyor...</span></div>';
+  
   try {
-    const resp = await fetch('/k8s-explorer/deployments-summary');
-    const data = await resp.json();
-    const deployments = Array.isArray(data.deployments) ? data.deployments : [];
-    const nameFilter = document.getElementById('deploymentNameFilter');
-    // Always update filter options to reflect current deployments
-    const prevValue = nameFilter.value;
-    const names = [...new Set(deployments.map(d => d.name))];
-    nameFilter.innerHTML = '<option value="">(Tümü)</option>' + names.map(n => `<option value="${n}">${n}</option>`).join('');
-    // Restore previous selection if possible
-    if (names.includes(prevValue)) nameFilter.value = prevValue;
-    let selectedName = nameFilter.value;
-    // Remove any previous event listeners and add a new one
-    nameFilter.onchange = fetchAndRenderDeploymentsTable;
-    const filtered = selectedName ? deployments.filter(d => d.name === selectedName) : deployments;
-    if (filtered.length === 0) {
-      container.innerHTML = '<div class="text-muted">Deployment bulunamadı.</div>';
-      return;
+    const response = await fetch('/k8s-explorer/jobs-summary');
+    const data = await response.json();
+    const jobs = data.jobs || [];
+    
+    // Populate namespace filter
+    const nsFilter = document.getElementById('jobsNamespaceFilter');
+    if (!nsFilter.dataset.filled) {
+      const namespaces = [...new Set(jobs.map(job => job.namespace))];
+      nsFilter.innerHTML = '<option value="">Tüm Namespace\'ler</option>' + 
+        namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
+      nsFilter.dataset.filled = '1';
+      nsFilter.addEventListener('change', () => {
+        const filtered = nsFilter.value ? jobs.filter(job => job.namespace === nsFilter.value) : jobs;
+        renderJobsTable(filtered);
+      });
     }
-    let html = '<table class="table table-sm table-bordered"><thead><tr><th>NAME</th><th>READY</th><th>UP-TO-DATE</th><th>AVAILABLE</th><th>AGE</th><th>NAMESPACE</th><th>İşlemler</th></tr></thead><tbody>';
-    for (const dep of filtered) {
-      const ready = dep.ready !== undefined ? dep.ready : '-';
-      const upToDate = dep.updated_replicas !== undefined ? dep.updated_replicas : '-';
-      const available = dep.available_replicas !== undefined ? dep.available_replicas : '-';
-      let age = '-';
-      if (dep.creation_timestamp) {
-        const created = new Date(dep.creation_timestamp);
-        const now = new Date();
-        const diffMs = now - created;
-        const diffDays = Math.floor(diffMs / (1000*60*60*24));
-        const diffHrs = Math.floor((diffMs % (1000*60*60*24)) / (1000*60*60));
-        const diffMin = Math.floor((diffMs % (1000*60*60)) / (1000*60));
-        if (diffDays > 0) age = diffDays + 'd';
-        else if (diffHrs > 0) age = diffHrs + 'h';
-        else age = diffMin + 'm';
-      }
-      // Add namespace column if available
-      const ns = dep.namespace;
-      html += `<tr><td>${dep.name}</td><td>${ready}</td><td>${upToDate}</td><td>${available}</td><td>${age}</td><td>${ns || ''}</td><td>
-        <button class="btn btn-sm btn-secondary" onclick="showDeploymentProperties('${dep.name}','${dep.namespace}')">Properties</button>
-        <button class="btn btn-sm btn-info" onclick="describeDeployment('${dep.name}','${dep.namespace}')">Describe</button>
-        <button class="btn btn-sm btn-primary" onclick="editDeploymentYaml('${dep.name}','${dep.namespace}')">Edit</button>
-        <button class="btn btn-sm btn-warning" onclick="showScaleDeploymentModal('${dep.name}','${dep.namespace}', ${parseInt(dep.ready.split('/')[1] || dep.ready) || 1})">Scale</button>
-      </td></tr>`;
-    }
-    html += '</tbody></table>';
-    container.innerHTML = html;
-  } 
-  catch (e) {
-    container.innerHTML = '<div class="text-danger">Deploymentlar alınırken hata oluştu.</div>';
+    
+    renderJobsTable(jobs);
+    updateJobsPieChart(jobs, 'pie-jobs-tab');
+  } catch (error) {
+    container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>Job listesi yüklenirken hata oluştu: ' + error.message + '</div>';
   }
 }
 
-// Deployment Describe function (global scope for button onclick)
-async function describeDeployment(name, namespace) {
-  let modal = document.getElementById('describeModal');
-  let body = document.getElementById('describeModalBody');
-  let label = document.getElementById('describeModalLabel');
-  if (!modal || !body || !label) {
-    console.error('Describe modal bulunamadı.');
-    alert('Describe modal bulunamadı. Lütfen HTML içinde describeModal, describeModalBody ve describeModalLabel id\'li elemanların olduğundan emin olun.');
+function renderJobsTable(jobs) {
+  const container = document.getElementById('jobs-table-container');
+  
+  if (jobs.length === 0) {
+    container.innerHTML = '<div class="empty-state"><i class="bi bi-play-circle"></i><h5>Job Bulunamadı</h5><p class="text-muted">Seçilen kriterlerde hiç Job bulunmuyor.</p></div>';
     return;
   }
-  // Modal'ı body'ye ekle (gerekirse, sadece document.body'de yoksa)
-  if (!document.body.contains(modal)) {
-    document.body.appendChild(modal);
-    console.warn('Describe modal body\'ye eklendi.');
-  }
-  // Eğer modal görünmüyorsa, force re-append (Bootstrap bug fix)
-  if (modal.style.display === 'none' || modal.classList.contains('fade') && !modal.classList.contains('show')) {
-    try {
-      modal.parentNode.removeChild(modal);
-      document.body.appendChild(modal);
-      console.warn('Describe modal yeniden eklendi.');
-    } catch (e) { /* ignore */ }
-  }
-  label.textContent = `Deployment Describe: ${namespace ? namespace + '/' : ''}${name}`;
-  body.textContent = 'Yükleniyor...';
-  // Modal açma: Eğer zaten açıksa tekrar açmaya çalışma
-  let bsModal = bootstrap.Modal.getInstance(modal);
-  if (!bsModal) {
-    try {
-      bsModal = new bootstrap.Modal(modal);
-    } catch (err) {
-      console.error('Modal oluşturulamadı:', err);
-      alert('Modal oluşturulamadı: ' + err);
-      return;
-    }
-  }
+  
+  let html = '<div class="table-responsive"><table class="table table-modern table-hover"><thead><tr><th>Namespace</th><th>Name</th><th>Succeeded</th><th>Failed</th><th>Completions</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
+  
+  jobs.forEach(job => {
+    const age = calculateAge(job.creation_timestamp);
+    const status = job.succeeded > 0 ? 'status-succeeded' : job.failed > 0 ? 'status-failed' : 'status-pending';
+    
+    html += `
+      <tr>
+        <td><span class="badge bg-secondary">${job.namespace}</span></td>
+        <td><strong>${job.name}</strong></td>
+        <td><span class="status-badge status-succeeded">${job.succeeded}</span></td>
+        <td><span class="status-badge status-failed">${job.failed}</span></td>
+        <td>${job.completions || '-'}</td>
+        <td>${age}</td>
+        <td>
+          <button class="btn btn-action btn-outline-danger btn-sm" onclick="deleteJob('${job.name}','${job.namespace}')">
+            <i class="bi bi-trash me-1"></i>Delete
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+  
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
+}
+
+// CronJobs functions
+async function fetchAndRenderCronJobsTable() {
+  const container = document.getElementById('cronjobs-table-container');
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">CronJob listesi yükleniyor...</span></div>';
+  
   try {
-    bsModal.show();
-  } catch (err) {
-    console.error('Modal açılamadı:', err);
-    alert('Modal açılamadı: ' + err);
+    const response = await fetch('/k8s-explorer/cronjobs-summary');
+    const data = await response.json();
+    const cronjobs = data.cronjobs || [];
+    
+    // Populate namespace filter
+    const nsFilter = document.getElementById('cronjobsNamespaceFilter');
+    if (!nsFilter.dataset.filled) {
+      const namespaces = [...new Set(cronjobs.map(cj => cj.namespace))];
+      nsFilter.innerHTML = '<option value="">Tüm Namespace\'ler</option>' + 
+        namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
+      nsFilter.dataset.filled = '1';
+      nsFilter.addEventListener('change', () => {
+        const filtered = nsFilter.value ? cronjobs.filter(cj => cj.namespace === nsFilter.value) : cronjobs;
+        renderCronJobsTable(filtered);
+      });
+    }
+    
+    renderCronJobsTable(cronjobs);
+    updateCronJobsPieChart(cronjobs, 'pie-cronjobs-tab');
+  } catch (error) {
+    container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>CronJob listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+  }
+}
+
+function renderCronJobsTable(cronjobs) {
+  const container = document.getElementById('cronjobs-table-container');
+  
+  if (cronjobs.length === 0) {
+    container.innerHTML = '<div class="empty-state"><i class="bi bi-clock"></i><h5>CronJob Bulunamadı</h5><p class="text-muted">Seçilen kriterlerde hiç CronJob bulunmuyor.</p></div>';
     return;
   }
-  try {
-    let url = `/k8s-explorer/describe?type=deployment&name=${encodeURIComponent(name)}`;
-    // Trim namespace and only add if non-empty
-    const ns = (namespace || '').trim();
-    if (ns) {
-      url += `&namespace=${encodeURIComponent(ns)}`;
-    }
-    const resp = await fetch(url);
-    const data = await resp.json();
-    if (resp.ok && data && data.describe) {
-      body.textContent = data.describe;
-    } else if (data && data.error) {
-      body.textContent = 'Describe alınamadı: ' + data.error;
-    } else {
-      body.textContent = 'Describe alınamadı: Beklenmeyen yanıt.';
-    }
-  } catch (e) {
-    body.textContent = 'Describe alınırken hata oluştu.';
-  }
-}
-// Ensure describeDeployment is globally accessible for inline onclick
-window.describeDeployment = describeDeployment;
-// Remove duplicate filter change event registration (now handled in fetchAndRenderDeploymentsTable)
-// Deployment Describe function (global scope for button onclick)
-// Deployment YAML Edit fonksiyonu
-async function editDeploymentYaml(name, namespace) {
-  // YAML'ı getir
-  const resp = await fetch(`/k8s-explorer/yaml?type=deployment&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`);
-  const yaml = await resp.text();
-  const area = document.getElementById('yamlEditArea');
-  const label = document.getElementById('yamlEditModalLabel');
-  const saveBtn = document.getElementById('saveYamlBtn');
-  const modalDiv = document.getElementById('yamlEditModal');
-  if (!area || !label || !saveBtn || !modalDiv) {
-    alert('YAML edit modali veya alanı bulunamadı. Lütfen HTML içinde yamlEditArea, yamlEditModalLabel, saveYamlBtn ve yamlEditModal id\'li elemanların olduğundan emin olun.');
-    return;
-  }
-  // Modal'ı body'ye ekle (gerekirse)
-  if (!document.body.contains(modalDiv)) {
-    document.body.appendChild(modalDiv);
-    console.warn('YAML edit modal body\'ye eklendi.');
-  }
-  // Eğer modal görünmüyorsa, force re-append (Bootstrap bug fix)
-  if (modalDiv.style.display === 'none' || (modalDiv.classList.contains('fade') && !modalDiv.classList.contains('show'))) {
-    try {
-      modalDiv.parentNode.removeChild(modalDiv);
-      document.body.appendChild(modalDiv);
-      console.warn('YAML edit modal yeniden eklendi.');
-    } catch (e) { /* ignore */ }
-  }
-  area.value = yaml;
-  label.textContent = `Deployment YAML Edit: ${namespace}/${name}`;
-  saveBtn.onclick = async function() {
-    const newYaml = area.value;
-    const patchResp = await fetch('/k8s-explorer/yaml', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'deployment', namespace, name, yaml: newYaml })
-    });
-    if (patchResp.ok) {
-      alert('YAML başarıyla güncellendi.');
-      var modal = bootstrap.Modal.getInstance(modalDiv);
-      if (!modal) modal = new bootstrap.Modal(modalDiv);
-      modal.hide();
-      // Deployments tablosunu ve cache'i güncelle
-      if (typeof fetchAndRenderDeploymentsTable === 'function') fetchAndRenderDeploymentsTable();
-      if (typeof renderOverviewCharts === 'function') renderOverviewCharts();
-      if (typeof renderDeploymentsTabChart === 'function') renderDeploymentsTabChart();
-    } else {
-      alert('YAML güncellenemedi: ' + await patchResp.text());
-    }
-  };
-  var modal = bootstrap.Modal.getInstance(modalDiv);
-  if (!modal) modal = new bootstrap.Modal(modalDiv);
-  modal.show();
-}
-window.editDeploymentYaml = editDeploymentYaml;
-
-// Deployment Properties Modal (dinamik oluşturulacak)
-function ensureDeploymentPropertiesModal() {
-  let modal = document.getElementById('deploymentPropertiesModal');
-  if (modal) return modal;
-  const html = `
-  <div class="modal fade" id="deploymentPropertiesModal" tabindex="-1" aria-labelledby="deploymentPropertiesModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="deploymentPropertiesModalLabel">Deployment Properties</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body" style="max-height:70vh; overflow:auto;">
-          <pre id="deploymentPropertiesBody" style="font-size:0.9em; white-space:pre-wrap; background:#f8f9fa; border:1px solid #dee2e6; padding:10px; border-radius:4px;">Yükleniyor...</pre>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-        </div>
-      </div>
-    </div>
-  </div>`;
-  const div = document.createElement('div');
-  div.innerHTML = html;
-  document.body.appendChild(div.firstElementChild);
-  return document.getElementById('deploymentPropertiesModal');
+  
+  let html = '<div class="table-responsive"><table class="table table-modern table-hover"><thead><tr><th>Namespace</th><th>Name</th><th>Schedule</th><th>Suspended</th><th>Active</th><th>Last Schedule</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
+  
+  cronjobs.forEach(cj => {
+    const age = calculateAge(cj.creation_timestamp);
+    const suspendedStatus = cj.suspended ? 'status-failed' : 'status-running';
+    const lastSchedule = cj.last_schedule_time ? new Date(cj.last_schedule_time).toLocaleString('tr-TR') : '-';
+    
+    html += `
+      <tr>
+        <td><span class="badge bg-secondary">${cj.namespace}</span></td>
+        <td><strong>${cj.name}</strong></td>
+        <td><code>${cj.schedule}</code></td>
+        <td><span class="status-badge ${suspendedStatus}">${cj.suspended ? 'Yes' : 'No'}</span></td>
+        <td>${cj.active || 0}</td>
+        <td>${lastSchedule}</td>
+        <td>${age}</td>
+        <td>
+          <button class="btn btn-action btn-outline-warning btn-sm" onclick="toggleCronJobSuspend('${cj.name}','${cj.namespace}',${cj.suspended})">
+            <i class="bi bi-pause-circle me-1"></i>${cj.suspended ? 'Resume' : 'Suspend'}
+          </button>
+          <button class="btn btn-action btn-outline-danger btn-sm" onclick="deleteCronJob('${cj.name}','${cj.namespace}')">
+            <i class="bi bi-trash me-1"></i>Delete
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+  
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
 }
 
-async function showDeploymentProperties(name, namespace) {
-  const modalEl = ensureDeploymentPropertiesModal();
-  const bodyEl = document.getElementById('deploymentPropertiesBody');
-  const labelEl = document.getElementById('deploymentPropertiesModalLabel');
-  if (!modalEl || !bodyEl || !labelEl) {
-    alert('Properties modal oluşturulamadı.');
-    return;
-  }
-  labelEl.textContent = `Deployment Properties: ${namespace}/${name}`;
-  bodyEl.textContent = 'Yükleniyor...';
-  let bsModal = bootstrap.Modal.getInstance(modalEl);
-  if (!bsModal) bsModal = new bootstrap.Modal(modalEl);
-  bsModal.show();
-  try {
-    const resp = await fetch(`/k8s-explorer/deployment-properties?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`);
-    const data = await resp.json();
-    if (resp.ok && data.deployment) {
-      // Güzel formatlı JSON
-      bodyEl.textContent = JSON.stringify(data.deployment, null, 2);
-    } else {
-      bodyEl.textContent = 'Properties alınamadı: ' + (data.error || 'Bilinmeyen hata');
-    }
-  } catch (e) {
-    bodyEl.textContent = 'İstek sırasında hata oluştu: ' + e;
-  }
+// Chart update functions
+function updateDaemonSetsPieChart(daemonsets, containerId) {
+  const ready = daemonsets.filter(ds => ds.ready === ds.desired).length;
+  const notReady = daemonsets.filter(ds => ds.ready !== ds.desired).length;
+  
+  createPieChart(containerId, 'DaemonSets', [
+    { name: 'Ready', y: ready, color: '#4CAF50' },
+    { name: 'Not Ready', y: notReady, color: '#FF9800' }
+  ]);
 }
-window.showDeploymentProperties = showDeploymentProperties;
 
-// Deployments sekmesi açıldığında tabloyu yükle
-document.addEventListener('DOMContentLoaded', function() {
-  document.querySelector('button[data-bs-target="#deployments"]').addEventListener('shown.bs.tab', fetchAndRenderDeploymentsTable);
-  const rsTabBtn = document.querySelector('button[data-bs-target="#replicasets"]');
-  if (rsTabBtn) {
-    rsTabBtn.addEventListener('shown.bs.tab', function() {
-      fetchAndRenderReplicaSetsTable();
-      renderReplicaSetsTabChart();
-    });
-  }
-});
+function updateStatefulSetsPieChart(statefulsets, containerId) {
+  const ready = statefulsets.filter(ss => {
+    const [readyCount, totalCount] = ss.ready.split('/').map(Number);
+    return readyCount === totalCount;
+  }).length;
+  const notReady = statefulsets.length - ready;
+  
+  createPieChart(containerId, 'StatefulSets', [
+    { name: 'Ready', y: ready, color: '#2196F3' },
+    { name: 'Not Ready', y: notReady, color: '#FF5722' }
+  ]);
+}
 
-// Pods tablosunu getir ve göster (düzeltilmiş)
-let podsCurrentPage = 1;
-const PODS_PAGE_SIZE = 10;
-async function fetchAndRenderPodsTable(page) {
-  if (page) podsCurrentPage = page;
-  const container = document.getElementById('pods-table-container');
+function updateReplicaSetsPieChart(replicasets, containerId) {
+  const ready = replicasets.filter(rs => rs.ready_replicas === rs.desired).length;
+  const notReady = replicasets.length - ready;
+  
+  createPieChart(containerId, 'ReplicaSets', [
+    { name: 'Ready', y: ready, color: '#9C27B0' },
+    { name: 'Not Ready', y: notReady, color: '#607D8B' }
+  ]);
+}
+
+function updateJobsPieChart(jobs, containerId) {
+  const succeeded = jobs.filter(job => job.succeeded > 0).length;
+  const failed = jobs.filter(job => job.failed > 0).length;
+  const running = jobs.length - succeeded - failed;
+  
+  createPieChart(containerId, 'Jobs', [
+    { name: 'Succeeded', y: succeeded, color: '#4CAF50' },
+    { name: 'Failed', y: failed, color: '#F44336' },
+    { name: 'Running', y: running, color: '#2196F3' }
+  ]);
+}
+
+function updateCronJobsPieChart(cronjobs, containerId) {
+  const active = cronjobs.filter(cj => !cj.suspended).length;
+  const suspended = cronjobs.filter(cj => cj.suspended).length;
+  
+  createPieChart(containerId, 'CronJobs', [
+    { name: 'Active', y: active, color: '#4CAF50' },
+    { name: 'Suspended', y: suspended, color: '#FF9800' }
+  ]);
+}
+
+// Generic pie chart creation function
+function createPieChart(containerId, title, data) {
+  const container = document.getElementById(containerId);
   if (!container) return;
-  container.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
-  try {
-    const resp = await fetch('/k8s-explorer/pods-summary');
-    const data = await resp.json();
-    const pods = Array.isArray(data.pods) ? data.pods : [];
-    const namespaces = [...new Set(pods.map(p=>p.namespace))];
-    const nsFilter = document.getElementById('namespaceFilter');
-    if (nsFilter) {
-      const prev = nsFilter.value;
-      // Her seferinde güncelle (cluster değişikliklerinde senkron kalır)
-      nsFilter.innerHTML = '<option value="">(Tümü)</option>' + namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
-      // Seçim korunabiliyorsa geri yükle
-      if ([...nsFilter.options].some(o=>o.value===prev)) nsFilter.value = prev; else nsFilter.value='';
-    }
-    const selectedNs = nsFilter ? nsFilter.value : '';
-    const filteredPods = selectedNs ? pods.filter(p=>p.namespace===selectedNs) : pods;
-    if (filteredPods.length === 0) {
-      container.innerHTML = '<div class="text-muted">Pod bulunamadı.</div>';
-      updatePodsPieChart(filteredPods);
-      return;
-    }
-    const totalPages = Math.ceil(filteredPods.length / PODS_PAGE_SIZE);
-    if (podsCurrentPage > totalPages) podsCurrentPage = totalPages;
-    if (podsCurrentPage < 1) podsCurrentPage = 1;
-    const start = (podsCurrentPage - 1) * PODS_PAGE_SIZE;
-    const pageItems = filteredPods.slice(start, start + PODS_PAGE_SIZE);
-    let html = '<table class="table table-sm table-bordered"><thead><tr><th>Namespace</th><th>Pod</th><th>Durum</th><th>İşlemler</th></tr></thead><tbody>';
-    for (const pod of pageItems) {
-      html += `<tr><td>${pod.namespace}</td><td>${pod.name}</td><td>${pod.status}</td><td>
-        <button class=\"btn btn-sm btn-primary me-1\" onclick=\"showPodProperties('${pod.namespace}','${pod.name}')\">Properties</button>
-        <button class=\"btn btn-sm btn-secondary me-1\" onclick=\"editPodYaml('${pod.namespace}','${pod.name}')\">YAML Edit</button>
-        <button class=\"btn btn-sm btn-danger me-1\" onclick=\"deletePod('${pod.namespace}','${pod.name}')\">Delete</button>
-        <button class=\"btn btn-sm btn-info\" onclick=\"describePod('${pod.namespace}','${pod.name}')\">Describe</button>
-      </td></tr>`;
-    }
-    html += '</tbody></table>';
-    container.innerHTML = html;
-    // Pagination bar
-    const pagDiv = document.getElementById('pods-pagination');
-    if (pagDiv) {
-      if (totalPages <= 1) {
-        pagDiv.innerHTML = '';
-      } else {
-        let phtml = '<nav><ul class="pagination pagination-sm mb-0">';
-        const makeLi = (p, label, disabled=false, active=false) => `<li class=\"page-item ${disabled?'disabled':''} ${active?'active':''}\"><a class=\"page-link\" href=\"#\" data-page=\"${p}\">${label}</a></li>`;
-        phtml += makeLi(podsCurrentPage-1,'«', podsCurrentPage===1);
-        // window of pages
-        const windowSize = 5;
-        let startP = Math.max(1, podsCurrentPage - Math.floor(windowSize/2));
-        let endP = Math.min(totalPages, startP + windowSize -1);
-        if (endP - startP + 1 < windowSize) startP = Math.max(1, endP - windowSize +1);
-        for (let p=startP; p<=endP; p++) phtml += makeLi(p, p, false, p===podsCurrentPage);
-        phtml += makeLi(podsCurrentPage+1,'»', podsCurrentPage===totalPages);
-        phtml += '</ul></nav>';
-        pagDiv.innerHTML = phtml;
-        pagDiv.querySelectorAll('a.page-link').forEach(a=>{
-          a.addEventListener('click', ev=>{
-            ev.preventDefault();
-            const p = parseInt(a.dataset.page);
-            if (!isNaN(p)) fetchAndRenderPodsTable(p);
-          });
-        });
-      }
-    }
-    updatePodsPieChart(filteredPods);
-  } catch (e) {
-    container.innerHTML = '<div class="text-danger">Podlar alınırken hata oluştu.</div>';
-  }
-}
-// Pod Properties fonksiyonu (global)
-window.showPodProperties = async function(namespace, name) {
-  let modal = document.getElementById('podPropertiesModal');
-  let label = document.getElementById('podPropertiesModalLabel');
-  let body = document.getElementById('podPropertiesModalBody');
-  if (!modal || !label || !body) {
-    alert('Properties modalı eksik. Lütfen HTML içinde podPropertiesModal, podPropertiesModalLabel, podPropertiesModalBody id\'li elemanların olduğundan emin olun.');
+  
+  if (data.every(item => item.y === 0)) {
+    container.innerHTML = '<div class="empty-state"><i class="bi bi-pie-chart"></i><h6>Veri Yok</h6><p class="text-muted mb-0">Gösterilecek veri bulunmuyor.</p></div>';
     return;
   }
-  label.textContent = `Pod Properties: ${namespace}/${name}`;
-  body.innerHTML = 'Yükleniyor...';
-  document.getElementById('podResourceChart').innerHTML = '<div class="text-muted">Kaynak kullanımı yükleniyor...</div>';
-  if (!document.body.contains(modal)) {
-    document.body.appendChild(modal);
-  }
-  if (modal.style.display === 'none' || (modal.classList.contains('fade') && !modal.classList.contains('show'))) {
-    try {
-      modal.parentNode.removeChild(modal);
-      document.body.appendChild(modal);
-    } catch (e) { /* ignore */ }
-  }
-  let bsModal = bootstrap.Modal.getInstance(modal);
-  if (!bsModal) bsModal = new bootstrap.Modal(modal);
-  bsModal.show();
-  // Prometheus endpoint autodetect (prefer backend discovery)
-  async function findPrometheusBaseUrl() {
-    try {
-      const resp = await fetch('/k8s-explorer/prometheus-url');
-      if (resp.ok) {
-        const data = await resp.json();
-        if (data.url) return data.url + '/api/v1';
+  
+  Highcharts.chart(containerId, {
+    chart: {
+      type: 'pie',
+      backgroundColor: 'transparent',
+      height: containerId.includes('jobs') || containerId.includes('cronjobs') ? 140 : 280
+    },
+    title: {
+      text: containerId.includes('jobs') || containerId.includes('cronjobs') ? '' : title,
+      style: { fontSize: '14px', fontWeight: 'bold' }
+    },
+    tooltip: {
+      pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b><br/>Count: <b>{point.y}</b>'
+    },
+    accessibility: { enabled: false },
+    plotOptions: {
+      pie: {
+        allowPointSelect: true,
+        cursor: 'pointer',
+        dataLabels: {
+          enabled: true,
+          format: '<b>{point.name}</b>: {point.y}'
+        },
+        showInLegend: false
       }
-    } catch (e) {}
-    const candidates = ['/api/prometheus','/prometheus','http://prometheus:9090'];
-    for (const base of candidates) {
-      try {
-        const r = await fetch(base + '/api/v1/status/buildinfo');
-        if (r.ok) return base + '/api/v1';
-      } catch (e) {}
-    }
-    return null;
-  }
-      // Namespace dropdownu sadece ilk yüklemede doldur
-      if (!nsFilter.dataset.filled) {
-        nsFilter.innerHTML = '<option value="">(Tümü)</option>' + namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
-        nsFilter.dataset.filled = '1';
-    async function rangeQuery(query) {
-      let selectedNs = nsFilter.value;
-      const filteredPods = selectedNs ? pods.filter(p=>p.namespace===selectedNs) : pods;
-      if (filteredPods.length === 0) {
-        container.innerHTML = '<div class="text-muted">Pod bulunamadı.</div>';
-        updatePodsPieChart(filteredPods);
-        return;
-      }
-      let html = '<table class="table table-sm table-bordered"><thead><tr><th>Namespace</th><th>Pod</th><th>Durum</th><th>İşlemler</th></tr></thead><tbody>';
-      for (const pod of filteredPods) {
-        html += `<tr><td>${pod.namespace}</td><td>${pod.name}</td><td>${pod.status}</td><td>
-          <button class="btn btn-sm btn-primary me-1" onclick="showPodProperties('${pod.namespace}','${pod.name}')">Properties</button>
-          <button class="btn btn-sm btn-secondary me-1" onclick="editPodYaml('${pod.namespace}','${pod.name}')">YAML Edit</button>
-          <button class="btn btn-sm btn-outline-dark me-1" onclick="showPodDescribe('${pod.namespace}','${pod.name}')">Describe</button>
-        </td></tr>`;
-      }
-      html += '</tbody></table>';
-      container.innerHTML = html;
-      updatePodsPieChart(filteredPods);
-      return data.data.result;
-    }
-    const [cpu, mem, netrx, nettx] = await Promise.all([
-      rangeQuery(cpuQ),
-      rangeQuery(memQ),
-      rangeQuery(netRxQ),
-      rangeQuery(netTxQ)
-    ]);
-    return {cpu, mem, netrx, nettx};
-  }
-
-  async function renderPodResourceChart(namespace, name) {
-    const chartDiv = document.getElementById('podResourceChart');
-    chartDiv.innerHTML = '<div class="text-muted">Kaynak kullanımı yükleniyor...</div>';
-    const promBase = await findPrometheusBaseUrl();
-    if (!promBase) {
-      chartDiv.innerHTML = '<div class="text-danger">Prometheus endpoint bulunamadı.</div>';
-      return;
-    }
-    try {
-      const metrics = await fetchPodMetrics(promBase, namespace, name);
-      // Prepare Highcharts series
-      const times = (metrics.cpu && metrics.cpu[0] && metrics.cpu[0].values) ? metrics.cpu[0].values.map(v=>v[0]*1000) : [];
-      function toSeries(metricArr, label, unit, factor=1) {
-        if (!metricArr || !metricArr[0] || !metricArr[0].values) return {name: label, data: []};
-        return {
-          name: label,
-          data: metricArr[0].values.map(v=>[v[0]*1000, parseFloat(v[1])*factor]),
-          tooltip: {valueSuffix: unit}
-        };
-      }
-      const series = [
-        toSeries(metrics.cpu, 'CPU (core)', ' core'),
-        toSeries(metrics.mem, 'Memory (MB)', ' MB', 1/1024/1024),
-        toSeries(metrics.netrx, 'Net RX (KB/s)', ' KB/s', 1/1024),
-        toSeries(metrics.nettx, 'Net TX (KB/s)', ' KB/s', 1/1024)
-      ];
-      Highcharts.chart('podResourceChart', {
-        chart: { type: 'spline', height: 320 },
-        title: { text: 'Pod Kaynak Kullanımı (son 30dk)' },
-        xAxis: { type: 'datetime', title: {text: 'Zaman'} },
-        yAxis: { title: { text: 'Kullanım' }, min: 0 },
-        series: series,
-        credits: { enabled: false },
-        tooltip: { shared: true, xDateFormat: '%H:%M' }
-      });
-    } catch (e) {
-      chartDiv.innerHTML = '<div class="text-danger">Prometheus metrikleri alınamadı.</div>';
-    }
-  }
-  // Chartı başlat
-  renderPodResourceChart(namespace, name);
-  try {
-    const resp = await fetch(`/k8s-explorer/yaml?type=pod&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`);
-    if (resp.ok) {
-      const yamlText = await resp.text();
-      // Parse YAML to object (try/catch for safety)
-      let podObj = null;
-      try {
-        podObj = jsyaml.load(yamlText);
-      } catch (e) { podObj = null; }
-      if (podObj && typeof podObj === 'object') {
-        let html = '<div class="table-responsive"><table class="table table-bordered table-sm">';
-        for (const key of ['name','namespace','status','nodeName','hostIP','podIP']) {
-          let val = podObj.metadata?.[key] || podObj.status?.[key] || podObj.spec?.[key] || '-';
-          if (key === 'name') val = podObj.metadata?.name || '-';
-          if (key === 'namespace') val = podObj.metadata?.namespace || '-';
-          if (key === 'status') val = podObj.status?.phase || '-';
-          if (key === 'nodeName') val = podObj.spec?.nodeName || '-';
-          if (key === 'hostIP') val = podObj.status?.hostIP || '-';
-          if (key === 'podIP') val = podObj.status?.podIP || '-';
-          html += `<tr><th>${key}</th><td>${val}</td></tr>`;
-        }
-        // Labels
-        if (podObj.metadata?.labels) {
-          html += `<tr><th>labels</th><td><pre style='white-space:pre-wrap;'>${JSON.stringify(podObj.metadata.labels, null, 2)}</pre></td></tr>`;
-        }
-        // Annotations
-        if (podObj.metadata?.annotations) {
-          html += `<tr><th>annotations</th><td><pre style='white-space:pre-wrap;'>${JSON.stringify(podObj.metadata.annotations, null, 2)}</pre></td></tr>`;
-        }
-        html += '</table></div>';
-        body.innerHTML = html;
-      } else {
-        body.innerHTML = '<div class="text-danger">Pod bilgisi alınamadı.</div>';
-      }
-    } else {
-      body.innerHTML = '<div class="text-danger">Pod bilgisi alınamadı: ' + (await resp.text()) + '</div>';
-    }
-  } catch (e) {
-    body.innerHTML = '<div class="text-danger">Pod bilgisi alınırken hata oluştu.</div>';
-  }
-};
-// Pie chart'ı namespace filtresine göre güncelle
-function updatePodsPieChart(pods) {
-  // Eğer pods parametresi yoksa, fetch ile al
-  if (!pods) {
-    fetch('/k8s-explorer/pods-summary').then(r=>r.json()).then(data=>{
-      const ns = document.getElementById('namespaceFilter').value;
-      const filtered = ns ? (data.pods||[]).filter(p=>p.namespace===ns) : (data.pods||[]);
-      updatePodsPieChart(filtered);
-    });
-    return;
-  }
-  // Pie chart datasını hazırla
-  const statusCounts = {};
-  for (const pod of pods) {
-    const status = pod.status || 'Unknown';
-    statusCounts[status] = (statusCounts[status] || 0) + 1;
-  }
-  renderPieChart('pie-pods-tab', 'Pods', statusCounts);
-}
-
-// Pie chart'ı sekme açıldığında daima güncelle
-(function() {
-  document.addEventListener('DOMContentLoaded', function() {
-    const deploymentsTabBtn = document.querySelector('button[data-bs-target="#deployments"]');
-    if (deploymentsTabBtn) {
-      deploymentsTabBtn.addEventListener('shown.bs.tab', function() {
-        ensureHighchartsAndRender(renderDeploymentsTabChart);
-      });
-    }
-    // Eğer sayfa ilk açıldığında Deployments tabı aktifse, grafiği yükle
-    if (document.getElementById('deployments').classList.contains('active')) {
-      ensureHighchartsAndRender(renderDeploymentsTabChart);
-    }
-  });
-})();
-
-// Namespace değişince tablo ve pie chart güncelle
-// ve 20sn'de bir otomatik güncelle
-(function() {
-  document.addEventListener('DOMContentLoaded', function() {
-    document.querySelector('button[data-bs-target="#pods"]').addEventListener('shown.bs.tab', fetchAndRenderPodsTable);
-    document.getElementById('namespaceFilter').onchange = function() {
-      fetchAndRenderPodsTable();
-    };
-    setInterval(fetchAndRenderPodsTable, 20000);
-  });
-})();
-
-// Pie chart'taki Pods'a tıklanınca Pods sekmesine geç ve tabloyu güncelle
-(function() {
-  document.addEventListener('DOMContentLoaded', function() {
-    const piePods = document.getElementById('pie-pods');
-    if (piePods) {
-      piePods.addEventListener('click', function() {
-        const podsTabBtn = document.querySelector('button[data-bs-target="#pods"]');
-        if (podsTabBtn) podsTabBtn.click();
-        setTimeout(fetchAndRenderPodsTable, 300);
-      });
-    }
-  });
-})();
-
-
-// YAML Edit ve Delete butonları için fonksiyonlar
-async function editPodYaml(namespace, name) {
-  // YAML'ı getir
-  const resp = await fetch(`/k8s-explorer/yaml?type=pod&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`);
-  const yaml = await resp.text();
-  const area = document.getElementById('yamlEditArea');
-  const label = document.getElementById('yamlEditModalLabel');
-  const saveBtn = document.getElementById('saveYamlBtn');
-  const modalDiv = document.getElementById('yamlEditModal');
-  if (!area || !label || !saveBtn || !modalDiv) {
-    alert('YAML edit modali veya alanı bulunamadı. Lütfen HTML içinde yamlEditArea, yamlEditModalLabel, saveYamlBtn ve yamlEditModal id\'li elemanların olduğundan emin olun.');
-    return;
-  }
-  area.value = yaml;
-  label.textContent = `Pod YAML Edit: ${namespace}/${name}`;
-  saveBtn.onclick = async function() {
-    const newYaml = area.value;
-    const patchResp = await fetch('/k8s-explorer/yaml', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'pod', namespace, name, yaml: newYaml })
-    });
-    if (patchResp.ok) {
-      alert('YAML başarıyla güncellendi.');
-      var modal = bootstrap.Modal.getInstance(modalDiv);
-      modal.hide();
-      fetchAndRenderPodsTable();
-    } else {
-      alert('YAML güncellenemedi: ' + await patchResp.text());
-    }
-  };
-  var modal = new bootstrap.Modal(modalDiv);
-  modal.show();
-}
-
-async function deletePod(namespace, name) {
-  if (!confirm(`${namespace}/${name} podunu silmek istediğinize emin misiniz?`)) return;
-  const resp = await fetch(`/k8s-explorer/delete?type=pod&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`, { method: 'POST' });
-  if (resp.ok) {
-    alert('Pod silindi.');
-    fetchAndRenderPodsTable();
-  } else {
-    alert('Pod silinemedi: ' + await resp.text());
-  }
-}
-
-// Pods sekmesi açıldığında tabloyu yükle
-document.addEventListener('DOMContentLoaded', function() {
-  document.querySelector('button[data-bs-target="#pods"]').addEventListener('shown.bs.tab', fetchAndRenderPodsTable);
-});
-async function fetchWorkloadStats() {
-  const resp = await fetch('/k8s-explorer/workload-stats');
-  return await resp.json();
-}
-
-function renderPieChart(container, title, statusCounts) {
-  if (typeof Highcharts === 'undefined') {
-    document.getElementById(container).innerHTML = '<div class="text-danger">Highcharts yüklenemedi.</div>';
-    return;
-  }
-  // Status color mapping
-  const statusColors = {
-    'Ready': '#28a745',
-    'Failed': '#dc3545',
-    'Pending': '#ffc107',
-    'Succeeded': '#007bff',
-    'Unknown': '#6c757d',
-    'Running': '#17a2b8',
-    'CrashLoopBackOff': '#fd7e14',
-    'Completed': '#20c997',
-    'Other': '#adb5bd'
-  };
-  // Defensive: ensure statusCounts is a valid object
-  if (!statusCounts || typeof statusCounts !== 'object' || Array.isArray(statusCounts)) {
-    statusCounts = {};
-  }
-  // Debug: log statusCounts
-  console.log('Pie chart data for', container, statusCounts);
-  const data = [];
-  let hasData = false;
-  for (const [status, countRaw] of Object.entries(statusCounts)) {
-    // Accept both numbers and numeric strings (including floats)
-    let count = countRaw;
-    if (typeof countRaw === 'string') {
-      // Try to parse as float for more flexibility
-      count = parseFloat(countRaw.replace(',', '.'));
-    }
-    if (typeof count === 'number' && !isNaN(count) && count > 0) {
-      hasData = true;
-      data.push({
-        name: status,
-        y: count,
-        color: statusColors[status] || statusColors['Other']
-      });
-    }
-  }
-  // If no data, show a gray "No Data" slice
-  if (!hasData) {
-    data.push({ name: 'No Data', y: 1, color: '#adb5bd' });
-  }
-  // Clear previous chart
-  document.getElementById(container).innerHTML = '';
-  Highcharts.chart(container, {
-    chart: { type: 'pie' },
-    title: { text: title },
+    },
     series: [{
-      name: 'Count',
+      name: title,
       colorByPoint: true,
       data: data
     }],
-    plotOptions: { pie: { dataLabels: { enabled: true, format: '{point.name}: {point.y}' } } },
     credits: { enabled: false }
   });
 }
 
-async function renderOverviewCharts() {
-  const stats = await fetchWorkloadStats();
-  // Helper to get status counts or fallback
-  function getStatusCounts(obj) {
-    if (!obj) return {};
-    // If already a status breakdown (has non-numeric keys), return as is
-    if (typeof obj === 'object' && !Array.isArray(obj) && Object.keys(obj).length > 0) {
-      // If keys are status names (not just 'ready'/'failed'), return as is
-      const keys = Object.keys(obj);
-      if (keys.some(k => !['ready','failed','total'].includes(k.toLowerCase()))) {
-        return obj;
-      }
-      // If only ready/failed, map to status breakdown
-      const mapped = {};
-      if (obj.ready !== undefined) mapped['Ready'] = obj.ready;
-      if (obj.failed !== undefined) mapped['Failed'] = obj.failed;
-      return mapped;
-    }
-    return {};
-  }
-  renderPieChart('pie-pods', 'Pods', getStatusCounts(stats?.pods));
-  renderPieChart('pie-deployments', 'Deployments', getStatusCounts(stats?.deployments));
-  renderPieChart('pie-daemonsets', 'Daemon Sets', getStatusCounts(stats?.daemonsets));
-  renderPieChart('pie-statefulsets', 'Stateful Sets', getStatusCounts(stats?.statefulsets));
-  renderPieChart('pie-replicasets', 'Replica Sets', getStatusCounts(stats?.replicasets));
-  renderPieChart('pie-jobs', 'Jobs', getStatusCounts(stats?.jobs));
-  renderPieChart('pie-cronjobs', 'CronJobs', getStatusCounts(stats?.cronjobs));
+// Utility functions
+function calculateAge(timestamp) {
+  if (!timestamp) return '-';
+  const created = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now - created;
+  const diffDays = Math.floor(diffMs / (1000*60*60*24));
+  const diffHrs = Math.floor((diffMs % (1000*60*60*24)) / (1000*60*60));
+  const diffMin = Math.floor((diffMs % (1000*60*60)) / (1000*60));
+  
+  if (diffDays > 0) return diffDays + 'd';
+  else if (diffHrs > 0) return diffHrs + 'h';
+  else return diffMin + 'm';
 }
 
-async function renderPodsTabChart() {
-  const pieContainer = document.getElementById('pie-pods-tab');
-  pieContainer.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
-  try {
-    const resp = await fetch('/k8s-explorer/pods-summary');
-    if (!resp.ok) {
-      pieContainer.innerHTML = '<div class="text-danger">Pod verisi alınamadı.</div>';
-      return;
-    }
-    const data = await resp.json();
-    console.log('Pods pie chart RAW response:', data);
-    const pods = Array.isArray(data.pods) ? data.pods : [];
-    console.log('Pods pie chart parsed pods:', pods);
-    if (pods.length === 0) {
-      renderPieChart('pie-pods-tab', 'Pods', {});
-      return;
-    }
-    const statusCounts = {};
-    for (const pod of pods) {
-      const status = pod.status || 'Unknown';
-      statusCounts[status] = (statusCounts[status] || 0) + 1;
-    }
-    console.log('Pods pie chart debug:', {pods, statusCounts});
-    renderPieChart('pie-pods-tab', 'Pods', statusCounts);
-  } catch (e) {
-    pieContainer.innerHTML = '<div class="text-danger">Pod verisi alınırken hata oluştu.</div>';
-  }
-}
-async function renderDeploymentsTabChart() {
-  const stats = await fetchWorkloadStats();
-  function getStatusCounts(obj) {
-    if (!obj) return {};
-    if (typeof obj === 'object' && !Array.isArray(obj) && Object.keys(obj).length > 0) {
-      const keys = Object.keys(obj);
-      if (keys.some(k => !['ready','failed','total'].includes(k.toLowerCase()))) {
-        return obj;
-      }
-      const mapped = {};
-      if (obj.ready !== undefined) mapped['Ready'] = obj.ready;
-      if (obj.failed !== undefined) mapped['Failed'] = obj.failed;
-      return mapped;
-    }
-    return {};
-  }
-  renderPieChart('pie-deployments-tab', 'Deployments', getStatusCounts(stats?.deployments));
-}
-// ReplicaSets pie chart
-async function renderReplicaSetsTabChart() {
-  const pieContainer = document.getElementById('pie-replicasets-tab');
-  if (!pieContainer) return;
-  pieContainer.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
-  try {
-    const resp = await fetch('/k8s-explorer/replicasets-summary');
-    const data = await resp.json();
-    let rsets = Array.isArray(data.replicasets) ? data.replicasets : [];
-    const nsSel = document.getElementById('replicasetsNamespaceFilter');
-    if (nsSel && nsSel.value) {
-      rsets = rsets.filter(r=>r.namespace === nsSel.value);
-    }
-    if (rsets.length === 0) {
-      renderPieChart('pie-replicasets-tab', 'ReplicaSets', {});
-      return;
-    }
-    // Status hesapla: hazır olanlar ve olmayanlar
-    let ready = 0, notReady = 0;
-    for (const rs of rsets) {
-      try {
-        const parts = (rs.ready || '0/0').split('/');
-        const rdy = parseInt(parts[0]||'0');
-        const total = parseInt(parts[1]||'0');
-        ready += rdy;
-        notReady += Math.max(total - rdy, 0);
-      } catch(e){ /* ignore */ }
-    }
-    const series = {};
-    if (ready>0) series['Ready'] = ready;
-    if (notReady>0) series['Not Ready'] = notReady;
-    renderPieChart('pie-replicasets-tab', 'ReplicaSets', series);
-  } catch (e) {
-    pieContainer.innerHTML = '<div class="text-danger">ReplicaSet verisi alınırken hata oluştu.</div>';
-  }
-}
-
-// ReplicaSets tablosu
-let replicaSetsCurrentPage = 1;
-const REPLICASETS_PAGE_SIZE = 10;
-async function fetchAndRenderReplicaSetsTable(page) {
-  if (page) replicaSetsCurrentPage = page;
-  const container = document.getElementById('replicasets-table-container');
-  if (!container) return;
-  container.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
-  try {
-    const resp = await fetch('/k8s-explorer/replicasets-summary');
-    const data = await resp.json();
-    let rsets = Array.isArray(data.replicasets) ? data.replicasets : [];
-    // Namespace dropdownu
-    const nsSel = document.getElementById('replicasetsNamespaceFilter');
-    if (nsSel) {
-      const prev = nsSel.value;
-      const namespaces = [...new Set(rsets.map(r=>r.namespace))].sort();
-      nsSel.innerHTML = '<option value="">(Hepsi)</option>' + namespaces.map(ns=>`<option value="${ns}">${ns}</option>`).join('');
-      if ([...nsSel.options].some(o=>o.value===prev)) nsSel.value = prev; else nsSel.value='';
-      if (!nsSel.onchange) nsSel.onchange = () => fetchAndRenderReplicaSetsTable(1);
-    }
-    if (nsSel && nsSel.value) {
-      rsets = rsets.filter(r=>r.namespace === nsSel.value);
-    }
-  if (rsets.length === 0) {
-      container.innerHTML = '<div class="text-muted">ReplicaSet bulunamadı.</div>';
-      return;
-    }
-  const totalPages = Math.ceil(rsets.length / REPLICASETS_PAGE_SIZE);
-  if (replicaSetsCurrentPage > totalPages) replicaSetsCurrentPage = totalPages;
-  if (replicaSetsCurrentPage < 1) replicaSetsCurrentPage = 1;
-  const start = (replicaSetsCurrentPage - 1) * REPLICASETS_PAGE_SIZE;
-  const pageItems = rsets.slice(start, start + REPLICASETS_PAGE_SIZE);
-  let html = '<div class="d-flex gap-2 mb-2"'
-             + '<button id="deleteSelectedReplicaSetsBtn" class="btn btn-sm btn-danger" disabled>Seçilenleri Sil</button>'
-             + '</div>';
-    html += '<table class="table table-sm table-bordered align-middle"><thead>'
-          + '<tr>'
-          + '<th style="width:26px"><input type="checkbox" id="replicaSetsSelectAll"></th>'
-          + '<th>Namespace</th><th>Name</th><th>Ready</th><th>Desired</th><th>Age</th>'
-          + '</tr></thead><tbody>';
-    const now = new Date();
-  for (const rs of pageItems) {
-      let age='-';
-      if (rs.creation_timestamp) {
-        const created = new Date(rs.creation_timestamp);
-        const diffMs = now - created;
-        const diffDays = Math.floor(diffMs / (1000*60*60*24));
-        const diffHrs = Math.floor((diffMs % (1000*60*60*24)) / (1000*60*60));
-        const diffMin = Math.floor((diffMs % (1000*60*60)) / (1000*60));
-        if (diffDays > 0) age = diffDays + 'd'; else if (diffHrs>0) age = diffHrs + 'h'; else age = diffMin + 'm';
-      }
-      html += `<tr>`
-           + `<td><input type="checkbox" class="replicaset-row-cb" data-namespace="${rs.namespace}" data-name="${rs.name}"></td>`
-           + `<td>${rs.namespace}</td><td>${rs.name}</td><td>${rs.ready}</td><td>${rs.desired}</td><td>${age}</td>`
-           + `</tr>`;
-    }
-    html += '</tbody></table>';
-    container.innerHTML = html;
-    // Pagination bar
-    const pagDiv = document.getElementById('replicasets-pagination');
-    if (pagDiv) {
-      if (totalPages <= 1) pagDiv.innerHTML = ''; else {
-        let phtml = '<nav><ul class="pagination pagination-sm mb-0">';
-        const makeLi = (p, label, disabled=false, active=false) => `<li class=\"page-item ${disabled?'disabled':''} ${active?'active':''}\"><a class=\"page-link\" href=\"#\" data-page=\"${p}\">${label}</a></li>`;
-        phtml += makeLi(replicaSetsCurrentPage-1,'«', replicaSetsCurrentPage===1);
-        const windowSize = 5;
-        let startP = Math.max(1, replicaSetsCurrentPage - Math.floor(windowSize/2));
-        let endP = Math.min(totalPages, startP + windowSize -1);
-        if (endP - startP + 1 < windowSize) startP = Math.max(1, endP - windowSize +1);
-        for (let p=startP; p<=endP; p++) phtml += makeLi(p, p, false, p===replicaSetsCurrentPage);
-        phtml += makeLi(replicaSetsCurrentPage+1,'»', replicaSetsCurrentPage===totalPages);
-        phtml += '</ul></nav>';
-        pagDiv.innerHTML = phtml;
-        pagDiv.querySelectorAll('a.page-link').forEach(a=>{
-          a.addEventListener('click', ev=>{ ev.preventDefault(); const p=parseInt(a.dataset.page); if(!isNaN(p)) fetchAndRenderReplicaSetsTable(p); });
-        });
-      }
-    }
-
-    // Selection & bulk delete logic
-    const selectAll = container.querySelector('#replicaSetsSelectAll');
-    const rowCheckboxes = Array.from(container.querySelectorAll('.replicaset-row-cb'));
-    const deleteBtn = container.querySelector('#deleteSelectedReplicaSetsBtn');
-    function refreshDeleteBtn() {
-      deleteBtn.disabled = !rowCheckboxes.some(cb => cb.checked);
-    }
-    if (selectAll) {
-      selectAll.addEventListener('change', () => {
-        rowCheckboxes.forEach(cb => cb.checked = selectAll.checked);
-        refreshDeleteBtn();
-      });
-    }
-    rowCheckboxes.forEach(cb => cb.addEventListener('change', () => {
-      if (!cb.checked && selectAll && selectAll.checked) selectAll.checked = false;
-      refreshDeleteBtn();
-    }));
-    refreshDeleteBtn();
-
-    if (deleteBtn) {
-      deleteBtn.addEventListener('click', async () => {
-        const selected = rowCheckboxes.filter(cb => cb.checked).map(cb => ({namespace: cb.dataset.namespace, name: cb.dataset.name}));
-        if (selected.length === 0) return;
-        if (!confirm(`${selected.length} ReplicaSet silinsin mi?`)) return;
-        deleteBtn.disabled = true;
-        deleteBtn.textContent = 'Siliniyor...';
-        try {
-          const respDel = await fetch('/k8s-explorer/delete-replicasets', {
-            method: 'POST',
-            headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({items: selected})
-          });
-          if (!respDel.ok) {
-            alert('Silme isteği başarısız: ' + await respDel.text());
-          } else {
-            const result = await respDel.json();
-            if (result.error) {
-              alert('Hata: ' + result.error);
-            } else {
-              const failed = (result.results||[]).filter(r => !r.deleted);
-              if (failed.length > 0) {
-                alert(`Bazı ReplicaSet'ler silinemedi: \n` + failed.map(f=>`${f.namespace}/${f.name}: ${f.error||'hata'}`).join('\n'));
-              }
-            }
-          }
-        } catch (err) {
-          alert('Silme sırasında hata: ' + err);
-        }
-        // Yenile
-        fetchAndRenderReplicaSetsTable();
-        renderReplicaSetsTabChart();
-      });
-    }
-  } catch (e) {
-    container.innerHTML = '<div class="text-danger">ReplicaSet listesi alınırken hata oluştu.</div>';
-  }
-}
-
-// DaemonSets tablosunu getir ve göster
-async function fetchAndRenderDaemonSetsTable() {
-  const container = document.getElementById('daemonsets-table-container');
-  container.innerHTML = '<div class="text-muted">Yükleniyor...";</div>';
-  try {
-    const resp = await fetch('/k8s-explorer/daemonsets-summary');
-    const data = await resp.json();
-    const daemonsets = Array.isArray(data.daemonsets) ? data.daemonsets : [];
-    if (daemonsets.length === 0) {
-      container.innerHTML = '<div class="text-muted">DaemonSet bulunamadı.</div>';
-      return;
-    }
-    let html = '<table class="table table-sm table-bordered"><thead><tr><th>NAME</th><th>READY</th><th>CURRENT</th><th>DESIRED</th><th>AGE</th><th>NAMESPACE</th><th>İşlemler</th></tr></thead><tbody>';
-    for (const ds of daemonsets) {
-      let age = '-';
-      if (ds.creation_timestamp) {
-        const created = new Date(ds.creation_timestamp);
-        const now = new Date();
-        const diffMs = now - created;
-        const diffDays = Math.floor(diffMs / (1000*60*60*24));
-        const diffHrs = Math.floor((diffMs % (1000*60*60*24)) / (1000*60*60));
-        const diffMin = Math.floor((diffMs % (1000*60*60)) / (1000*60));
-        if (diffDays > 0) age = diffDays + 'd';
-        else if (diffHrs > 0) age = diffHrs + 'h';
-        else age = diffMin + 'm';
-      }
-      html += `<tr><td>${ds.name}</td><td>${ds.ready || '-'}</td><td>${ds.current || '-'}</td><td>${ds.desired || '-'}</td><td>${age}</td><td>${ds.namespace || ''}</td><td>
-        <button class="btn btn-sm btn-secondary" onclick="showDaemonSetProperties('${ds.name}','${ds.namespace}')">Properties</button>
-        <button class="btn btn-sm btn-primary" onclick="editDaemonSetYaml('${ds.name}','${ds.namespace}')">Edit</button>
-        <button class="btn btn-sm btn-danger ms-1" onclick="restartDaemonSet('${ds.name}','${ds.namespace}')">Restart</button>
-        <button class="btn btn-sm btn-secondary ms-1" onclick="showDaemonSetLogs('${ds.name}','${ds.namespace}')">Logs</button>
-      </td></tr>`;
-    }
-    html += '</tbody></table>';
-    container.innerHTML = html;
-  } catch (e) {
-    container.innerHTML = '<div class="text-danger">DaemonSetler alınırken hata oluştu.</div>';
-  }
-}
-
-// DaemonSets pie chart'ı çiz
-async function renderDaemonSetsTabChart() {
-  const pieContainer = document.getElementById('pie-daemonsets-tab');
-  pieContainer.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
-  try {
-    const resp = await fetch('/k8s-explorer/daemonsets-summary');
-    if (!resp.ok) {
-      pieContainer.innerHTML = '<div class="text-danger">DaemonSet verisi alınamadı.</div>';
-      return;
-    }
-    const data = await resp.json();
-    const daemonsets = Array.isArray(data.daemonsets) ? data.daemonsets : [];
-    if (daemonsets.length === 0) {
-      renderPieChart('pie-daemonsets-tab', 'Daemon Sets', {});
-      return;
-    }
-    // Status breakdown: Ready/NotReady
-    let ready = 0, notReady = 0;
-    for (const ds of daemonsets) {
-      if (ds.ready && ds.desired && ds.ready == ds.desired) ready++;
-      else notReady++;
-    }
-    const statusCounts = { 'Ready': ready, 'NotReady': notReady };
-    renderPieChart('pie-daemonsets-tab', 'Daemon Sets', statusCounts);
-  } catch (e) {
-    pieContainer.innerHTML = '<div class="text-danger">DaemonSet verisi alınırken hata oluştu.</div>';
-  }
-}
-
-// DaemonSets sekmesi açıldığında tabloyu ve grafiği yükle
-(function() {
-  document.addEventListener('DOMContentLoaded', function() {
-    const tabBtn = document.querySelector('button[data-bs-target="#daemonsets"]');
-    if (tabBtn) tabBtn.addEventListener('shown.bs.tab', function() {
-      fetchAndRenderDaemonSetsTable();
-      renderDaemonSetsTabChart();
-    });
-  });
-})();
-// Jobs tab
-let jobsCurrentPage = 1;
-const JOBS_PAGE_SIZE = 10;
-async function renderJobsTabChart() {
-  const pieContainer = document.getElementById('pie-jobs-tab');
-  if (!pieContainer) return;
-  pieContainer.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
-  try {
-    const resp = await fetch('/k8s-explorer/jobs-summary');
-    if (!resp.ok) {
-      pieContainer.innerHTML = '<div class="text-danger">Job verisi alınamadı.</div>';
-      return;
-    }
-    const data = await resp.json();
-    const jobs = Array.isArray(data.jobs) ? data.jobs : [];
-    if (jobs.length === 0) {
-      renderPieChart('pie-jobs-tab', 'Jobs', {});
-      return;
-    }
-    // Count succeeded vs failed vs active
-    const counts = { 'Succeeded': 0, 'Failed': 0, 'Active': 0 };
-    for (const j of jobs) {
-      if (j.succeeded && j.succeeded > 0) counts['Succeeded'] += 1;
-      else if (j.failed && j.failed > 0) counts['Failed'] += 1;
-      else counts['Active'] += 1;
-    }
-    renderPieChart('pie-jobs-tab', 'Jobs', counts);
-  } catch (e) {
-    pieContainer.innerHTML = '<div class="text-danger">Job verisi alınırken hata oluştu.</div>';
-  }
-}
-
-async function fetchAndRenderJobsTable(page) {
-  if (page) jobsCurrentPage = page;
-  const container = document.getElementById('jobs-table-container');
-  if (!container) return;
-  container.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
-  try {
-    const resp = await fetch('/k8s-explorer/jobs-summary');
-    const data = await resp.json();
-    let jobs = Array.isArray(data.jobs) ? data.jobs : [];
-    const nsSel = document.getElementById('jobsNamespaceFilter');
-    if (nsSel) {
-      const prev = nsSel.value;
-      const namespaces = [...new Set(jobs.map(j=>j.namespace))].sort();
-      nsSel.innerHTML = '<option value="">(Hepsi)</option>' + namespaces.map(ns=>`<option value="${ns}">${ns}</option>`).join('');
-      if ([...nsSel.options].some(o=>o.value===prev)) nsSel.value = prev; else nsSel.value='';
-      if (!nsSel.onchange) nsSel.onchange = () => fetchAndRenderJobsTable(1);
-    }
-    if (nsSel && nsSel.value) jobs = jobs.filter(j=>j.namespace === nsSel.value);
-    if (jobs.length === 0) {
-      container.innerHTML = '<div class="text-muted">Job bulunamadı.</div>';
-      renderPieChart('pie-jobs-tab', 'Jobs', {});
-      return;
-    }
-    const totalPages = Math.ceil(jobs.length / JOBS_PAGE_SIZE);
-    if (jobsCurrentPage > totalPages) jobsCurrentPage = totalPages;
-    if (jobsCurrentPage < 1) jobsCurrentPage = 1;
-    const start = (jobsCurrentPage - 1) * JOBS_PAGE_SIZE;
-    const pageItems = jobs.slice(start, start + JOBS_PAGE_SIZE);
-    let html = '<table class="table table-sm table-bordered"><thead><tr><th>Namespace</th><th>Name</th><th>Succeeded</th><th>Failed</th><th>Completions</th><th>Age</th></tr></thead><tbody>';
-    const now = new Date();
-    for (const j of pageItems) {
-      let age='-';
-      if (j.creation_timestamp) {
-        const created = new Date(j.creation_timestamp);
-        const diffMs = now - created;
-        const diffDays = Math.floor(diffMs / (1000*60*60*24));
-        const diffHrs = Math.floor((diffMs % (1000*60*60*24)) / (1000*60*60));
-        const diffMin = Math.floor((diffMs % (1000*60*60)) / (1000*60));
-        if (diffDays > 0) age = diffDays + 'd'; else if (diffHrs>0) age = diffHrs + 'h'; else age = diffMin + 'm';
-      }
-      html += `<tr><td>${j.namespace}</td><td>${j.name}</td><td>${j.succeeded || 0}</td><td>${j.failed || 0}</td><td>${j.completions || '-'}</td><td>${age}</td></tr>`;
-    }
-    html += '</tbody></table>';
-    container.innerHTML = html;
-    // Pagination
-    const pagDiv = document.getElementById('jobs-pagination');
-    if (pagDiv) {
-      if (totalPages <= 1) pagDiv.innerHTML = ''; else {
-        let phtml = '<nav><ul class="pagination pagination-sm mb-0">';
-        const makeLi = (p, label, disabled=false, active=false) => `<li class="page-item ${disabled?'disabled':''} ${active?'active':''}"><a class="page-link" href="#" data-page="${p}">${label}</a></li>`;
-        phtml += makeLi(jobsCurrentPage-1,'«', jobsCurrentPage===1);
-        const windowSize = 5;
-        let startP = Math.max(1, jobsCurrentPage - Math.floor(windowSize/2));
-        let endP = Math.min(totalPages, startP + windowSize -1);
-        if (endP - startP + 1 < windowSize) startP = Math.max(1, endP - windowSize +1);
-        for (let p = startP; p<=endP; p++) phtml += makeLi(p, p, false, p===jobsCurrentPage);
-        phtml += makeLi(jobsCurrentPage+1,'»', jobsCurrentPage===totalPages);
-        phtml += '</ul></nav>';
-        pagDiv.innerHTML = phtml;
-        pagDiv.querySelectorAll('a.page-link').forEach(a=>{
-          a.addEventListener('click', ev=>{ ev.preventDefault(); const p=parseInt(a.dataset.page); if(!isNaN(p)) fetchAndRenderJobsTable(p); });
-        });
-      }
-    }
-    // Update jobs pie chart too
-    renderJobsTabChart();
-  } catch (e) {
-    container.innerHTML = '<div class="text-danger">Job listesi alınırken hata oluştu.</div>';
-  }
-}
-
-(function() {
-  document.addEventListener('DOMContentLoaded', function() {
-    const btn = document.querySelector('button[data-bs-target="#jobs"]');
-    if (btn) btn.addEventListener('shown.bs.tab', function() {
-      fetchAndRenderJobsTable();
-      ensureHighchartsAndRender(renderJobsTabChart);
-    });
-  });
-})();
-// CronJobs tab
-let cronjobsCurrentPage = 1;
-const CRONJOBS_PAGE_SIZE = 10;
-async function renderCronJobsTabChart() {
-  const pieContainer = document.getElementById('pie-cronjobs-tab');
-  if (!pieContainer) return;
-  pieContainer.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
-  try {
-    const resp = await fetch('/k8s-explorer/cronjobs-summary');
-    if (!resp.ok) {
-      pieContainer.innerHTML = '<div class="text-danger">CronJob verisi alınamadı.</div>';
-      return;
-    }
-    const data = await resp.json();
-    const cronjobs = Array.isArray(data.cronjobs) ? data.cronjobs : [];
-    if (cronjobs.length === 0) {
-      renderPieChart('pie-cronjobs-tab', 'CronJobs', {});
-      return;
-    }
-    const counts = { 'Active': 0, 'Suspended': 0, 'Idle': 0 };
-    for (const cj of cronjobs) {
-      if (cj.suspended) counts['Suspended'] += 1;
-      else if (cj.active && cj.active > 0) counts['Active'] += 1;
-      else counts['Idle'] += 1;
-    }
-    renderPieChart('pie-cronjobs-tab', 'CronJobs', counts);
-  } catch (e) {
-    pieContainer.innerHTML = '<div class="text-danger">CronJob verisi alınırken hata oluştu.</div>';
-  }
-}
-
-async function fetchAndRenderCronJobsTable(page) {
-  if (page) cronjobsCurrentPage = page;
-  const container = document.getElementById('cronjobs-table-container');
-  if (!container) return;
-  container.innerHTML = '<div class="text-muted">Yükleniyor...</div>';
-  try {
-    const resp = await fetch('/k8s-explorer/cronjobs-summary');
-    const data = await resp.json();
-    let cronjobs = Array.isArray(data.cronjobs) ? data.cronjobs : [];
-    const nsSel = document.getElementById('cronjobsNamespaceFilter');
-    if (nsSel) {
-      const prev = nsSel.value;
-      const namespaces = [...new Set(cronjobs.map(c=>c.namespace))].sort();
-      nsSel.innerHTML = '<option value="">(Hepsi)</option>' + namespaces.map(ns=>`<option value="${ns}">${ns}</option>`).join('');
-      if ([...nsSel.options].some(o=>o.value===prev)) nsSel.value = prev; else nsSel.value='';
-      if (!nsSel.onchange) nsSel.onchange = () => fetchAndRenderCronJobsTable(1);
-    }
-    if (nsSel && nsSel.value) cronjobs = cronjobs.filter(c=>c.namespace === nsSel.value);
-    if (cronjobs.length === 0) {
-      container.innerHTML = '<div class="text-muted">CronJob bulunamadı.</div>';
-      renderPieChart('pie-cronjobs-tab', 'CronJobs', {});
-      return;
-    }
-    const totalPages = Math.ceil(cronjobs.length / CRONJOBS_PAGE_SIZE);
-    if (cronjobsCurrentPage > totalPages) cronjobsCurrentPage = totalPages;
-    if (cronjobsCurrentPage < 1) cronjobsCurrentPage = 1;
-    const start = (cronjobsCurrentPage - 1) * CRONJOBS_PAGE_SIZE;
-    const pageItems = cronjobs.slice(start, start + CRONJOBS_PAGE_SIZE);
-    let html = '<table class="table table-sm table-bordered"><thead><tr><th>Namespace</th><th>Name</th><th>Schedule</th><th>Suspended</th><th>LastSchedule</th><th>Age</th></tr></thead><tbody>';
-    const now = new Date();
-    for (const cj of pageItems) {
-      let age='-';
-      if (cj.creation_timestamp) {
-        const created = new Date(cj.creation_timestamp);
-        const diffMs = now - created;
-        const diffDays = Math.floor(diffMs / (1000*60*60*24));
-        const diffHrs = Math.floor((diffMs % (1000*60*60*24)) / (1000*60*60));
-        const diffMin = Math.floor((diffMs % (1000*60*60)) / (1000*60));
-        if (diffDays > 0) age = diffDays + 'd'; else if (diffHrs>0) age = diffHrs + 'h'; else age = diffMin + 'm';
-      }
-      html += `<tr><td>${cj.namespace}</td><td>${cj.name}</td><td>${cj.schedule || '-'}</td><td>${cj.suspended? 'Yes':'No'}</td><td>${cj.last_schedule_time? cj.last_schedule_time : '-'}</td><td>${age}</td></tr>`;
-    }
-    html += '</tbody></table>';
-    container.innerHTML = html;
-    // Pagination
-    const pagDiv = document.getElementById('cronjobs-pagination');
-    if (pagDiv) {
-      if (totalPages <= 1) pagDiv.innerHTML = ''; else {
-        let phtml = '<nav><ul class="pagination pagination-sm mb-0">';
-        const makeLi = (p, label, disabled=false, active=false) => `<li class="page-item ${disabled?'disabled':''} ${active?'active':''}"><a class="page-link" href="#" data-page="${p}">${label}</a></li>`;
-        phtml += makeLi(cronjobsCurrentPage-1,'«', cronjobsCurrentPage===1);
-        const windowSize = 5;
-        let startP = Math.max(1, cronjobsCurrentPage - Math.floor(windowSize/2));
-        let endP = Math.min(totalPages, startP + windowSize -1);
-        if (endP - startP + 1 < windowSize) startP = Math.max(1, endP - windowSize +1);
-        for (let p = startP; p<=endP; p++) phtml += makeLi(p, p, false, p===cronjobsCurrentPage);
-        phtml += makeLi(cronjobsCurrentPage+1,'»', cronjobsCurrentPage===totalPages);
-        phtml += '</ul></nav>';
-        pagDiv.innerHTML = phtml;
-        pagDiv.querySelectorAll('a.page-link').forEach(a=>{
-          a.addEventListener('click', ev=>{ ev.preventDefault(); const p=parseInt(a.dataset.page); if(!isNaN(p)) fetchAndRenderCronJobsTable(p); });
-        });
-      }
-    }
-    // Update pie chart
-    renderCronJobsTabChart();
-  } catch (e) {
-    container.innerHTML = '<div class="text-danger">CronJob listesi alınırken hata oluştu.</div>';
-  }
-}
-
-(function() {
-  document.addEventListener('DOMContentLoaded', function() {
-    const btn = document.querySelector('button[data-bs-target="#cronjobs"]');
-    if (btn) btn.addEventListener('shown.bs.tab', function() {
-      fetchAndRenderCronJobsTable();
-      ensureHighchartsAndRender(renderCronJobsTabChart);
-    });
-  });
-})();
-document.addEventListener('DOMContentLoaded', function() {
-  if (document.getElementById('overview').classList.contains('active')) {
-    ensureHighchartsAndRender(renderOverviewCharts);
-  }
-  document.querySelector('button[data-bs-target="#overview"]').addEventListener('shown.bs.tab', function() { ensureHighchartsAndRender(renderOverviewCharts); });
-  document.querySelector('button[data-bs-target="#pods"]').addEventListener('shown.bs.tab', function() { ensureHighchartsAndRender(renderPodsTabChart); });
-  document.querySelector('button[data-bs-target="#deployments"]').addEventListener('shown.bs.tab', function() { ensureHighchartsAndRender(renderDeploymentsTabChart); });
-});
-
-// Scale Deployment Modal logic (global)
-window.showScaleDeploymentModal = function(name, namespace, currentReplicas) {
-  const modalDiv = document.getElementById('scaleDeploymentModal');
-  // Ensure modal is in document.body (fix for Bootstrap modal bug)
-  if (modalDiv && !document.body.contains(modalDiv)) {
-    document.body.appendChild(modalDiv);
-  }
-  if (modalDiv && (modalDiv.style.display === 'none' || (modalDiv.classList.contains('fade') && !modalDiv.classList.contains('show')))) {
-    try {
-      modalDiv.parentNode.removeChild(modalDiv);
-      document.body.appendChild(modalDiv);
-    } catch (e) { /* ignore */ }
-  }
-  const label = document.getElementById('scaleDeploymentName');
-  const input = document.getElementById('scaleReplicasInput');
-  const saveBtn = document.getElementById('scaleDeploymentSaveBtn');
-  label.textContent = `${namespace}/${name}`;
-  input.value = currentReplicas;
-  saveBtn.onclick = async function() {
-    const newReplicas = parseInt(input.value);
-    if (isNaN(newReplicas) || newReplicas < 0) {
-      alert('Geçerli bir sayı girin.');
-      return;
-    }
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Kaydediliyor...';
-    try {
-      const resp = await fetch('/k8s-explorer/scale-deployment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, namespace, replicas: newReplicas })
-      });
-      if (resp.ok) {
-        alert('Replica sayısı güncellendi.');
-        var modal = bootstrap.Modal.getInstance(modalDiv);
-        if (!modal) modal = new bootstrap.Modal(modalDiv);
-        modal.hide();
-        if (typeof fetchAndRenderDeploymentsTable === 'function') fetchAndRenderDeploymentsTable();
-        if (typeof renderOverviewCharts === 'function') renderOverviewCharts();
-        if (typeof renderDeploymentsTabChart === 'function') renderDeploymentsTabChart();
-      } else {
-        alert('Replica güncellenemedi: ' + (await resp.text()));
-      }
-    } catch (e) {
-      alert('Hata: ' + e);
-    } finally {
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Kaydet';
-    }
-  };
-  var modal = bootstrap.Modal.getInstance(modalDiv);
-  if (!modal) modal = new bootstrap.Modal(modalDiv);
-  modal.show();
-};
-window.editDaemonSetYaml = async function(name, namespace) {
-  // YAML'ı getir
-  const resp = await fetch(`/k8s-explorer/yaml?type=daemonset&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`);
-  const yaml = await resp.text();
-  const area = document.getElementById('yamlEditArea');
-  const label = document.getElementById('yamlEditModalLabel');
-  const saveBtn = document.getElementById('saveYamlBtn');
-  const modalDiv = document.getElementById('yamlEditModal');
-  if (!area || !label || !saveBtn || !modalDiv) {
-    alert('YAML edit modali veya alanı bulunamadı. Lütfen HTML içinde yamlEditArea, yamlEditModalLabel, saveYamlBtn ve yamlEditModal id\'li elemanların olduğundan emin olun.');
+// Action functions (placeholders - implement based on existing patterns)
+// Action functions (implemented)
+function showDaemonSetProperties(name, namespace) {
+  // Reuse the pod properties modal to display daemonset properties (simple JSON view)
+  const modalEl = document.getElementById('podPropertiesModal');
+  const label = document.getElementById('podPropertiesModalLabel');
+  const body = document.getElementById('podPropertiesModalBody');
+  if (!modalEl || !label || !body) {
+    alert('Properties modal bulunamadı.');
     return;
   }
-  // Modal'ı body'ye ekle (gerekirse)
-  if (!document.body.contains(modalDiv)) {
-    document.body.appendChild(modalDiv);
-    console.warn('YAML edit modal body\'ye eklendi.');
-  }
-  // Eğer modal görünmüyorsa, force re-append (Bootstrap bug fix)
-  if (modalDiv.style.display === 'none' || (modalDiv.classList.contains('fade') && !modalDiv.classList.contains('show'))) {
-    try {
-      modalDiv.parentNode.removeChild(modalDiv);
-      document.body.appendChild(modalDiv);
-      console.warn('YAML edit modal yeniden eklendi.');
-    } catch (e) { /* ignore */ }
-  }
-  area.value = yaml;
-  label.textContent = `DaemonSet YAML Edit: ${namespace}/${name}`;
-  saveBtn.onclick = async function() {
-    const newYaml = area.value;
-    const patchResp = await fetch('/k8s-explorer/yaml', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'daemonset', namespace, name, yaml: newYaml })
-    });
-    if (patchResp.ok) {
-      alert('YAML başarıyla güncellendi.');
-      var modal = bootstrap.Modal.getInstance(modalDiv);
-      if (!modal) modal = new bootstrap.Modal(modalDiv);
-      modal.hide();
-      if (typeof fetchAndRenderDaemonSetsTable === 'function') fetchAndRenderDaemonSetsTable();
-      if (typeof renderOverviewCharts === 'function') renderOverviewCharts();
-      if (typeof renderDaemonSetsTabChart === 'function') renderDaemonSetsTabChart();
-    } else {
-      alert('YAML güncellenemedi: ' + await patchResp.text());
-    }
-  };
-  var modal = bootstrap.Modal.getInstance(modalDiv);
-  if (!modal) modal = new bootstrap.Modal(modalDiv);
-  modal.show();
-};
-
-// Eksik yardımcılar: describe ve metrics fetch
-async function describePod(namespace, name) {
-  try {
-    const resp = await fetch(`/k8s-explorer/describe?type=pod&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`);
-    const text = await resp.text();
-    alert(text.substring(0, 2000)); // basit gösterim
-  } catch(e) { alert('Describe alınamadı: ' + e); }
-}
-
-async function showPodDescribe(namespace, name) { return describePod(namespace, name); }
-
-// Pod metriklerini Prometheus'tan almak için kullanılan yardımcı (placeholder)
-async function fetchPodMetrics(promBase, namespace, name) {
-  if (!promBase) return {cpu:[], mem:[], netrx:[], nettx:[]};
-  const baseQuery = `pod=\"${name}\"`;
-  const cpuQ = `sum(rate(container_cpu_usage_seconds_total{${baseQuery}}[5m])) by (pod)`;
-  const memQ = `sum(container_memory_usage_bytes{${baseQuery}}) by (pod)`;
-  const netRxQ = `sum(rate(container_network_receive_bytes_total{${baseQuery}}[5m])) by (pod)`;
-  const netTxQ = `sum(rate(container_network_transmit_bytes_total{${baseQuery}}[5m])) by (pod)`;
-  const qs = p => Object.entries(p).map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join('&');
-  const rangeQuery = async (query) => {
-    const url = `${promBase}/query_range?${qs({query, start: Math.floor(Date.now()/1000)-1800, end: Math.floor(Date.now()/1000), step: 30})}`;
-    try { const r = await fetch(url); const j = await r.json(); return j.data.result; } catch(e){ return []; }
-  };
-  const [cpu, mem, netrx, nettx] = await Promise.all([
-    rangeQuery(cpuQ), rangeQuery(memQ), rangeQuery(netRxQ), rangeQuery(netTxQ)
-  ]);
-  return {cpu, mem, netrx, nettx};
-}
-
-
-// DaemonSet Logs fonksiyonu (global)
-window.showDaemonSetLogs = async function(name, namespace) {
-  let modal = document.getElementById('daemonSetLogsModal');
-  let body = document.getElementById('daemonSetLogsModalBody');
-  let label = document.getElementById('daemonSetLogsModalLabel');
-  let podSelect = document.getElementById('daemonSetPodSelect');
-  if (!modal || !body || !label || !podSelect) {
-    alert('Logs modalı veya pod seçici bulunamadı. Lütfen HTML içinde daemonSetLogsModal, daemonSetLogsModalBody, daemonSetLogsModalLabel ve daemonSetPodSelect id\'li elemanların olduğundan emin olun.');
-    return;
-  }
-  if (!document.body.contains(modal)) {
-    document.body.appendChild(modal);
-  }
-  if (modal.style.display === 'none' || (modal.classList.contains('fade') && !modal.classList.contains('show'))) {
-    try {
-      modal.parentNode.removeChild(modal);
-      document.body.appendChild(modal);
-    } catch (e) { /* ignore */ }
-  }
-  label.textContent = `DaemonSet Pod Logları: ${namespace}/${name}`;
+  label.textContent = `DaemonSet Properties: ${namespace}/${name}`;
   body.textContent = 'Yükleniyor...';
-  podSelect.innerHTML = '<option>Yükleniyor...</option>';
-  let bsModal = bootstrap.Modal.getInstance(modal);
-  if (!bsModal) bsModal = new bootstrap.Modal(modal);
-  bsModal.show();
-  try {
-    const resp = await fetch(`/k8s-explorer/daemonset-logs?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}&mode=perpod`);
-    if (!resp.ok) {
-      body.textContent = 'Loglar alınamadı: ' + (await resp.text());
-      podSelect.innerHTML = '<option>Hata</option>';
-      return;
-    }
-    const data = await resp.json();
-    if (data && data.pod_logs && Object.keys(data.pod_logs).length > 0) {
-      // Fill pod selector
-      podSelect.innerHTML = '<option value="__all__">Tümü</option>' + Object.keys(data.pod_logs).map(pod => `<option value="${pod}">${pod}</option>`).join('');
-      // Show all pod logs by default
-      let allLogs = Object.entries(data.pod_logs).map(([pod, log]) => `--- ${pod} ---\n${log || '(Log yok)'}`).join('\n\n');
-      body.textContent = allLogs;
-      podSelect.onchange = function() {
-        const selectedPod = podSelect.value;
-        if (selectedPod === '__all__') {
-          body.textContent = allLogs;
-        } else {
-          body.textContent = data.pod_logs[selectedPod] || '(Log yok)';
-        }
-      };
-    } else if (data && data.error) {
-      body.textContent = 'Loglar alınamadı: ' + data.error;
-      podSelect.innerHTML = '<option>Hata</option>';
-    } else {
-      body.textContent = 'Loglar alınamadı: Beklenmeyen yanıt.';
-      podSelect.innerHTML = '<option>Yok</option>';
-    }
-  } catch (e) {
-    body.textContent = 'Loglar alınırken hata oluştu.';
-    podSelect.innerHTML = '<option>Hata</option>';
-  }
-};
-</script>
-<script>
-// DaemonSet Restart fonksiyonu (global)
-window.restartDaemonSet = async function(name, namespace) {
-  if (!confirm(`${namespace}/${name} DaemonSet'i restart edilsin mi?`)) return;
-  try {
-    const resp = await fetch('/k8s-explorer/restart-daemonset', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, namespace })
+  if (!document.body.contains(modalEl)) document.body.appendChild(modalEl);
+  const bs = bootstrap.Modal.getOrCreateInstance(modalEl);
+  bs.show();
+  fetch(`/k8s-explorer/daemonset-properties?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        body.innerHTML = `<div class="text-danger">Properties alınamadı: ${data.error}</div>`;
+        return;
+      }
+      // show readable JSON
+      body.innerHTML = `<pre style="white-space:pre-wrap;">${JSON.stringify(data.daemonset || data, null, 2)}</pre>`;
+    }).catch(e => {
+      body.innerHTML = `<div class="text-danger">Properties alınırken hata oluştu: ${e}</div>`;
     });
-    if (resp.ok) {
-      alert('DaemonSet restart edildi.');
-      if (typeof fetchAndRenderDaemonSetsTable === 'function') fetchAndRenderDaemonSetsTable();
-    } else {
-      alert('Restart başarısız: ' + (await resp.text()));
-    }
-  } catch (e) {
-    alert('Restart sırasında hata: ' + e);
-  }
-};
-
-// DaemonSet Properties Modal (dinamik oluşturma)
-function ensureDaemonSetPropertiesModal() {
-  let modal = document.getElementById('daemonSetPropertiesModal');
-  if (modal) return modal;
-  const html = `
-  <div class="modal fade" id="daemonSetPropertiesModal" tabindex="-1" aria-labelledby="daemonSetPropertiesModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="daemonSetPropertiesModalLabel">DaemonSet Properties</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body" style="max-height:70vh; overflow:auto;">
-          <pre id="daemonSetPropertiesBody" style="font-size:0.9em; white-space:pre-wrap; background:#f8f9fa; border:1px solid #dee2e6; padding:10px; border-radius:4px;">Yükleniyor...</pre>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-        </div>
-      </div>
-    </div>
-  </div>`;
-  const div = document.createElement('div');
-  div.innerHTML = html;
-  document.body.appendChild(div.firstElementChild);
-  return document.getElementById('daemonSetPropertiesModal');
 }
 
-async function showDaemonSetProperties(name, namespace) {
-  const modalEl = ensureDaemonSetPropertiesModal();
-  const bodyEl = document.getElementById('daemonSetPropertiesBody');
-  const labelEl = document.getElementById('daemonSetPropertiesModalLabel');
-  if (!modalEl || !bodyEl || !labelEl) {
-    alert('Properties modal oluşturulamadı.');
+function restartDaemonSet(name, namespace) {
+  if (!confirm(`${namespace}/${name} DaemonSet'ini yeniden başlatmak istediğinizden emin misiniz?`)) return;
+  fetch('/k8s-explorer/restart-daemonset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, namespace })
+  }).then(async (r) => {
+    if (r.ok) {
+      alert('DaemonSet restart talebi gönderildi.');
+      // Refresh daemonsets, pods and overview so UI reflects restarted pods immediately
+      if (typeof fetchAndRenderDaemonSetsTable === 'function') fetchAndRenderDaemonSetsTable();
+      if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
+      if (typeof loadOverviewData === 'function') loadOverviewData();
+    } else {
+      const txt = await r.text();
+      alert('Restart başarısız: ' + txt);
+    }
+  }).catch(e => alert('Restart isteği başarısız: ' + e));
+}
+
+function showPodLogs(name, namespace) {
+  const modalEl = document.getElementById('podLogsModal');
+  const body = document.getElementById('podLogsModalBody');
+  const label = document.getElementById('podLogsModalLabel');
+  if (!modalEl || !body || !label) {
+    alert('Logs modal bulunamadı.');
     return;
   }
-  labelEl.textContent = `DaemonSet Properties: ${namespace}/${name}`;
-  bodyEl.textContent = 'Yükleniyor...';
-  let bsModal = bootstrap.Modal.getInstance(modalEl);
-  if (!bsModal) bsModal = new bootstrap.Modal(modalEl);
-  bsModal.show();
-  try {
-    const resp = await fetch(`/k8s-explorer/daemonset-properties?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`);
-    const data = await resp.json();
-    if (resp.ok && data.daemonset) {
-      bodyEl.textContent = JSON.stringify(data.daemonset, null, 2);
+  label.textContent = `Pod Logs: ${namespace}/${name}`;
+  body.textContent = 'Yükleniyor...';
+  if (!document.body.contains(modalEl)) document.body.appendChild(modalEl);
+  const bs = bootstrap.Modal.getOrCreateInstance(modalEl);
+  bs.show();
+  fetch(`/k8s-explorer/logs?type=pod&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`)
+    .then(async r => {
+      if (!r.ok) {
+        const txt = await r.text();
+        body.textContent = 'Log alınamadı: ' + txt;
+        return;
+      }
+      const txt = await r.text();
+      body.textContent = txt || '(Boş log)';
+    }).catch(e => {
+      body.textContent = 'Log alınırken hata oluştu: ' + e;
+    });
+}
+
+function showStatefulSetProperties(name, namespace) {
+  const modalEl = document.getElementById('podPropertiesModal');
+  const label = document.getElementById('podPropertiesModalLabel');
+  const body = document.getElementById('podPropertiesModalBody');
+  if (!modalEl || !label || !body) {
+    alert('Properties modal bulunamadı.');
+    return;
+  }
+  label.textContent = `StatefulSet Properties: ${namespace}/${name}`;
+  body.textContent = 'Yükleniyor...';
+  if (!document.body.contains(modalEl)) document.body.appendChild(modalEl);
+  const bs = bootstrap.Modal.getOrCreateInstance(modalEl);
+  bs.show();
+  fetch(`/k8s-explorer/statefulset-properties?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        body.innerHTML = `<div class="text-danger">Properties alınamadı: ${data.error}</div>`;
+        return;
+      }
+      body.innerHTML = `<pre style="white-space:pre-wrap;">${JSON.stringify(data.statefulset || data, null, 2)}</pre>`;
+    }).catch(e => {
+      body.innerHTML = `<div class="text-danger">Properties alınırken hata oluştu: ${e}</div>`;
+    });
+}
+
+function restartStatefulSet(name, namespace) {
+  if (!confirm(`${namespace}/${name} StatefulSet'ini yeniden başlatmak istediğinizden emin misiniz?`)) return;
+  fetch('/k8s-explorer/restart-statefulset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, namespace })
+  }).then(async (r) => {
+    if (r.ok) {
+      alert('StatefulSet restart talebi gönderildi.');
+      if (typeof fetchAndRenderStatefulSetsTable === 'function') fetchAndRenderStatefulSetsTable();
+      if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
+      if (typeof loadOverviewData === 'function') loadOverviewData();
     } else {
-      bodyEl.textContent = 'Properties alınamadı: ' + (data.error || 'Bilinmeyen hata');
+      const txt = await r.text();
+      alert('Restart başarısız: ' + txt);
     }
-  } catch (e) {
-    bodyEl.textContent = 'İstek sırasında hata oluştu: ' + e;
+  }).catch(e => alert('Restart isteği başarısız: ' + e));
+}
+
+// Deployment: scale and restart
+function showScaleDeploymentModal(name, namespace, replicas) {
+  const input = prompt(`${namespace}/${name} için yeni replica sayısını girin:`, replicas);
+  if (input === null) return; // cancelled
+  const newReplicas = parseInt(input);
+  if (isNaN(newReplicas) || newReplicas < 0) { alert('Geçerli bir sayı girin'); return; }
+  // Call backend scale API
+  fetch('/k8s-explorer/scale-deployment', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, namespace, replicas: newReplicas })
+  }).then(async r => {
+    if (r.ok) {
+      alert('Deployment replica sayısı güncellendi.');
+      // Refresh deployments table, pods table and overview charts so UI reflects new state
+      if (typeof fetchAndRenderDeploymentsTable === 'function') fetchAndRenderDeploymentsTable();
+      if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
+      if (typeof loadOverviewData === 'function') loadOverviewData();
+    } else {
+      const txt = await r.text();
+      alert('Scale başarısız: ' + txt);
+    }
+  }).catch(e => alert('Scale isteği başarısız: ' + e));
+}
+
+function restartDeployment(name, namespace) {
+  if (!confirm(`${namespace}/${name} Deployment'ını yeniden başlatmak istediğinizden emin misiniz?`)) return;
+  fetch('/k8s-explorer/restart-deployment', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, namespace })
+  }).then(async r => {
+    if (r.ok) {
+  alert('Deployment restart talebi gönderildi.');
+  // Refresh deployments, pods and overview so the UI reflects restarted pods immediately
+  if (typeof fetchAndRenderDeploymentsTable === 'function') fetchAndRenderDeploymentsTable();
+  if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
+  if (typeof loadOverviewData === 'function') loadOverviewData();
+    } else {
+      const txt = await r.text();
+      alert('Restart başarısız: ' + txt);
+    }
+  }).catch(e => alert('Restart isteği başarısız: ' + e));
+}
+
+// Pod actions: properties modal and restart
+function showPodProperties(name, namespace) {
+  const modalEl = document.getElementById('podPropertiesModal');
+  const label = document.getElementById('podPropertiesModalLabel');
+  const body = document.getElementById('podPropertiesModalBody');
+  if (!modalEl || !label || !body) {
+    alert('Pod properties modal yapılandırması eksik.');
+    return;
+  }
+  label.textContent = `Pod Properties: ${namespace}/${name}`;
+  body.textContent = 'Yükleniyor...';
+  // Ensure modal is attached to body (Bootstrap quirk)
+  if (!document.body.contains(modalEl)) document.body.appendChild(modalEl);
+  const bs = bootstrap.Modal.getOrCreateInstance(modalEl);
+  bs.show();
+  fetch(`/k8s-explorer/pod-properties?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        body.innerHTML = `<div class="text-danger">Properties alınamadı: ${data.error}</div>`;
+        return;
+      }
+      body.innerHTML = `<pre style="white-space:pre-wrap;">${JSON.stringify(data, null, 2)}</pre>`;
+    }).catch(e => {
+      body.innerHTML = `<div class="text-danger">Properties alınırken hata oluştu: ${e}</div>`;
+    });
+}
+
+function restartPod(name, namespace) {
+  if (!confirm(`${namespace}/${name} podunu yeniden başlatmak istediğinize emin misiniz?`)) return;
+  fetch('/k8s-explorer/restart-pod', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, namespace })
+  }).then(async r => {
+    if (r.ok) {
+      alert('Pod restart edildi (silme talebi gönderildi).');
+      if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
+    } else {
+      const txt = await r.text();
+      alert('Restart başarısız: ' + txt);
+    }
+  }).catch(e => alert('Restart isteği başarısız: ' + e));
+}
+
+function showScaleStatefulSetModal(name, namespace, replicas) {
+  const input = prompt(`${namespace}/${name} için yeni replica sayısını girin:`, replicas);
+  if (input === null) return; // canceled
+  const newReplicas = parseInt(input);
+  if (isNaN(newReplicas) || newReplicas < 0) { alert('Geçerli bir sayı girin'); return; }
+  fetch('/k8s-explorer/scale-statefulset', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, namespace, replicas: newReplicas })
+  }).then(async r => {
+    if (r.ok) {
+      alert('StatefulSet replica sayısı güncellendi.');
+      if (typeof fetchAndRenderStatefulSetsTable === 'function') fetchAndRenderStatefulSetsTable();
+      if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
+      if (typeof loadOverviewData === 'function') loadOverviewData();
+    } else {
+      const txt = await r.text();
+      alert('Scale başarısız: ' + txt);
+    }
+  }).catch(e => alert('Scale isteği başarısız: ' + e));
+}
+
+function deleteReplicaSet(name, namespace) {
+  if (!confirm(`${namespace}/${name} ReplicaSet'ini silmek istediğinizden emin misiniz?`)) return;
+  // Call backend bulk delete endpoint with a single item
+  fetch('/k8s-explorer/delete-replicasets', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items: [{ namespace: namespace, name: name }] })
+  }).then(async r => {
+    let txt = '';
+    try { txt = await r.text(); } catch(e){ txt = '' + e; }
+    if (!r.ok && r.status !== 207) {
+      alert('Delete başarısız: ' + txt);
+      return;
+    }
+    let json = {};
+    try { json = JSON.parse(txt || '{}'); } catch(e) { json = { deleted: [], errors: [{ error: txt }] }; }
+    const deleted = json.deleted || [];
+    const errors = json.errors || [];
+    if (deleted.length > 0) {
+      alert(`ReplicaSet silindi: ${name} (ns: ${namespace})`);
+    }
+    if (errors.length > 0) {
+      console.warn('Delete errors:', errors);
+      alert('Bazı hatalar oluştu. Konsolu kontrol edin.');
+    }
+    // Refresh UI
+    if (typeof fetchAndRenderReplicaSetsTable === 'function') fetchAndRenderReplicaSetsTable();
+    if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
+    if (typeof loadOverviewData === 'function') loadOverviewData();
+  }).catch(e => {
+    alert('Delete isteği başarısız: ' + e);
+  });
+}
+
+function deleteJob(name, namespace) {
+  if (confirm(`${namespace}/${name} Job'unu silmek istediğinizden emin misiniz?`)) {
+    alert('Delete functionality will be implemented');
   }
 }
-window.showDaemonSetProperties = showDaemonSetProperties;
+
+function toggleCronJobSuspend(name, namespace, currentSuspended) {
+  const action = currentSuspended ? 'resume' : 'suspend';
+  if (confirm(`${namespace}/${name} CronJob'unu ${action} etmek istediğinizden emin misiniz?`)) {
+    alert(`${action} functionality will be implemented`);
+  }
+}
+
+function deleteCronJob(name, namespace) {
+  if (confirm(`${namespace}/${name} CronJob'unu silmek istediğinizden emin misiniz?`)) {
+    alert('Delete functionality will be implemented');
+  }
+}
+
+// Existing chart functions (keeping for compatibility)
+function updatePodsPieChart(pods, containerId) {
+  const running = pods.filter(p => p.status === 'Running').length;
+  const pending = pods.filter(p => p.status === 'Pending').length;
+  const failed = pods.filter(p => p.status === 'Failed').length;
+  const succeeded = pods.filter(p => p.status === 'Succeeded').length;
+  
+  createPieChart(containerId, 'Pods', [
+    { name: 'Running', y: running, color: '#4CAF50' },
+    { name: 'Pending', y: pending, color: '#FF9800' },
+    { name: 'Failed', y: failed, color: '#F44336' },
+    { name: 'Succeeded', y: succeeded, color: '#2196F3' }
+  ]);
+}
+
+function updateDeploymentsPieChart(deployments, containerId) {
+  const ready = deployments.filter(d => d.ready_replicas > 0).length;
+  const notReady = deployments.length - ready;
+  
+  createPieChart(containerId, 'Deployments', [
+    { name: 'Ready', y: ready, color: '#4CAF50' },
+    { name: 'Not Ready', y: notReady, color: '#FF9800' }
+  ]);
+}
+
 </script>
+<!-- Added missing endblock tag to close the content block -->
 {% endblock %}
-{% endblock %}
+</html>

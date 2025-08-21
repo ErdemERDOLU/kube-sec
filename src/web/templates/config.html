@@ -1,0 +1,2154 @@
+{% extends "base.html" %}
+
+{% block title %}Config - Kubernetes Security Checker{% endblock %}
+
+{% block content %}
+<style>
+  :root {
+    --primary-gradient: linear-gradient(135deg, #059669 0%, #047857 100%);
+    --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    --danger-gradient: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    --info-gradient: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    --dark-gradient: linear-gradient(135deg, #475569 0%, #334155 100%);
+    --purple-gradient: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    --indigo-gradient: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    --emerald-gradient: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  }
+
+  .config-card {
+    border: none;
+    border-radius: 1.25rem;
+    box-shadow: 0 4px 25px rgba(5, 150, 105, 0.08);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    background: #ffffff;
+    border: 1px solid rgba(5, 150, 105, 0.1);
+  }
+
+  .config-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(5, 150, 105, 0.15);
+    border-color: rgba(5, 150, 105, 0.2);
+  }
+
+  .chart-container {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-top: 1px solid rgba(5, 150, 105, 0.1);
+  }
+
+  .loading-spinner {
+    display: inline-block;
+    width: 1.25rem;
+    height: 1.25rem;
+    border: 3px solid #ecfeff;
+    border-top: 3px solid #059669;
+    border-radius: 50%;
+    animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .nav-pills .nav-link {
+    border-radius: 1rem;
+    font-weight: 600;
+    padding: 1rem 1.75rem;
+    margin: 0 0.375rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #64748b;
+    background: transparent;
+    border: 2px solid transparent;
+    font-size: 0.875rem;
+    letter-spacing: 0.025em;
+  }
+
+  .nav-pills .nav-link:hover {
+    background: rgba(5, 150, 105, 0.08);
+    color: #059669;
+    transform: translateY(-2px);
+    border-color: rgba(5, 150, 105, 0.2);
+  }
+
+  .nav-pills .nav-link.active {
+    background: var(--primary-gradient);
+    color: white;
+    box-shadow: 0 8px 25px rgba(5, 150, 105, 0.3);
+    border-color: #047857;
+  }
+
+  .table-responsive {
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  }
+
+  .table th {
+    background: var(--dark-gradient);
+    color: white;
+    font-weight: 700;
+    border: none;
+    padding: 1.25rem;
+    font-size: 0.875rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .table td {
+    padding: 1.25rem;
+    border-color: #e2e8f0;
+    vertical-align: middle;
+    font-weight: 500;
+  }
+
+  .table tbody tr:hover {
+    background-color: rgba(5, 150, 105, 0.02);
+    transform: scale(1.001);
+    transition: all 0.2s ease;
+  }
+
+  .badge {
+    font-weight: 600;
+    padding: 0.625rem 1rem;
+    border-radius: 0.75rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+  }
+
+  .btn {
+    border-radius: 0.75rem;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0.75rem 1.5rem;
+    font-size: 0.875rem;
+    letter-spacing: 0.025em;
+  }
+
+  .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  }
+
+  .btn-outline-primary {
+    border: 2px solid #059669;
+    color: #059669;
+  }
+
+  .btn-outline-primary:hover {
+    background: #059669;
+    border-color: #047857;
+    color: white;
+  }
+
+  .page-header h1 {
+    font-weight: 800;
+    color: #1e293b;
+    font-size: 2.25rem;
+    letter-spacing: -0.025em;
+  }
+
+  .page-header p {
+    font-size: 1.125rem;
+    color: #64748b;
+    font-weight: 500;
+  }
+
+  .config-card .card-header {
+    padding: 1.5rem;
+    border: none;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .config-card .card-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    pointer-events: none;
+  }
+
+  .status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+
+  .status-active {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+  }
+
+  .status-inactive {
+    background: rgba(107, 114, 128, 0.1);
+    color: #4b5563;
+    border: 1px solid rgba(107, 114, 128, 0.2);
+  }
+
+  .status-error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+  /* Inline select helpers for small filter controls */
+  .secrets-filter { display: inline-flex; align-items: center; gap: 0.5rem; }
+  .form-select-inline { display: inline-block; width: 220px; max-width: 100%; }
+
+/* Added toast notification styles */
+.toast-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+}
+
+.toast {
+  min-width: 300px;
+  margin-bottom: 10px;
+}
+
+.toast.success {
+  background-color: #d4edda;
+  border-color: #c3e6cb;
+  color: #155724;
+}
+
+.toast.error {
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
+}
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-5 page-header">
+  <div>
+    <h1 class="h1 mb-2 fw-bold">
+      <i class="bi bi-gear me-3" style="color: #059669;"></i>Kubernetes Configuration
+    </h1>
+    <p class="mb-0">Modern cluster configuration management and monitoring dashboard</p>
+  </div>
+  <div class="d-flex gap-3">
+    <button class="btn btn-outline-primary" onclick="refreshAllData()">
+      <i class="bi bi-arrow-clockwise me-2"></i>Tümünü Yenile
+    </button>
+    <button class="btn btn-primary" style="background: var(--primary-gradient); border: none;">
+      <i class="bi bi-plus-circle me-2"></i>Yeni Ekle
+    </button>
+  </div>
+</div>
+
+<div class="card config-card mb-5" id="config-navigation">
+  <div class="card-header bg-white border-0 pt-4">
+    <ul class="nav nav-pills nav-fill justify-content-center" id="configTab" role="tablist">
+  <!-- "Genel Bakış" tab removed per request -->
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="configmaps-tab" data-bs-toggle="tab" data-bs-target="#configmaps" type="button" role="tab">
+          <i class="bi bi-file-text me-2"></i>ConfigMaps
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="secrets-tab" data-bs-toggle="tab" data-bs-target="#secrets" type="button" role="tab">
+          <i class="bi bi-shield-lock me-2"></i>Secrets
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="resource-quotas-tab" data-bs-toggle="tab" data-bs-target="#resource-quotas" type="button" role="tab">
+          <i class="bi bi-speedometer2 me-2"></i>Resource Quotas
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="limit-ranges-tab" data-bs-toggle="tab" data-bs-target="#limit-ranges" type="button" role="tab">
+          <i class="bi bi-bar-chart me-2"></i>Limit Ranges
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="hpa-tab" data-bs-toggle="tab" data-bs-target="#hpa" type="button" role="tab">
+          <i class="bi bi-arrows-expand me-2"></i>HPA
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="pdb-tab" data-bs-toggle="tab" data-bs-target="#pdb" type="button" role="tab">
+          <i class="bi bi-shield-check me-2"></i>PDB
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="priority-classes-tab" data-bs-toggle="tab" data-bs-target="#priority-classes" type="button" role="tab">
+          <i class="bi bi-sort-numeric-down me-2"></i>Priority Classes
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="runtime-classes-tab" data-bs-toggle="tab" data-bs-target="#runtime-classes" type="button" role="tab">
+          <i class="bi bi-cpu me-2"></i>Runtime Classes
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="leases-tab" data-bs-toggle="tab" data-bs-target="#leases" type="button" role="tab">
+          <i class="bi bi-clock-history me-2"></i>Leases
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="webhooks-tab" data-bs-toggle="tab" data-bs-target="#webhooks" type="button" role="tab">
+          <i class="bi bi-webhook me-2"></i>Webhooks
+        </button>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="tab-content" id="configTabContent">
+  <!-- "Genel Bakış" pane removed per request -->
+
+  <div class="tab-pane fade show active" id="configmaps" role="tabpanel">
+    <div class="row g-4">
+  <div class="col-lg-12">
+        <div class="config-card">
+          <div class="card-header text-white" style="background: var(--primary-gradient);">
+            <h5 class="mb-0 fw-bold">
+              <i class="bi bi-file-text me-2"></i>ConfigMaps Listesi
+            </h5>
+          </div>
+          <div class="card-body p-0">
+                  <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                    <div>
+                      <small class="text-muted">Namespace filtresi</small>
+                      <select id="configNamespaceSelect" class="form-select form-select-sm form-select-inline d-inline-block ms-2" aria-label="Namespace filtre">
+                        <option value="default">default</option>
+                        <option value="all">Tümü</option>
+                      </select>
+                    </div>
+                    <div>
+                      <button id="clearConfigNsFilter" class="btn btn-outline-secondary btn-sm d-none">Filtreyi Temizle</button>
+                    </div>
+                  </div>
+                  <div id="configmaps-table-container">
+                    <div class="d-flex align-items-center justify-content-center py-5">
+                      <div class="loading-spinner me-2"></div>
+                      <span class="text-muted">ConfigMap listesi yükleniyor...</span>
+                    </div>
+                  </div>
+                </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="config-card">
+          <div class="card-header text-white" style="background: var(--primary-gradient);">
+            <h6 class="mb-0 fw-bold">ConfigMap Durumları</h6>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-configmaps-tab" style="width: 100%; height: 280px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="secrets" role="tabpanel">
+    <div class="row g-4">
+  <div class="col-lg-12">
+        <div class="config-card">
+          <div class="card-header text-white" style="background: var(--danger-gradient);">
+            <h5 class="mb-0 fw-bold">
+              <i class="bi bi-shield-lock me-2"></i>Secrets Listesi
+            </h5>
+          </div>
+          <div class="card-body p-0">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+              <div>
+                <small class="text-muted">Namespace filtresi</small>
+                <span class="secrets-filter ms-2">
+                  <select id="secretsNamespaceSelect" class="form-select form-select-sm form-select-inline" aria-label="Namespace filtre">
+                  <option value="default">default</option>
+                  <option value="all">Tümü</option>
+                  </select>
+                </span>
+              </div>
+              <div>
+                <button id="clearSecretsNsFilter" class="btn btn-outline-secondary btn-sm d-none">Filtreyi Temizle</button>
+              </div>
+            </div>
+            <div id="secrets-table-container">
+              <div class="d-flex align-items-center justify-content-center py-5">
+                <div class="loading-spinner me-2"></div>
+                <span class="text-muted">Secret listesi yükleniyor...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+  </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="resource-quotas" role="tabpanel">
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="config-card">
+          <div class="card-header text-white" style="background: var(--warning-gradient);">
+            <h5 class="mb-0 fw-bold">
+              <i class="bi bi-speedometer2 me-2"></i>Resource Quotas Listesi
+            </h5>
+          </div>
+          <div class="card-body p-0">
+            <div id="resource-quotas-table-container">
+              <div class="d-flex align-items-center justify-content-center py-5">
+                <div class="loading-spinner me-2"></div>
+                <span class="text-muted">Resource Quota listesi yükleniyor...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="config-card">
+          <div class="card-header text-white" style="background: var(--warning-gradient);">
+            <h6 class="mb-0 fw-bold">Quota Durumları</h6>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-resource-quotas-tab" style="width: 100%; height: 280px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="limit-ranges" role="tabpanel">
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="config-card">
+          <div class="card-header text-white" style="background: var(--info-gradient);">
+            <h5 class="mb-0 fw-bold">
+              <i class="bi bi-bar-chart me-2"></i>Limit Ranges Listesi
+            </h5>
+          </div>
+          <div class="card-body p-0">
+            <div id="limit-ranges-table-container">
+              <div class="d-flex align-items-center justify-content-center py-5">
+                <div class="loading-spinner me-2"></div>
+                <span class="text-muted">Limit Range listesi yükleniyor...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="config-card">
+          <div class="card-header text-white" style="background: var(--info-gradient);">
+            <h6 class="mb-0 fw-bold">Limit Range Durumları</h6>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-limit-ranges-tab" style="width: 100%; height: 280px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="hpa" role="tabpanel">
+    <div class="config-card">
+      <div class="card-header text-white" style="background: var(--success-gradient);">
+        <h5 class="mb-0 fw-bold">
+          <i class="bi bi-arrows-expand me-2"></i>Horizontal Pod Autoscaler
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="text-center py-5">
+          <i class="bi bi-arrows-expand text-muted" style="font-size: 4rem;"></i>
+          <h4 class="mt-3 text-muted">HPA Simulation</h4>
+          <p class="text-muted">Horizontal Pod Autoscaler yapılandırması ve simülasyonu</p>
+          <button class="btn btn-success">
+            <i class="bi bi-play-circle me-2"></i>HPA Simülasyonu Başlat
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="pdb" role="tabpanel">
+    <div class="config-card">
+      <div class="card-header text-white" style="background: var(--purple-gradient);">
+        <h5 class="mb-0 fw-bold">
+          <i class="bi bi-shield-check me-2"></i>Pod Disruption Budget
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="text-center py-5">
+          <i class="bi bi-shield-check text-muted" style="font-size: 4rem;"></i>
+          <h4 class="mt-3 text-muted">PDB Simulation</h4>
+          <p class="text-muted">Pod Disruption Budget yapılandırması ve simülasyonu</p>
+          <button class="btn btn-primary" style="background: var(--purple-gradient); border: none;">
+            <i class="bi bi-play-circle me-2"></i>PDB Simülasyonu Başlat
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="priority-classes" role="tabpanel">
+    <div class="config-card">
+      <div class="card-header text-white" style="background: var(--indigo-gradient);">
+        <h5 class="mb-0 fw-bold">
+          <i class="bi bi-sort-numeric-down me-2"></i>Priority Classes
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="text-center py-5">
+          <i class="bi bi-sort-numeric-down text-muted" style="font-size: 4rem;"></i>
+          <h4 class="mt-3 text-muted">Priority Classes Simulation</h4>
+          <p class="text-muted">Pod öncelik sınıfları yapılandırması ve simülasyonu</p>
+          <button class="btn btn-primary" style="background: var(--indigo-gradient); border: none;">
+            <i class="bi bi-play-circle me-2"></i>Priority Simülasyonu Başlat
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="runtime-classes" role="tabpanel">
+    <div class="config-card">
+      <div class="card-header text-white" style="background: var(--dark-gradient);">
+        <h5 class="mb-0 fw-bold">
+          <i class="bi bi-cpu me-2"></i>Runtime Classes
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="text-center py-5">
+          <i class="bi bi-cpu text-muted" style="font-size: 4rem;"></i>
+          <h4 class="mt-3 text-muted">Runtime Classes Simulation</h4>
+          <p class="text-muted">Container runtime sınıfları yapılandırması ve simülasyonu</p>
+          <button class="btn btn-dark">
+            <i class="bi bi-play-circle me-2"></i>Runtime Simülasyonu Başlat
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="leases" role="tabpanel">
+    <div class="config-card">
+      <div class="card-header text-white" style="background: var(--info-gradient);">
+        <h5 class="mb-0 fw-bold">
+          <i class="bi bi-clock-history me-2"></i>Leases
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="text-center py-5">
+          <i class="bi bi-clock-history text-muted" style="font-size: 4rem;"></i>
+          <h4 class="mt-3 text-muted">Leases Simulation</h4>
+          <p class="text-muted">Kubernetes lease objelerinin yapılandırması ve simülasyonu</p>
+          <button class="btn btn-info">
+            <i class="bi bi-play-circle me-2"></i>Lease Simülasyonu Başlat
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="webhooks" role="tabpanel">
+    <div class="row g-4">
+      <div class="col-lg-6">
+        <div class="config-card">
+          <div class="card-header text-white" style="background: var(--warning-gradient);">
+            <h5 class="mb-0 fw-bold">
+              <i class="bi bi-webhook me-2"></i>Mutating Admission Webhooks
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="text-center py-4">
+              <i class="bi bi-webhook text-muted" style="font-size: 3rem;"></i>
+              <h5 class="mt-3 text-muted">Mutation Webhooks</h5>
+              <p class="text-muted">Kubernetes kaynaklarını değiştiren webhook'lar</p>
+              <button class="btn btn-warning">
+                <i class="bi bi-play-circle me-2"></i>Mutation Simülasyonu
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="config-card">
+          <div class="card-header text-white" style="background: var(--danger-gradient);">
+            <h5 class="mb-0 fw-bold">
+              <i class="bi bi-shield-exclamation me-2"></i>Validating Admission Webhooks
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="text-center py-4">
+              <i class="bi bi-shield-exclamation text-muted" style="font-size: 3rem;"></i>
+              <h5 class="mt-3 text-muted">Validation Webhooks</h5>
+              <p class="text-muted">Kubernetes kaynaklarını doğrulayan webhook'lar</p>
+              <button class="btn btn-danger">
+                <i class="bi bi-play-circle me-2"></i>Validation Simülasyonu
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script>
+// Ensure global handlers exist before dynamic table renders to avoid ReferenceError from inline onclicks
+window.showConfigMap = window.showConfigMap || function(name, namespace) { console.debug('showConfigMap called early', name, namespace); };
+window.editConfigMap = window.editConfigMap || function(name, namespace) { console.debug('editConfigMap called early', name, namespace); };
+// Secret handler stubs to avoid ReferenceError when buttons are clicked before full script loads
+window.showSecret = window.showSecret || function(name, namespace) { console.debug('showSecret called early', name, namespace); };
+window.editSecret = window.editSecret || function(name, namespace) { console.debug('editSecret called early', name, namespace); };
+window.deleteSecret = window.deleteSecret || function(name, namespace) { console.debug('deleteSecret called early', name, namespace); };
+
+// Click proxy fallback defined early so inline onclicks won't fail
+window.__config_clickProxy = window.__config_clickProxy || function(action, name, namespace) {
+  try {
+    console.debug('__config_clickProxy', action, name, namespace);
+    if (action === 'view' && window.showConfigMap) {
+      try { window.showConfigMap(name, namespace); } catch (e) { console.error('showConfigMap error from proxy', e); }
+    }
+    if (action === 'edit' && window.editConfigMap) {
+      try { window.editConfigMap(name, namespace); } catch (e) { console.error('editConfigMap error from proxy', e); }
+    }
+    // Secret actions
+    if (action === 'view-secret' && window.showSecret) {
+      try { window.showSecret(name, namespace); } catch (e) { console.error('showSecret error from proxy', e); }
+    }
+    if (action === 'edit-secret' && window.editSecret) {
+      try { window.editSecret(name, namespace); } catch (e) { console.error('editSecret error from proxy', e); }
+    }
+    if (action === 'delete-secret' && window.deleteSecret) {
+      try { window.deleteSecret(name, namespace); } catch (e) { console.error('deleteSecret error from proxy', e); }
+    }
+  } catch (e) { console.debug('config click proxy top error', e); }
+};
+
+// Small visible debug helper so clicks are visible even if console is filtered
+window.__showDebugMessage = window.__showDebugMessage || function(msg, timeout = 2000) {
+  try {
+    let el = document.getElementById('__kubesec_debug_msg');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = '__kubesec_debug_msg';
+      el.style.position = 'fixed';
+      el.style.right = '1rem';
+      el.style.bottom = '1rem';
+      el.style.zIndex = 2000;
+      document.body.appendChild(el);
+    }
+    const msgEl = document.createElement('div');
+    msgEl.textContent = msg;
+    msgEl.style.background = 'rgba(37,99,235,0.95)';
+    msgEl.style.color = 'white';
+    msgEl.style.padding = '0.5rem 0.75rem';
+    msgEl.style.marginTop = '0.4rem';
+    msgEl.style.borderRadius = '0.5rem';
+    msgEl.style.boxShadow = '0 6px 18px rgba(0,0,0,0.15)';
+    el.appendChild(msgEl);
+    setTimeout(() => { try { el.removeChild(msgEl); } catch(_){} }, timeout);
+  } catch (e) { console.debug('debugMessage error', e); }
+};
+
+function showToast(message, type = 'success') {
+  // Create toast container if it doesn't exist
+  let toastContainer = document.querySelector('.toast-container');
+  if (!toastContainer) {
+    toastContainer = document.createElement('div');
+    toastContainer.className = 'toast-container';
+    document.body.appendChild(toastContainer);
+  }
+  
+  // Create toast element
+  const toastId = 'toast-' + Date.now();
+  const toastHtml = `
+    <div class="toast ${type}" id="${toastId}" role="alert" aria-live="assertive" aria-atomic="true">
+      <div class="toast-header">
+        <strong class="me-auto">${type === 'success' ? 'Başarılı' : 'Hata'}</strong>
+        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+      <div class="toast-body">
+        ${message}
+      </div>
+    </div>
+  `;
+  
+  toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+  
+  // Initialize and show toast
+  const toastElement = document.getElementById(toastId);
+  const toast = new bootstrap.Toast(toastElement, {
+    autohide: true,
+    delay: 4000
+  });
+  
+  // Remove toast element after it's hidden
+  toastElement.addEventListener('hidden.bs.toast', function() {
+    toastElement.remove();
+  });
+  
+  toast.show();
+}
+
+window.showConfigMap = function(name, namespace) {
+  console.debug('showConfigMap called:', name, namespace);
+  
+  const requestKey = `show-configmap-${name}-${namespace}`;
+  if (isRequestActive(requestKey)) {
+    console.debug('Request already active:', requestKey);
+    return;
+  }
+  
+  setRequestActive(requestKey);
+  
+  const existingViewModal = document.getElementById('configMapViewModal');
+  if (existingViewModal) {
+    const existingInstance = bootstrap.Modal.getInstance(existingViewModal);
+    if (existingInstance) {
+      existingInstance.dispose();
+    }
+    existingViewModal.remove();
+  }
+  
+  fetch(`/k8s-explorer/configmap?name=${encodeURIComponent(name)}&namespace=${encodeURIComponent(namespace)}`)
+    .then(response => response.json())
+    .then(data => {
+      setRequestInactive(requestKey);
+      
+      if (data.error) {
+        showToast('ConfigMap yüklenirken hata: ' + data.error, 'error');
+        return;
+      }
+      
+      const configmap = data.configmap;
+      const modalHtml = `
+        <div class="modal fade" id="configMapViewModal" tabindex="-1">
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">ConfigMap: ${configmap.name}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <strong>Namespace:</strong> <span class="badge bg-primary">${configmap.namespace}</span>
+                </div>
+                <div class="mb-3">
+                  <strong>Data:</strong>
+                </div>
+                <div class="table-responsive">
+                  <table class="table table-bordered">
+                    <thead>
+                      <tr>
+                        <th>Key</th>
+                        <th>Value</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${Object.entries(configmap.data || {}).map(([key, value]) => `
+                        <tr>
+                          <td><code>${key}</code></td>
+                          <td><pre class="mb-0" style="max-height: 200px; overflow-y: auto;">${value}</pre></td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="event.stopPropagation(); window.editConfigMap('${configmap.name}', '${configmap.namespace}');">Edit</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Add modal to body and show
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      const modalElement = document.getElementById('configMapViewModal');
+      const modal = new bootstrap.Modal(modalElement);
+      
+      modalElement.addEventListener('hidden.bs.modal', function () {
+        modal.dispose();
+        modalElement.remove();
+      });
+      
+      modal.show();
+    })
+    .catch(error => {
+      setRequestInactive(requestKey);
+      console.error('Error fetching ConfigMap:', error);
+      showToast('ConfigMap yüklenirken hata: ' + error.message, 'error');
+    });
+};
+
+window.editConfigMap = function(name, namespace) {
+  console.debug('editConfigMap called:', name, namespace);
+  
+  const requestKey = `edit-configmap-${name}-${namespace}`;
+  if (isRequestActive(requestKey)) {
+    console.debug('Request already active:', requestKey);
+    return;
+  }
+  
+  setRequestActive(requestKey);
+  
+  // Clean up any existing modals
+  const existingEditModal = document.getElementById('configMapEditModal');
+  if (existingEditModal) {
+    const existingInstance = bootstrap.Modal.getInstance(existingEditModal);
+    if (existingInstance) {
+      existingInstance.dispose();
+    }
+    existingEditModal.remove();
+  }
+  
+  const existingViewModal = document.getElementById('configMapViewModal');
+  if (existingViewModal) {
+    const viewInstance = bootstrap.Modal.getInstance(existingViewModal);
+    if (viewInstance) {
+      viewInstance.hide();
+    }
+  }
+  
+  // Clean up fallback panel if exists
+  const fallbackPanel = document.getElementById('__config_fallback_panel');
+  if (fallbackPanel) {
+    fallbackPanel.remove();
+  }
+  
+  fetch(`/k8s-explorer/configmap?name=${encodeURIComponent(name)}&namespace=${encodeURIComponent(namespace)}`)
+    .then(response => response.json())
+    .then(data => {
+      setRequestInactive(requestKey);
+      
+      if (data.error) {
+        showToast('ConfigMap yüklenirken hata: ' + data.error, 'error');
+        return;
+      }
+      
+      const configmap = data.configmap;
+      const modalHtml = `
+        <div class="modal fade" id="configMapEditModal" tabindex="-1">
+          <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Edit ConfigMap: ${configmap.name}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <strong>Namespace:</strong> <span class="badge bg-primary">${configmap.namespace}</span>
+                </div>
+                <div class="mb-3">
+                  <strong>Data:</strong>
+                  <small class="text-muted ms-2">Edit the key-value pairs below</small>
+                </div>
+                <div id="configMapDataEditor">
+                  ${Object.entries(configmap.data || {}).map(([key, value], index) => `
+                    <div class="row mb-3 config-data-row">
+                      <div class="col-md-3">
+                        <label class="form-label">Key</label>
+                        <input type="text" class="form-control config-key" value="${key}" data-original-key="${key}">
+                      </div>
+                      <div class="col-md-8">
+                        <label class="form-label">Value</label>
+                        <textarea class="form-control config-value" rows="3" style="font-family: monospace;">${value}</textarea>
+                      </div>
+                      <div class="col-md-1 d-flex align-items-end">
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-config-row">
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+                <button type="button" class="btn btn-outline-success btn-sm" id="addConfigRow">
+                  <i class="fas fa-plus"></i> Add New Key-Value Pair
+                </button>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveConfigMapBtn">Save Changes</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Add modal to body and show
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      const modalElement = document.getElementById('configMapEditModal');
+      const modal = new bootstrap.Modal(modalElement);
+      
+      modalElement.addEventListener('hidden.bs.modal', function () {
+        modal.dispose();
+        modalElement.remove();
+        // Restore body scroll
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+      });
+      
+      modal.show();
+      
+      const addRowBtn = document.getElementById('addConfigRow');
+      const saveBtn = document.getElementById('saveConfigMapBtn');
+      const editor = document.getElementById('configMapDataEditor');
+      
+      // Add new row functionality
+      addRowBtn.addEventListener('click', function() {
+        const newRowHtml = `
+          <div class="row mb-3 config-data-row">
+            <div class="col-md-3">
+              <label class="form-label">Key</label>
+              <input type="text" class="form-control config-key" value="" data-original-key="">
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Value</label>
+              <textarea class="form-control config-value" rows="3" style="font-family: monospace;"></textarea>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+              <button type="button" class="btn btn-outline-danger btn-sm remove-config-row">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        `;
+        editor.insertAdjacentHTML('beforeend', newRowHtml);
+      });
+      
+      // Remove row functionality with event delegation
+      editor.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-config-row')) {
+          const rowToRemove = e.target.closest('.config-data-row');
+          if (rowToRemove) {
+            rowToRemove.remove();
+          }
+        }
+      });
+      
+      // Add save functionality
+      saveBtn.addEventListener('click', function(event) {
+        event.stopPropagation();
+        
+        const saveRequestKey = `save-configmap-${configmap.name}-${configmap.namespace}`;
+        if (isRequestActive(saveRequestKey)) {
+          console.debug('Save request already active:', saveRequestKey);
+          return;
+        }
+        
+        setRequestActive(saveRequestKey);
+        
+        // Collect data from form
+        const rows = document.querySelectorAll('#configMapDataEditor .config-data-row');
+        const newData = {};
+        let hasError = false;
+        
+        rows.forEach(row => {
+          const keyInput = row.querySelector('.config-key');
+          const valueInput = row.querySelector('.config-value');
+          const key = keyInput.value.trim();
+          const value = valueInput.value;
+          
+          if (key === '') {
+            keyInput.classList.add('is-invalid');
+            hasError = true;
+            return;
+          }
+          
+          if (newData.hasOwnProperty(key)) {
+            showToast('Tekrarlanan anahtar bulundu: ' + key, 'error');
+            hasError = true;
+            return;
+          }
+          
+          newData[key] = value;
+        });
+        
+        if (hasError) {
+          setRequestInactive(saveRequestKey);
+          return;
+        }
+        
+        // Send update request
+        fetch('/k8s-explorer/update-configmap', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: configmap.name,
+            namespace: configmap.namespace,
+            data: newData
+          })
+        })
+        .then(response => response.json())
+        .then(result => {
+          setRequestInactive(saveRequestKey);
+          
+          if (result.error) {
+            showToast('ConfigMap güncellenirken hata: ' + result.error, 'error');
+          } else {
+            showToast('ConfigMap başarıyla güncellendi', 'success');
+            modal.hide();
+            // Refresh the page to show updated data
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
+          }
+        })
+        .catch(error => {
+          setRequestInactive(saveRequestKey);
+          console.error('Error updating configmap:', error);
+          showToast('ConfigMap güncellenirken hata oluştu', 'error');
+        });
+      });
+    })
+    .catch(error => {
+      setRequestInactive(requestKey);
+      console.error('Error fetching configmap:', error);
+      showToast('ConfigMap yüklenirken hata oluştu', 'error');
+    });
+};
+
+
+document.addEventListener('click', function(event) {
+  if (event.target.matches('[data-action="view-configmap"]')) {
+    event.stopPropagation();
+    const name = event.target.getAttribute('data-name');
+    const namespace = event.target.getAttribute('data-namespace');
+    if (name && namespace) {
+      window.showConfigMap(name, namespace);
+    }
+  }
+  
+  if (event.target.matches('[data-action="edit-configmap"]')) {
+    event.stopPropagation();
+    const name = event.target.getAttribute('data-name');
+    const namespace = event.target.getAttribute('data-namespace');
+    if (name && namespace) {
+      window.editConfigMap(name, namespace);
+    }
+  }
+  
+});
+
+let allConfigData = {
+  configmaps: [],
+  secrets: [],
+  resource_quotas: [],
+  limit_ranges: []
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+  loadOverviewData();
+  // fetch namespaces for config page filter
+  fetch('/k8s-explorer/namespaces').then(r => r.json()).then(j => {
+    if (j.namespaces) {
+      const sel = document.getElementById('configNamespaceSelect');
+      // insert namespaces (avoid duplicates)
+      j.namespaces.forEach(ns => {
+        if (![...sel.options].some(o => o.value === ns)) {
+          const opt = document.createElement('option');
+          opt.value = ns;
+          opt.text = ns;
+          sel.appendChild(opt);
+        }
+      });
+      // default selection: use 'default' if present, otherwise 'all'
+      sel.value = j.namespaces.includes('default') ? 'default' : 'all';
+      sel.addEventListener('change', () => {
+        const v = sel.value;
+        document.getElementById('clearConfigNsFilter').classList.toggle('d-none', v === 'all');
+        // if currently on configmaps tab, refresh it
+        const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+        if (activeTab === 'configmaps') fetchAndRenderConfigMapsTable();
+      });
+      document.getElementById('clearConfigNsFilter').addEventListener('click', () => {
+        document.getElementById('configNamespaceSelect').value = 'all';
+        document.getElementById('clearConfigNsFilter').classList.add('d-none');
+        fetchAndRenderConfigMapsTable();
+      });
+      // populate secrets namespace select as well (if present)
+      const secretsSel = document.getElementById('secretsNamespaceSelect');
+      if (secretsSel) {
+        j.namespaces.forEach(ns => {
+          if (![...secretsSel.options].some(o => o.value === ns)) {
+            const opt = document.createElement('option');
+            opt.value = ns;
+            opt.text = ns;
+            secretsSel.appendChild(opt);
+          }
+        });
+        secretsSel.value = j.namespaces.includes('default') ? 'default' : 'all';
+        secretsSel.addEventListener('change', () => {
+          const v = secretsSel.value;
+          document.getElementById('clearSecretsNsFilter').classList.toggle('d-none', v === 'all');
+          const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+          if (activeTab === 'secrets') fetchAndRenderSecretsTable();
+        });
+        document.getElementById('clearSecretsNsFilter').addEventListener('click', () => {
+          document.getElementById('secretsNamespaceSelect').value = 'all';
+          document.getElementById('clearSecretsNsFilter').classList.add('d-none');
+          fetchAndRenderSecretsTable();
+        });
+      }
+    }
+    // trigger initial render for the active tab (configmaps by default)
+    const activeTabAfterNs = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+    if (activeTabAfterNs === 'configmaps') {
+      setTimeout(fetchAndRenderConfigMapsTable, 50);
+    }
+  }).catch(() => {
+    // if namespace list fetch fails, still try to render active tab
+    const activeTabAfterNs = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+    if (activeTabAfterNs === 'configmaps') setTimeout(fetchAndRenderConfigMapsTable, 50);
+  });
+  
+  document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+    tab.addEventListener('shown.bs.tab', function(e) {
+      const targetId = e.target.getAttribute('data-bs-target').replace('#', '');
+      handleTabChange(targetId);
+      
+      setTimeout(() => {
+        document.getElementById('config-navigation').scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }, 100);
+    });
+  });
+  // Fallback: trigger initial render for the active tab immediately
+  try {
+    const initialActive = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+    if (initialActive === 'configmaps') setTimeout(fetchAndRenderConfigMapsTable, 50);
+  } catch (e) {
+    // ignore
+  }
+
+  // Delegated handlers for configmap view/edit buttons - works even after the table is re-rendered
+  document.addEventListener('click', function(e) {
+    try {
+    // DEBUG: log delegated clicks
+    // console.debug('delegated click:', e.target);
+      const viewBtn = e.target.closest && e.target.closest('.btn-view-configmap');
+      if (viewBtn) {
+        const name = viewBtn.getAttribute('data-name');
+        const namespace = viewBtn.getAttribute('data-namespace');
+        if (window.showConfigMap) {
+          try { console.debug('invoking showConfigMap', name, namespace); window.__showDebugMessage && window.__showDebugMessage('show: ' + name + ' / ' + namespace); window.showConfigMap(name, namespace); } catch (err) { console.error('showConfigMap handler error', err); }
+        }
+        return;
+      }
+      const editBtn = e.target.closest && e.target.closest('.btn-edit-configmap');
+      if (editBtn) {
+        const name = editBtn.getAttribute('data-name');
+        const namespace = editBtn.getAttribute('data-namespace');
+        if (window.editConfigMap) {
+          try { console.debug('invoking editConfigMap', name, namespace); window.__showDebugMessage && window.__showDebugMessage('edit: ' + name + ' / ' + namespace); window.editConfigMap(name, namespace); } catch (err) { console.error('editConfigMap handler error', err); }
+        }
+      }
+      // Secret buttons: delegated handler ensures clicks are caught after re-renders
+      const viewSecretBtn = e.target.closest && e.target.closest('.btn-view-secret');
+      if (viewSecretBtn) {
+        const name = viewSecretBtn.getAttribute('data-name');
+        const namespace = viewSecretBtn.getAttribute('data-namespace');
+        if (window.showSecret) {
+          try { console.debug('invoking showSecret', name, namespace); window.__showDebugMessage && window.__showDebugMessage('show-secret: ' + name + ' / ' + namespace); window.showSecret(name, namespace); } catch (err) { console.error('showSecret handler error', err); }
+        }
+        return;
+      }
+      const editSecretBtn = e.target.closest && e.target.closest('.btn-edit-secret');
+      if (editSecretBtn) {
+        const name = editSecretBtn.getAttribute('data-name');
+        const namespace = editSecretBtn.getAttribute('data-namespace');
+        if (window.editSecret) {
+          try { console.debug('invoking editSecret', name, namespace); window.__showDebugMessage && window.__showDebugMessage('edit-secret: ' + name + ' / ' + namespace); window.editSecret(name, namespace); } catch (err) { console.error('editSecret handler error', err); }
+        }
+        return;
+      }
+      const deleteSecretBtn = e.target.closest && e.target.closest('.btn-delete-secret');
+      if (deleteSecretBtn) {
+        const name = deleteSecretBtn.getAttribute('data-name');
+        const namespace = deleteSecretBtn.getAttribute('data-namespace');
+        if (window.deleteSecret) {
+          try { console.debug('invoking deleteSecret', name, namespace); window.__showDebugMessage && window.__showDebugMessage('delete-secret: ' + name + ' / ' + namespace); window.deleteSecret(name, namespace); } catch (err) { console.error('deleteSecret handler error', err); }
+        }
+        return;
+      }
+    } catch (err) { console.debug('delegated configmap click handler error', err); }
+  });
+});
+
+async function loadOverviewData() {
+  try {
+    const [configmapsData, secretsData, resourceQuotasData, limitRangesData] = await Promise.all([
+      fetch('/k8s-explorer/configmaps-summary').then(r => r.json()),
+      fetch('/k8s-explorer/secrets-summary').then(r => r.json()),
+      fetch('/k8s-explorer/resource-quotas-summary').then(r => r.json()),
+      fetch('/k8s-explorer/limit-ranges-summary').then(r => r.json())
+    ]);
+
+    allConfigData.configmaps = configmapsData.configmaps || [];
+    allConfigData.secrets = secretsData.secrets || [];
+    allConfigData.resource_quotas = resourceQuotasData.resource_quotas || [];
+    allConfigData.limit_ranges = limitRangesData.limit_ranges || [];
+
+    updateOverviewCharts();
+  } catch (error) {
+    console.error('Error loading overview data:', error);
+  }
+}
+
+function updateOverviewCharts() {
+  // If Overview charts were removed from the page, skip initialization to avoid errors
+  try {
+    const cfgEl = document.getElementById('pie-configmaps');
+    if (cfgEl) {
+      try {
+        const configmapsChart = echarts.init(cfgEl);
+        const configmapsData = allConfigData.configmaps;
+        const configmapsNamespaces = [...new Set(configmapsData.map(cm => cm.namespace))];
+        configmapsChart.setOption({
+          tooltip: { trigger: 'item' },
+          series: [{
+            type: 'pie',
+            radius: '70%',
+            data: configmapsNamespaces.map(ns => ({
+              value: configmapsData.filter(cm => cm.namespace === ns).length,
+              name: ns
+            })),
+            emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }}
+          }]
+        });
+      } catch (e) { console.debug('configmaps chart init failed', e); }
+    }
+
+    const secEl = document.getElementById('pie-secrets');
+    if (secEl) {
+      try {
+        const secretsChart = echarts.init(secEl);
+        const secretsData = allConfigData.secrets;
+        const secretTypes = [...new Set(secretsData.map(s => s.type))];
+        secretsChart.setOption({
+          tooltip: { trigger: 'item' },
+          series: [{
+            type: 'pie',
+            radius: '70%',
+            data: secretTypes.map(type => ({
+              value: secretsData.filter(s => s.type === type).length,
+              name: type
+            })),
+            emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }}
+          }]
+        });
+      } catch (e) { console.debug('secrets chart init failed', e); }
+    }
+
+    const quotasEl = document.getElementById('pie-resource-quotas');
+    if (quotasEl) {
+      try {
+        const quotasChart = echarts.init(quotasEl);
+        const quotasData = allConfigData.resource_quotas;
+        const quotasNamespaces = [...new Set(quotasData.map(q => q.namespace))];
+        quotasChart.setOption({
+          tooltip: { trigger: 'item' },
+          series: [{
+            type: 'pie',
+            radius: '70%',
+            data: quotasNamespaces.map(ns => ({
+              value: quotasData.filter(q => q.namespace === ns).length,
+              name: ns
+            })),
+            emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }}
+          }]
+        });
+      } catch (e) { console.debug('resource quotas chart init failed', e); }
+    }
+
+    const lrEl = document.getElementById('pie-limit-ranges');
+    if (lrEl) {
+      try {
+        const limitRangesChart = echarts.init(lrEl);
+        const limitRangesData = allConfigData.limit_ranges;
+        const limitRangesNamespaces = [...new Set(limitRangesData.map(lr => lr.namespace))];
+        limitRangesChart.setOption({
+          tooltip: { trigger: 'item' },
+          series: [{
+            type: 'pie',
+            radius: '70%',
+            data: limitRangesNamespaces.map(ns => ({
+              value: limitRangesData.filter(lr => lr.namespace === ns).length,
+              name: ns
+            })),
+            emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }}
+          }]
+        });
+      } catch (e) { console.debug('limit ranges chart init failed', e); }
+    }
+  } catch (e) {
+    console.debug('updateOverviewCharts top-level error', e);
+  }
+
+  try {
+    ['hpa', 'pdb', 'priority-classes', 'runtime-classes'].forEach(type => {
+      const el = document.getElementById(`pie-${type}`);
+      if (!el) return;
+      try {
+        const chart = echarts.init(el);
+        chart.setOption({
+          tooltip: { trigger: 'item' },
+          series: [{
+            type: 'pie',
+            radius: '70%',
+            data: [ { value: 1, name: 'Simülasyon Modu' } ],
+            emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }}
+          }]
+        });
+      } catch (e) { console.debug(type + ' chart init failed', e); }
+    });
+  } catch (e) { console.debug('extra charts block failed', e); }
+}
+
+function handleTabChange(tabId) {
+  switch(tabId) {
+    case 'configmaps':
+      fetchAndRenderConfigMapsTable();
+      break;
+    case 'secrets':
+      fetchAndRenderSecretsTable();
+      break;
+    case 'resource-quotas':
+      fetchAndRenderResourceQuotasTable();
+      break;
+    case 'limit-ranges':
+      fetchAndRenderLimitRangesTable();
+      break;
+  }
+}
+
+async function fetchAndRenderConfigMapsTable() {
+  const container = document.getElementById('configmaps-table-container');
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">ConfigMap listesi yükleniyor...</span></div>';
+  
+  try {
+  const ns = document.getElementById('configNamespaceSelect') ? document.getElementById('configNamespaceSelect').value : 'all';
+  const response = await fetch('/k8s-explorer/configmaps-summary' + (ns ? ('?namespace=' + encodeURIComponent(ns)) : ''));
+    const data = await response.json();
+    const configmaps = data.configmaps || [];
+    
+    let tableHtml = `
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Namespace</th>
+              <th>Name</th>
+              <th>Data Keys</th>
+              <th>Age</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    
+    configmaps.forEach(cm => {
+      const age = cm.creation_timestamp ? calculateAge(cm.creation_timestamp) : 'Unknown';
+      tableHtml += `
+        <tr>
+          <td><span class="badge bg-primary">${cm.namespace}</span></td>
+          <td><strong>${cm.name}</strong></td>
+          <td><span class="badge bg-info">${cm.data_count} keys</span></td>
+          <td>${age}</td>
+          <td>
+                <button type="button" class="btn btn-sm btn-outline-primary me-1 btn-view-configmap" data-name="${cm.name}" data-namespace="${cm.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('view', '${cm.name}', '${cm.namespace}')">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-configmap" data-name="${cm.name}" data-namespace="${cm.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('edit', '${cm.name}', '${cm.namespace}')">
+                  <i class="bi bi-pencil"></i>
+                </button>
+          </td>
+        </tr>
+      `;
+    });
+    
+    tableHtml += '</tbody></table></div>';
+    container.innerHTML = tableHtml;
+    // Attach click handlers to newly rendered buttons (use delegation-safe attachment)
+    container.querySelectorAll('.btn-view-configmap').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const name = btn.getAttribute('data-name');
+        const namespace = btn.getAttribute('data-namespace');
+        try { window.showConfigMap(name, namespace); } catch (err) { console.error('showConfigMap handler error', err); }
+      });
+    });
+    container.querySelectorAll('.btn-edit-configmap').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const name = btn.getAttribute('data-name');
+        const namespace = btn.getAttribute('data-namespace');
+        try { window.editConfigMap(name, namespace); } catch (err) { console.error('editConfigMap handler error', err); }
+      });
+    });
+    
+  } catch (error) {
+    container.innerHTML = '<div class="alert alert-danger">ConfigMap listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+  }
+}
+
+async function fetchAndRenderSecretsTable() {
+  const container = document.getElementById('secrets-table-container');
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Secret listesi yükleniyor...</span></div>';
+  
+  try {
+  const ns = document.getElementById('secretsNamespaceSelect') ? document.getElementById('secretsNamespaceSelect').value : 'all';
+  const response = await fetch('/k8s-explorer/secrets-summary' + (ns ? ('?namespace=' + encodeURIComponent(ns)) : ''));
+    const data = await response.json();
+    const secrets = data.secrets || [];
+    
+    let tableHtml = `
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Namespace</th>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Data Keys</th>
+              <th>Age</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    
+    secrets.forEach(secret => {
+      const age = secret.creation_timestamp ? calculateAge(secret.creation_timestamp) : 'Unknown';
+      const typeColor = secret.type === 'kubernetes.io/service-account-token' ? 'bg-success' : 
+                       secret.type === 'kubernetes.io/tls' ? 'bg-warning' : 'bg-secondary';
+      tableHtml += `
+        <tr>
+          <td><span class="badge bg-primary">${secret.namespace}</span></td>
+          <td><strong>${secret.name}</strong></td>
+          <td><span class="badge ${typeColor}">${secret.type}</span></td>
+          <td><span class="badge bg-info">${secret.data_count} keys</span></td>
+          <td>${age}</td>
+              <td>
+                <button type="button" class="btn btn-sm btn-outline-primary me-1 btn-view-secret" data-name="${secret.name}" data-namespace="${secret.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('view-secret', '${secret.name}', '${secret.namespace}')">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary me-1 btn-edit-secret" data-name="${secret.name}" data-namespace="${secret.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('edit-secret', '${secret.name}', '${secret.namespace}')">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-secret" data-name="${secret.name}" data-namespace="${secret.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('delete-secret', '${secret.name}', '${secret.namespace}')">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+        </tr>
+      `;
+    });
+    
+    tableHtml += '</tbody></table></div>';
+    container.innerHTML = tableHtml;
+  // Attach click handlers to newly rendered buttons (delegation exists globally; also attach direct handlers for redundancy)
+  container.querySelectorAll('.btn-view-secret').forEach(btn => btn.addEventListener('click', () => { const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.showSecret && window.showSecret(name, namespace); } catch(e){console.error(e);} }));
+  container.querySelectorAll('.btn-edit-secret').forEach(btn => btn.addEventListener('click', () => { const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.editSecret && window.editSecret(name, namespace); } catch(e){console.error(e);} }));
+  container.querySelectorAll('.btn-delete-secret').forEach(btn => btn.addEventListener('click', () => { const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.deleteSecret && window.deleteSecret(name, namespace); } catch(e){console.error(e);} }));
+    
+  } catch (error) {
+    container.innerHTML = '<div class="alert alert-danger">Secret listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+  }
+}
+
+async function fetchAndRenderResourceQuotasTable() {
+  const container = document.getElementById('resource-quotas-table-container');
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Resource Quota listesi yükleniyor...</span></div>';
+  
+  try {
+    const response = await fetch('/k8s-explorer/resource-quotas-summary');
+    const data = await response.json();
+    const quotas = data.resource_quotas || [];
+    
+    let tableHtml = `
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Namespace</th>
+              <th>Name</th>
+              <th>Hard Limits</th>
+              <th>Used</th>
+              <th>Age</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    
+    quotas.forEach(quota => {
+      const age = quota.creation_timestamp ? calculateAge(quota.creation_timestamp) : 'Unknown';
+      const hardLimits = Object.keys(quota.hard).length;
+      const usedResources = Object.keys(quota.used).length;
+      tableHtml += `
+        <tr>
+          <td><span class="badge bg-primary">${quota.namespace}</span></td>
+          <td><strong>${quota.name}</strong></td>
+          <td><span class="badge bg-warning">${hardLimits} limits</span></td>
+          <td><span class="badge bg-info">${usedResources} used</span></td>
+          <td>${age}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary me-1">
+              <i class="bi bi-eye"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-pencil"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+    
+    tableHtml += '</tbody></table></div>';
+    container.innerHTML = tableHtml;
+    
+  } catch (error) {
+    container.innerHTML = '<div class="alert alert-danger">Resource Quota listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+  }
+}
+
+async function fetchAndRenderLimitRangesTable() {
+  const container = document.getElementById('limit-ranges-table-container');
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Limit Range listesi yükleniyor...</span></div>';
+  
+  try {
+    const response = await fetch('/k8s-explorer/limit-ranges-summary');
+    const data = await response.json();
+    const limitRanges = data.limit_ranges || [];
+    
+    let tableHtml = `
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Namespace</th>
+              <th>Name</th>
+              <th>Limits Count</th>
+              <th>Age</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    
+    limitRanges.forEach(lr => {
+      const age = lr.creation_timestamp ? calculateAge(lr.creation_timestamp) : 'Unknown';
+      tableHtml += `
+        <tr>
+          <td><span class="badge bg-primary">${lr.namespace}</span></td>
+          <td><strong>${lr.name}</strong></td>
+          <td><span class="badge bg-info">${lr.limits_count} limits</span></td>
+          <td>${age}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary me-1">
+              <i class="bi bi-eye"></i>
+            </button>
+            <button class="btn btn-sm btn-outline-secondary">
+              <i class="bi bi-pencil"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+    
+    tableHtml += '</tbody></table></div>';
+    container.innerHTML = tableHtml;
+    
+  } catch (error) {
+    container.innerHTML = '<div class="alert alert-danger">Limit Range listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+  }
+}
+
+function calculateAge(timestamp) {
+  const now = new Date();
+  const created = new Date(timestamp);
+  const diffMs = now - created;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  
+  if (diffDays > 0) return `${diffDays}d`;
+  if (diffHours > 0) return `${diffHours}h`;
+  return `${diffMinutes}m`;
+}
+
+function refreshAllData() {
+  loadOverviewData();
+  const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+  handleTabChange(activeTab);
+}
+// The second function only supported JSON editing and was preventing key deletion from working properly
+
+window.showSecret = function(name, namespace) {
+  console.debug('showSecret called:', name, namespace);
+  
+  const existingViewModal = document.getElementById('secretViewModal');
+  if (existingViewModal) {
+    const existingInstance = bootstrap.Modal.getInstance(existingViewModal);
+    if (existingInstance) {
+      existingInstance.dispose();
+    }
+    existingViewModal.remove();
+  }
+  
+  fetch(`/k8s-explorer/secret?name=${encodeURIComponent(name)}&namespace=${encodeURIComponent(namespace)}`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.error) {
+        showToast('Secret yüklenirken hata: ' + data.error, 'error');
+        return;
+      }
+      
+      const secret = data.secret;
+      const modalHtml = `
+        <div class="modal fade" id="secretViewModal" tabindex="-1">
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Secret: ${secret.name}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <strong>Namespace:</strong> <span class="badge bg-primary">${secret.namespace}</span>
+                </div>
+                <div class="mb-3">
+                  <strong>Type:</strong> <span class="badge bg-info">${secret.type || 'Opaque'}</span>
+                </div>
+                <div class="mb-3">
+                  <strong>Data:</strong>
+                </div>
+                <div class="table-responsive">
+                  <table class="table table-bordered">
+                    <thead>
+                      <tr>
+                        <th>Key</th>
+                        <th>Value</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${Object.entries(secret.data || {}).map(([key, value]) => `
+                        <tr>
+                          <td><code>${key}</code></td>
+                          <td>
+                            <div class="secret-value-container">
+                              <span class="secret-value-hidden">••••••••</span>
+                              <pre class="secret-value-shown mb-0 d-none" style="max-height: 200px; overflow-y: auto;">${value}</pre>
+                            </div>
+                          </td>
+                          <td>
+                            <button type="button" class="btn btn-sm btn-outline-secondary toggle-secret-value">
+                              <i class="bi bi-eye"></i> Show
+                            </button>
+                          </td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="window.editSecret('${secret.name}', '${secret.namespace}');">Edit</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Add modal to body and show
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      const modalElement = document.getElementById('secretViewModal');
+      const modal = new bootstrap.Modal(modalElement);
+      
+      // Add toggle functionality for secret values
+      modalElement.addEventListener('click', function(e) {
+        if (e.target.closest('.toggle-secret-value')) {
+          const btn = e.target.closest('tr').querySelector('.secret-value-container');
+          const hiddenSpan = container.querySelector('.secret-value-hidden');
+          const shownPre = container.querySelector('.secret-value-shown');
+          const icon = btn.querySelector('i');
+          
+          if (hiddenSpan.classList.contains('d-none')) {
+            // Currently showing, hide it
+            hiddenSpan.classList.remove('d-none');
+            shownPre.classList.add('d-none');
+            btn.innerHTML = '<i class="bi bi-eye"></i> Show';
+          } else {
+            // Currently hidden, show it
+            hiddenSpan.classList.add('d-none');
+            shownPre.classList.remove('d-none');
+            btn.innerHTML = '<i class="bi bi-eye-slash"></i> Hide';
+          }
+        }
+      });
+      
+      modalElement.addEventListener('hidden.bs.modal', function () {
+        modal.dispose();
+        modalElement.remove();
+        // Restore body scroll
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+      });
+      
+      modal.show();
+    })
+    .catch(error => {
+      console.error('Error fetching Secret:', error);
+      showToast('Secret yüklenirken hata: ' + error.message, 'error');
+    });
+};
+
+let activeRequests = new Set();
+
+function isRequestActive(key) {
+  return activeRequests.has(key);
+}
+
+function setRequestActive(key) {
+  activeRequests.add(key);
+}
+
+function setRequestInactive(key) {
+  activeRequests.delete(key);
+}
+
+window.editSecret = function(name, namespace) {
+  console.debug('editSecret called:', name, namespace);
+  
+  const requestKey = `edit-secret-${name}-${namespace}`;
+  if (isRequestActive(requestKey)) {
+    console.debug('editSecret already in progress, ignoring');
+    return;
+  }
+  setRequestActive(requestKey);
+  
+  // Clean up any existing modals
+  const existingEditModal = document.getElementById('secretEditModal');
+  if (existingEditModal) {
+    const existingInstance = bootstrap.Modal.getInstance(existingEditModal);
+    if (existingInstance) {
+      existingInstance.dispose();
+    }
+    existingEditModal.remove();
+  }
+  
+  const existingViewModal = document.getElementById('secretViewModal');
+  if (existingViewModal) {
+    const viewInstance = bootstrap.Modal.getInstance(existingViewModal);
+    if (viewInstance) {
+      viewInstance.hide();
+    }
+  }
+  
+  fetch(`/k8s-explorer/secret?name=${encodeURIComponent(name)}&namespace=${encodeURIComponent(namespace)}`)
+    .then(response => response.json())
+    .then(data => {
+      setRequestInactive(requestKey);
+      
+      if (data.error) {
+        showToast('Secret yüklenirken hata: ' + data.error, 'error');
+        return;
+      }
+      
+      const secret = data.secret;
+      const modalHtml = `
+        <div class="modal fade" id="secretEditModal" tabindex="-1">
+          <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Edit Secret: ${secret.name}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <strong>Namespace:</strong> <span class="badge bg-primary">${secret.namespace}</span>
+                </div>
+                <div class="mb-3">
+                  <strong>Type:</strong> <span class="badge bg-info">${secret.type || 'Opaque'}</span>
+                </div>
+                <div class="mb-3">
+                  <strong>Data:</strong>
+                  <small class="text-muted ms-2">Edit the key-value pairs below</small>
+                </div>
+                <div id="secretDataEditor">
+                  ${Object.entries(secret.data || {}).map(([key, value], index) => `
+                    <div class="row mb-3 secret-data-row">
+                      <div class="col-md-3">
+                        <label class="form-label">Key</label>
+                        <input type="text" class="form-control secret-key" value="${key}" data-original-key="${key}">
+                      </div>
+                      <div class="col-md-8">
+                        <label class="form-label">Value</label>
+                        <textarea class="form-control secret-value" rows="3" style="font-family: monospace;">${value}</textarea>
+                      </div>
+                      <div class="col-md-1 d-flex align-items-end">
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-secret-row">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+                <button type="button" class="btn btn-outline-success btn-sm" id="addSecretRow">
+                  <i class="bi bi-plus"></i> Add New Key-Value Pair
+                </button>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveSecret">Save Changes</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Add modal to body and show
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      const modalElement = document.getElementById('secretEditModal');
+      const modal = new bootstrap.Modal(modalElement);
+      
+      modalElement.addEventListener('hidden.bs.modal', function () {
+        modal.dispose();
+        modalElement.remove();
+        // Restore body scroll
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+      });
+      
+      modal.show();
+      
+      const addRowBtn = document.getElementById('addSecretRow');
+      const saveBtn = document.getElementById('saveSecret');
+      const editor = document.getElementById('secretDataEditor');
+      
+      // Add new row functionality
+      addRowBtn.addEventListener('click', function addNewRow() {
+        const newRowHtml = `
+          <div class="row mb-3 secret-data-row">
+            <div class="col-md-3">
+              <label class="form-label">Key</label>
+              <input type="text" class="form-control secret-key" value="" data-original-key="">
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Value</label>
+              <textarea class="form-control secret-value" rows="3" style="font-family: monospace;"></textarea>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+              <button type="button" class="btn btn-outline-danger btn-sm remove-secret-row">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+        `;
+        editor.insertAdjacentHTML('beforeend', newRowHtml);
+      });
+      
+      // Remove row functionality with event delegation
+      editor.addEventListener('click', function handleRowRemoval(e) {
+        if (e.target.closest('.remove-secret-row')) {
+          const rowToRemove = e.target.closest('.secret-data-row');
+          if (rowToRemove) {
+            rowToRemove.remove();
+          }
+        }
+      });
+      
+      saveBtn.addEventListener('click', function saveSecretData() {
+        const rows = editor.querySelectorAll('.secret-data-row');
+        const newData = {};
+        const seenKeys = new Set();
+        let hasError = false;
+        
+        // Only process visible rows that are still in the DOM
+        const validRows = Array.from(rows).filter(row => 
+          row.parentNode && 
+          row.offsetParent !== null && 
+          !row.hasAttribute('data-removed')
+        );
+        
+        validRows.forEach((row) => {
+          const keyInput = row.querySelector('.secret-key');
+          const valueInput = row.querySelector('.secret-value');
+          
+          if (!keyInput || !valueInput) {
+            return;
+          }
+          
+          const key = keyInput.value.trim();
+          const value = valueInput.value;
+          
+          if (key === '') {
+            showToast('Tüm anahtarların değeri olmalıdır', 'error');
+            hasError = true;
+            return;
+          }
+          
+          if (seenKeys.has(key)) {
+            showToast('Tekrarlanan anahtar bulundu: ' + key, 'error');
+            hasError = true;
+            return;
+          }
+          
+          seenKeys.add(key);
+          newData[key] = value;
+        });
+        
+        if (hasError) return;
+
+        const saveRequestKey = `save-secret-${secret.name}-${secret.namespace}`;
+        if (isRequestActive(saveRequestKey)) {
+          console.debug('Save already in progress, ignoring');
+          return;
+        }
+        setRequestActive(saveRequestKey);
+        
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Kaydediliyor...';
+        
+        // Save to backend
+        fetch('/k8s-explorer/update-secret', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: secret.name,
+            namespace: secret.namespace,
+            data: newData
+          })
+        })
+        .then(response => response.json())
+        .then(result => {
+          setRequestInactive(saveRequestKey);
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Kaydet';
+          
+          if (result.error) {
+            showToast('Secret kaydedilirken hata: ' + result.error, 'error');
+          } else {
+            showToast('Secret başarıyla kaydedildi!', 'success');
+            modal.hide();
+            // Refresh the table
+            if (typeof fetchAndRenderSecretsTable === 'function') {
+              fetchAndRenderSecretsTable();
+            }
+          }
+        })
+        .catch(error => {
+          setRequestInactive(saveRequestKey);
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Kaydet';
+          console.error('Error saving Secret:', error);
+          showToast('Secret kaydedilirken hata: ' + error.message, 'error');
+        })
+        .finally(() => {
+          // Re-enable save button
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Değişiklikleri Kaydet';
+        });
+      });
+    })
+    .catch(error => {
+      setRequestInactive(requestKey);
+      console.error('Error fetching Secret:', error);
+      showToast('Secret yüklenirken hata: ' + error.message, 'error');
+    });
+};
+
+window.deleteSecret = function(name, namespace) {
+  console.debug('deleteSecret called:', name, namespace);
+  
+  const requestKey = `delete-secret-${name}-${namespace}`;
+  if (isRequestActive(requestKey)) {
+    console.debug('deleteSecret already in progress, ignoring');
+    return;
+  }
+  
+  if (!confirm(`"${name}" Secret'ını "${namespace}" namespace'inde silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
+    return;
+  }
+  
+  setRequestActive(requestKey);
+  
+  fetch('/k8s-explorer/delete-secret', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: name,
+      namespace: namespace
+    })
+  })
+  .then(response => response.json())
+  .then(result => {
+    setRequestInactive(requestKey);
+    
+    if (result.error) {
+      showToast('Secret silinirken hata: ' + result.error, 'error');
+    } else {
+      showToast('Secret başarıyla silindi!', 'success');
+      // Refresh the table
+      if (typeof fetchAndRenderSecretsTable === 'function') {
+        fetchAndRenderSecretsTable();
+      }
+    }
+  })
+  .catch(error => {
+    setRequestInactive(requestKey);
+    console.error('Error deleting Secret:', error);
+    showToast('Secret silinirken hata: ' + error.message, 'error');
+  });
+};
+
+  container.querySelectorAll('.btn-view-secret').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.showSecret && window.showSecret(name, namespace); } catch(e){console.error(e);} }));
+  container.querySelectorAll('.btn-edit-secret').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.editSecret && window.editSecret(name, namespace); } catch(e){console.error(e);} }));
+  container.querySelectorAll('.btn-delete-secret').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.deleteSecret && window.deleteSecret(name, namespace); } catch(e){console.error(e);} }));
+
+document.addEventListener('click', function(event) {
+  if (event.target.matches('[data-action="view-configmap"]')) {
+    event.stopPropagation();
+    const name = event.target.getAttribute('data-name');
+    const namespace = event.target.getAttribute('data-namespace');
+    if (name && namespace) {
+      window.showConfigMap(name, namespace);
+    }
+  }
+  
+  if (event.target.matches('[data-action="edit-configmap"]')) {
+    event.stopPropagation();
+    const name = event.target.getAttribute('data-name');
+    const namespace = event.target.getAttribute('data-namespace');
+    if (name && namespace) {
+      window.editConfigMap(name, namespace);
+    }
+  }
+  
+    if (event.target.matches('[data-action="view-secret"]')) {
+    event.stopPropagation();
+    const name = event.target.getAttribute('data-name');
+    const namespace = event.target.getAttribute('data-namespace');
+    if (name && namespace) {
+      window.showSecret(name, namespace);
+    }
+  }
+  
+  if (event.target.matches('[data-action="edit-secret"]')) {
+    event.stopPropagation();
+    const name = event.target.getAttribute('data-name');
+    const namespace = event.target.getAttribute('data-namespace');
+    if (name && namespace) {
+      window.editSecret(name, namespace);
+    }
+  }
+    if (event.target.matches('[data-action="delete-secret"]')) {
+    event.stopPropagation();
+    const name = event.target.getAttribute('data-name');
+    const namespace = event.target.getAttribute('data-namespace');
+    if (name && namespace) {
+      window.deleteSecret(name, namespace);
+    }
+  }
+});
+
+</script>
+
+<!-- Moving modals inside the content block before endblock -->
+<!-- ConfigMap view and edit modals -->
+<div class="modal fade" id="configMapViewModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="configMapViewModalLabel">ConfigMap</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="configMapViewBody">Yükleniyor...</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="configMapEditModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="configMapEditModalLabel">ConfigMap Düzenle</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="configMapEditBody">Yükleniyor...</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+        <button type="button" class="btn btn-primary" onclick="saveConfigMap()">Kaydet</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Secret view and edit modals -->
+<div class="modal fade" id="secretViewModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="secretViewModalLabel">Secret</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="secretViewBody">Yükleniyor...</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="secretEditModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="secretEditModalLabel">Secret Düzenle</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="secretEditBody">Yükleniyor...</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+        <button type="button" class="btn btn-primary" onclick="saveSecret()">Kaydet</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+</html>

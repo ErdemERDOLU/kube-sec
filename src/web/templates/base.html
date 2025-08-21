@@ -254,6 +254,13 @@
                             <i class="bi bi-layers me-1"></i>Workloads
                         </a>
                     </li>
+                    
+                    <!-- Added Config tab next to Workloads -->
+                    <li class="nav-item">
+                        <a class="nav-link" href="/config">
+                            <i class="bi bi-gear me-1"></i>Config
+                        </a>
+                    </li>
                 </ul>
                 
                 <!-- Theme toggle -->
@@ -323,6 +330,132 @@
         }
     </script>
     
-    {% block scripts %}{% endblock %}
+        <!-- Cluster health toast (top-right) -->
+        <div aria-live="polite" aria-atomic="true" class="position-fixed top-0 end-0 p-3" style="z-index: 1080;">
+            <div id="clusterHealthToast" class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="false" style="display:none;">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <strong id="clusterHealthTitle">Kubernetes bağlantı hatası</strong>
+                        <div id="clusterHealthMessage" class="small">Cluster'a bağlanılamıyor.</div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Kapat"></button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Cluster health poller: polls /k8s-explorer/health every 10s with a 5s request timeout.
+            (function(){
+                const POLL_INTERVAL = 10000; // 10s
+                const REQUEST_TIMEOUT = 5000; // 5s
+                const FAILURE_THRESHOLD = 30000; // 30s
+
+                let firstFailureAt = null;
+                let toastInstance = null;
+
+                function showClusterAlert(contextName, error) {
+                    const toastEl = document.getElementById('clusterHealthToast');
+                    const titleEl = document.getElementById('clusterHealthTitle');
+                    const msgEl = document.getElementById('clusterHealthMessage');
+                    if (!toastEl || !titleEl || !msgEl) return;
+                    titleEl.textContent = `Kubernetes cluster'a bağlanılamadı${contextName ? ` (${contextName})` : ''}`;
+                    msgEl.textContent = error ? String(error) : `30 saniye içinde bu cluster'a bağlanamadı.`;
+                    toastEl.style.display = 'block';
+                    if (!toastInstance) toastInstance = bootstrap.Toast.getOrCreateInstance(toastEl, { autohide: false });
+                    toastInstance.show();
+                }
+
+                function hideClusterAlert() {
+                    const toastEl = document.getElementById('clusterHealthToast');
+                    if (!toastEl) return;
+                    if (toastInstance) toastInstance.hide();
+                    // reset display after hidden (Bootstrap removes show class but keeps element)
+                    setTimeout(() => { toastEl.style.display = 'none'; }, 300);
+                }
+
+                async function checkHealth() {
+                    const controller = new AbortController();
+                    const id = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+                    let ok = false;
+                    let context = null;
+                    let error = null;
+                    try {
+                        const res = await fetch('/k8s-explorer/health', { signal: controller.signal });
+                        clearTimeout(id);
+                        if (!res.ok) {
+                            error = `HTTP ${res.status}`;
+                            ok = false;
+                        } else {
+                            const json = await res.json();
+                            ok = !!json.ok;
+                            context = json.context;
+                            error = json.error || null;
+                        }
+                    } catch (e) {
+                        clearTimeout(id);
+                        ok = false;
+                        error = e && e.name === 'AbortError' ? 'İstek zaman aşımına uğradı' : String(e);
+                    }
+
+                    const now = Date.now();
+                    if (ok) {
+                        firstFailureAt = null;
+                        hideClusterAlert();
+                    } else {
+                        if (!firstFailureAt) firstFailureAt = now;
+                        const elapsed = now - firstFailureAt;
+                        // Show toast only after continuous failures exceeding threshold
+                        if (elapsed >= FAILURE_THRESHOLD) {
+                            // Determine context name if object
+                            let ctxName = null;
+                            try {
+                                if (context) {
+                                    if (typeof context === 'string') ctxName = context;
+                                    else if (context.name) ctxName = context.name;
+                                    else ctxName = JSON.stringify(context);
+                                }
+                            } catch (e) { ctxName = null; }
+                            showClusterAlert(ctxName, error);
+                        }
+                    }
+                }
+
+                document.addEventListener('DOMContentLoaded', function(){
+                    // initial immediate check
+                    checkHealth();
+                    // periodic polling
+                    setInterval(checkHealth, POLL_INTERVAL);
+                });
+            })();
+        </script>
+
+</script>
+
+        <!-- Global user toast (top-right) -->
+        <div aria-live="polite" aria-atomic="true" class="position-fixed top-0 end-0 p-3" style="z-index: 2099;">
+            <div id="globalUserToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000" style="display:none;">
+                <div class="d-flex">
+                    <div class="toast-body" id="globalUserToastBody">İşleminiz başarılı.</div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Kapat"></button>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            window.showUserToast = function(message, success = true) {
+                try {
+                    const toastEl = document.getElementById('globalUserToast');
+                    const body = document.getElementById('globalUserToastBody');
+                    if (!toastEl || !body) return;
+                    body.textContent = message || (success ? 'İşleminiz başarıyla yapıldı.' : 'Bir hata oluştu.');
+                    toastEl.className = 'toast align-items-center text-bg-' + (success ? 'success' : 'danger') + ' border-0';
+                    toastEl.style.display = 'block';
+                    const t = bootstrap.Toast.getOrCreateInstance(toastEl);
+                    t.show();
+                } catch (e) { console.debug('showUserToast error', e); }
+            };
+        </script>
+
+        {% block scripts %}{% endblock %}
 </body>
 </html>

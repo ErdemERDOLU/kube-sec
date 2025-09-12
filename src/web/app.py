@@ -67,6 +67,782 @@ harbor_trivy_cache = {}
 harbor_trivy_cache_time = {}
 
 
+# HPA summary endpoint
+@app.route('/k8s-explorer/hpa-summary')
+def hpa_summary():
+    try:
+        namespace = request.args.get('namespace')
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        autoscaling_v1 = client.AutoscalingV1Api()
+        if namespace:
+            hpas = autoscaling_v1.list_namespaced_horizontal_pod_autoscaler(namespace).items
+        else:
+            hpas = autoscaling_v1.list_horizontal_pod_autoscaler_for_all_namespaces().items
+        result = []
+        for hpa in hpas:
+            md = hpa.metadata
+            spec = hpa.spec
+            status = hpa.status
+            result.append({
+                'namespace': md.namespace,
+                'name': md.name,
+                'min_replicas': getattr(spec, 'min_replicas', None),
+                'max_replicas': getattr(spec, 'max_replicas', None),
+                'current_replicas': getattr(status, 'current_replicas', None),
+                'desired_replicas': getattr(status, 'desired_replicas', None),
+                'creation_timestamp': md.creation_timestamp.isoformat() if getattr(md, 'creation_timestamp', None) else None,
+                'metrics': getattr(spec, 'metrics', None),
+                'target_kind': getattr(spec.scale_target_ref, 'kind', None) if getattr(spec, 'scale_target_ref', None) else None,
+                'target_name': getattr(spec.scale_target_ref, 'name', None) if getattr(spec, 'scale_target_ref', None) else None
+            })
+        return jsonify({'hpas': result})
+    except Exception as e:
+        return jsonify({'hpas': [], 'error': str(e)})
+
+# Get a single HPA details
+@app.route('/k8s-explorer/hpa')
+def get_hpa():
+    try:
+        name = request.args.get('name')
+        namespace = request.args.get('namespace')
+        if not name or not namespace:
+            return jsonify({'error': 'name and namespace are required'}), 400
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        autoscaling_v1 = client.AutoscalingV1Api()
+        hpa = autoscaling_v1.read_namespaced_horizontal_pod_autoscaler(name=name, namespace=namespace)
+        md = hpa.metadata
+        spec = hpa.spec
+        status = hpa.status
+        return jsonify({'hpa': {
+            'namespace': md.namespace,
+            'name': md.name,
+            'min_replicas': getattr(spec, 'min_replicas', None),
+            'max_replicas': getattr(spec, 'max_replicas', None),
+            'current_replicas': getattr(status, 'current_replicas', None),
+            'desired_replicas': getattr(status, 'desired_replicas', None),
+            'creation_timestamp': md.creation_timestamp.isoformat() if getattr(md, 'creation_timestamp', None) else None,
+            'metrics': getattr(spec, 'metrics', None),
+            'target_kind': getattr(spec.scale_target_ref, 'kind', None) if getattr(spec, 'scale_target_ref', None) else None,
+            'target_name': getattr(spec.scale_target_ref, 'name', None) if getattr(spec, 'scale_target_ref', None) else None
+        }})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Update HPA (min/max replicas)
+@app.route('/k8s-explorer/update-hpa', methods=['POST'])
+def update_hpa():
+    try:
+        data = request.get_json(force=True) or {}
+        name = data.get('name')
+        namespace = data.get('namespace')
+        min_r = data.get('min_replicas')
+        max_r = data.get('max_replicas')
+        if not name or not namespace:
+            return jsonify({'error': 'name and namespace are required'}), 400
+        if min_r is None and max_r is None:
+            return jsonify({'error': 'nothing to update'}), 400
+
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        autoscaling_v1 = client.AutoscalingV1Api()
+
+        patch_spec = {}
+        if min_r is not None:
+            try:
+                patch_spec['minReplicas'] = int(min_r)
+            except Exception:
+                return jsonify({'error': 'min_replicas must be an integer'}), 400
+        if max_r is not None:
+            try:
+                patch_spec['maxReplicas'] = int(max_r)
+            except Exception:
+                return jsonify({'error': 'max_replicas must be an integer'}), 400
+
+        patch_body = {'spec': patch_spec}
+        resp = autoscaling_v1.patch_namespaced_horizontal_pod_autoscaler(name=name, namespace=namespace, body=patch_body)
+        return jsonify({'status': 'ok', 'name': name, 'namespace': namespace})
+    except ApiException as e:
+        try:
+            return jsonify({'error': e.body}), e.status
+        except Exception:
+            return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Delete HPA
+@app.route('/k8s-explorer/delete-hpa', methods=['POST'])
+def delete_hpa():
+    try:
+        data = request.get_json(force=True) or {}
+        name = data.get('name')
+        namespace = data.get('namespace')
+        if not name or not namespace:
+            return jsonify({'error': 'name and namespace are required'}), 400
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        autoscaling_v1 = client.AutoscalingV1Api()
+        autoscaling_v1.delete_namespaced_horizontal_pod_autoscaler(name=name, namespace=namespace)
+        return jsonify({'status': 'deleted', 'name': name, 'namespace': namespace})
+    except ApiException as e:
+        try:
+            return jsonify({'error': e.body}), e.status
+        except Exception:
+            return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# PDB summary endpoint
+@app.route('/k8s-explorer/pdb-summary')
+def pdb_summary():
+    try:
+        namespace = request.args.get('namespace')
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        policy_v1 = client.PolicyV1Api()
+        if namespace and namespace != 'all':
+            pdbs = policy_v1.list_namespaced_pod_disruption_budget(namespace).items
+        else:
+            pdbs = policy_v1.list_pod_disruption_budget_for_all_namespaces().items
+        result = []
+        for pdb in pdbs:
+            md = pdb.metadata
+            spec = pdb.spec or {}
+            status = pdb.status or {}
+            min_avail = getattr(spec, 'min_available', None)
+            max_unavail = getattr(spec, 'max_unavailable', None)
+            # IntOrString -> render as string
+            def int_or_str(val):
+                try:
+                    return str(val)
+                except Exception:
+                    return None
+            result.append({
+                'namespace': getattr(md, 'namespace', None),
+                'name': getattr(md, 'name', None),
+                'min_available': int_or_str(min_avail),
+                'max_unavailable': int_or_str(max_unavail),
+                'disruptions_allowed': getattr(status, 'disruptions_allowed', None),
+                'current_healthy': getattr(status, 'current_healthy', None),
+                'desired_healthy': getattr(status, 'desired_healthy', None),
+                'expected_pods': getattr(status, 'expected_pods', None),
+                'creation_timestamp': md.creation_timestamp.isoformat() if getattr(md, 'creation_timestamp', None) else None,
+                'selector': getattr(spec, 'selector', None).to_dict() if getattr(spec, 'selector', None) else None
+            })
+        return jsonify({'pdbs': result})
+    except Exception as e:
+        return jsonify({'pdbs': [], 'error': str(e)})
+
+# Leases summary endpoint (namespaced)
+@app.route('/k8s-explorer/leases-summary')
+def leases_summary():
+    try:
+        namespace = request.args.get('namespace')
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        coord_v1 = client.CoordinationV1Api()
+        if namespace and namespace != 'all':
+            leases = coord_v1.list_namespaced_lease(namespace).items
+        else:
+            leases = coord_v1.list_lease_for_all_namespaces().items
+
+        def dt_to_iso(x):
+            try:
+                return x.isoformat() if getattr(x, 'isoformat', None) else (str(x) if x else None)
+            except Exception:
+                return None
+
+        result = []
+        for le in leases:
+            md = le.metadata
+            spec = getattr(le, 'spec', None)
+            result.append({
+                'namespace': getattr(md, 'namespace', None),
+                'name': getattr(md, 'name', None),
+                'holder_identity': getattr(spec, 'holder_identity', None) if spec else None,
+                'lease_duration_seconds': getattr(spec, 'lease_duration_seconds', None) if spec else None,
+                'acquire_time': dt_to_iso(getattr(spec, 'acquire_time', None)) if spec else None,
+                'renew_time': dt_to_iso(getattr(spec, 'renew_time', None)) if spec else None,
+                'lease_transitions': getattr(spec, 'lease_transitions', None) if spec else None,
+                'creation_timestamp': md.creation_timestamp.isoformat() if getattr(md, 'creation_timestamp', None) else None
+            })
+        return jsonify({'leases': result})
+    except Exception as e:
+        return jsonify({'leases': [], 'error': str(e)})
+
+# Mutating Webhooks summary (cluster-scoped; optional namespace filter by service namespace)
+@app.route('/k8s-explorer/mutating-webhooks-summary')
+def mutating_webhooks_summary():
+    try:
+        namespace = request.args.get('namespace')
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        ar = client.AdmissionregistrationV1Api()
+        items = ar.list_mutating_webhook_configuration().items
+        result = []
+        for cfg in items:
+            md = cfg.metadata
+            webhooks = getattr(cfg, 'webhooks', []) or []
+            # Collect referenced services and basic policies
+            services = []
+            rules_count = 0
+            failure_policies = set()
+            for wh in webhooks:
+                cc = getattr(wh, 'client_config', None)
+                svc = getattr(cc, 'service', None) if cc else None
+                if svc:
+                    services.append({
+                        'namespace': getattr(svc, 'namespace', None),
+                        'name': getattr(svc, 'name', None),
+                        'path': getattr(svc, 'path', None),
+                        'port': getattr(svc, 'port', None),
+                    })
+                rules = getattr(wh, 'rules', None) or []
+                rules_count += len(rules)
+                if getattr(wh, 'failure_policy', None):
+                    failure_policies.add(wh.failure_policy)
+
+            # Optional filtering by service namespace
+            if namespace and namespace != 'all':
+                if not any(s.get('namespace') == namespace for s in services):
+                    continue
+
+            result.append({
+                'name': getattr(md, 'name', None),
+                'webhooks_count': len(webhooks),
+                'services': services,
+                'rules_count': rules_count,
+                'failure_policy': ','.join(sorted(failure_policies)) if failure_policies else None,
+                'creation_timestamp': md.creation_timestamp.isoformat() if getattr(md, 'creation_timestamp', None) else None
+            })
+        return jsonify({'mutating_webhooks': result})
+    except Exception as e:
+        return jsonify({'mutating_webhooks': [], 'error': str(e)})
+
+# Validating Webhooks summary (cluster-scoped; optional namespace filter by service namespace)
+@app.route('/k8s-explorer/validating-webhooks-summary')
+def validating_webhooks_summary():
+    try:
+        namespace = request.args.get('namespace')
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        ar = client.AdmissionregistrationV1Api()
+        items = ar.list_validating_webhook_configuration().items
+        result = []
+        for cfg in items:
+            md = cfg.metadata
+            webhooks = getattr(cfg, 'webhooks', []) or []
+            services = []
+            rules_count = 0
+            failure_policies = set()
+            for wh in webhooks:
+                cc = getattr(wh, 'client_config', None)
+                svc = getattr(cc, 'service', None) if cc else None
+                if svc:
+                    services.append({
+                        'namespace': getattr(svc, 'namespace', None),
+                        'name': getattr(svc, 'name', None),
+                        'path': getattr(svc, 'path', None),
+                        'port': getattr(svc, 'port', None),
+                    })
+                rules = getattr(wh, 'rules', None) or []
+                rules_count += len(rules)
+                if getattr(wh, 'failure_policy', None):
+                    failure_policies.add(wh.failure_policy)
+
+            if namespace and namespace != 'all':
+                if not any(s.get('namespace') == namespace for s in services):
+                    continue
+
+            result.append({
+                'name': getattr(md, 'name', None),
+                'webhooks_count': len(webhooks),
+                'services': services,
+                'rules_count': rules_count,
+                'failure_policy': ','.join(sorted(failure_policies)) if failure_policies else None,
+                'creation_timestamp': md.creation_timestamp.isoformat() if getattr(md, 'creation_timestamp', None) else None
+            })
+        return jsonify({'validating_webhooks': result})
+    except Exception as e:
+        return jsonify({'validating_webhooks': [], 'error': str(e)})
+
+# PriorityClasses summary endpoint (cluster-scoped)
+@app.route('/k8s-explorer/priority-classes-summary')
+def priority_classes_summary():
+    try:
+        # Optional namespace param is accepted for UI consistency but ignored (PriorityClass is cluster-scoped)
+        _ = request.args.get('namespace')
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        scheduling_v1 = client.SchedulingV1Api()
+        pcs = scheduling_v1.list_priority_class().items
+        result = []
+        for pc in pcs:
+            md = pc.metadata
+            result.append({
+                'name': getattr(md, 'name', None),
+                'value': getattr(pc, 'value', None),
+                'global_default': getattr(pc, 'global_default', None),
+                'description': getattr(pc, 'description', None),
+                'preemption_policy': getattr(pc, 'preemption_policy', None),
+                'creation_timestamp': md.creation_timestamp.isoformat() if getattr(md, 'creation_timestamp', None) else None
+            })
+        return jsonify({'priority_classes': result})
+    except Exception as e:
+        return jsonify({'priority_classes': [], 'error': str(e)})
+
+# RuntimeClasses summary endpoint (cluster-scoped)
+@app.route('/k8s-explorer/runtime-classes-summary')
+def runtime_classes_summary():
+    try:
+        # Optional namespace param accepted for UI parity; ignored (RuntimeClass is cluster-scoped)
+        _ = request.args.get('namespace')
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        # Use CustomObjectsApi for broad compatibility
+        co = client.CustomObjectsApi()
+        objs = co.list_cluster_custom_object(group="node.k8s.io", version="v1", plural="runtimeclasses")
+        items = objs.get('items', [])
+        result = []
+        for rc in items:
+            md = rc.get('metadata', {})
+            spec = rc.get('spec', {})
+            scheduling = spec.get('scheduling') or {}
+            overhead = spec.get('overhead') or {}
+            # common fields
+            result.append({
+                'name': md.get('name'),
+                'handler': spec.get('handler'),
+                'scheduling': {
+                    'node_selector': scheduling.get('nodeSelector'),
+                    'tolerations': scheduling.get('tolerations'),
+                },
+                'overhead': overhead,
+                'creation_timestamp': md.get('creationTimestamp')
+            })
+        return jsonify({'runtime_classes': result})
+    except Exception as e:
+        return jsonify({'runtime_classes': [], 'error': str(e)})
+
+# Get a single RuntimeClass details (cluster-scoped)
+@app.route('/k8s-explorer/runtime-class')
+def get_runtime_class():
+    try:
+        name = request.args.get('name')
+        if not name:
+            return jsonify({'error': 'name is required'}), 400
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        co = client.CustomObjectsApi()
+        rc = co.get_cluster_custom_object(group="node.k8s.io", version="v1", plural="runtimeclasses", name=name)
+        md = rc.get('metadata', {})
+        spec = rc.get('spec', {})
+        scheduling = spec.get('scheduling') or {}
+        overhead = spec.get('overhead') or {}
+        return jsonify({'runtime_class': {
+            'name': md.get('name'),
+            'handler': spec.get('handler'),
+            'scheduling': {
+                'node_selector': scheduling.get('nodeSelector'),
+                'tolerations': scheduling.get('tolerations'),
+            },
+            'overhead': overhead,
+            'creation_timestamp': md.get('creationTimestamp')
+        }})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Update RuntimeClass (cluster-scoped)
+@app.route('/k8s-explorer/update-runtime-class', methods=['POST'])
+def update_runtime_class():
+    try:
+        data = request.get_json(force=True) or {}
+        name = data.get('name')
+        if not name:
+            return jsonify({'error': 'name is required'}), 400
+
+        # Handler genelde değiştirilmeyen bir alandır; güvenli tarafta kalarak reddedelim
+        if 'handler' in data and data.get('handler') not in (None, ''):
+            return jsonify({'error': 'RuntimeClass.handler güncellenemez. Gerekirse yeni bir RuntimeClass oluşturun.'}), 400
+
+        node_selector_str = data.get('node_selector')  # e.g. "k=v,k2=v2"
+        tolerations_json = data.get('tolerations')     # array or JSON string
+        overhead_json = data.get('overhead')           # dict or JSON string
+
+        # Build patch
+        patch_spec = {}
+        sched = {}
+
+        # nodeSelector parse
+        if node_selector_str is not None:
+            if node_selector_str == '':
+                sched['nodeSelector'] = None
+            else:
+                try:
+                    node_selector = {}
+                    for pair in [p.strip() for p in node_selector_str.split(',') if p.strip()]:
+                        if '=' in pair:
+                            k, v = pair.split('=', 1)
+                            node_selector[k.strip()] = v.strip()
+                        else:
+                            return jsonify({'error': f'Geçersiz nodeSelector girdisi: {pair} (k=v formatı)'}), 400
+                    sched['nodeSelector'] = node_selector
+                except Exception as pe:
+                    return jsonify({'error': f'nodeSelector parse hatası: {pe}'}), 400
+
+        # tolerations parse
+        if tolerations_json is not None:
+            if isinstance(tolerations_json, str):
+                if tolerations_json.strip() == '':
+                    sched['tolerations'] = None
+                else:
+                    try:
+                        parsed = json.loads(tolerations_json)
+                        if not isinstance(parsed, list):
+                            return jsonify({'error': 'tolerations JSON bir dizi olmalı'}), 400
+                        sched['tolerations'] = parsed
+                    except Exception as je:
+                        return jsonify({'error': f'tolerations JSON hatası: {je}'}), 400
+            else:
+                # assume array or None
+                if tolerations_json == '':
+                    sched['tolerations'] = None
+                else:
+                    sched['tolerations'] = tolerations_json
+
+        if sched:
+            patch_spec['scheduling'] = sched
+
+        # overhead parse
+        if overhead_json is not None:
+            if isinstance(overhead_json, str):
+                if overhead_json.strip() == '':
+                    patch_spec['overhead'] = None
+                else:
+                    try:
+                        parsed = json.loads(overhead_json)
+                        if not isinstance(parsed, dict):
+                            return jsonify({'error': 'overhead JSON bir nesne olmalı'}), 400
+                        patch_spec['overhead'] = parsed
+                    except Exception as je:
+                        return jsonify({'error': f'overhead JSON hatası: {je}'}), 400
+            else:
+                if overhead_json == '':
+                    patch_spec['overhead'] = None
+                else:
+                    patch_spec['overhead'] = overhead_json
+
+        if not patch_spec:
+            return jsonify({'error': 'nothing to update'}), 400
+
+        patch_body = { 'spec': patch_spec }
+
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        co = client.CustomObjectsApi()
+        co.patch_cluster_custom_object(group="node.k8s.io", version="v1", plural="runtimeclasses", name=name, body=patch_body)
+        return jsonify({'status': 'ok', 'name': name})
+    except ApiException as e:
+        try:
+            return jsonify({'error': e.body}), e.status
+        except Exception:
+            return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Delete RuntimeClass (cluster-scoped)
+@app.route('/k8s-explorer/delete-runtime-class', methods=['POST'])
+def delete_runtime_class():
+    try:
+        data = request.get_json(force=True) or {}
+        name = data.get('name')
+        if not name:
+            return jsonify({'error': 'name is required'}), 400
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        co = client.CustomObjectsApi()
+        co.delete_cluster_custom_object(group="node.k8s.io", version="v1", plural="runtimeclasses", name=name)
+        return jsonify({'status': 'deleted', 'name': name})
+    except ApiException as e:
+        try:
+            return jsonify({'error': e.body}), e.status
+        except Exception:
+            return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Get a single PriorityClass details (cluster-scoped)
+@app.route('/k8s-explorer/priority-class')
+def get_priority_class():
+    try:
+        name = request.args.get('name')
+        if not name:
+            return jsonify({'error': 'name is required'}), 400
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        scheduling_v1 = client.SchedulingV1Api()
+        pc = scheduling_v1.read_priority_class(name=name)
+        md = pc.metadata
+        return jsonify({'priority_class': {
+            'name': getattr(md, 'name', None),
+            'value': getattr(pc, 'value', None),
+            'global_default': getattr(pc, 'global_default', None),
+            'description': getattr(pc, 'description', None),
+            'preemption_policy': getattr(pc, 'preemption_policy', None),
+            'creation_timestamp': md.creation_timestamp.isoformat() if getattr(md, 'creation_timestamp', None) else None
+        }})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Update PriorityClass (cluster-scoped)
+@app.route('/k8s-explorer/update-priority-class', methods=['POST'])
+def update_priority_class():
+    try:
+        data = request.get_json(force=True) or {}
+        name = data.get('name')
+        if not name:
+            return jsonify({'error': 'name is required'}), 400
+
+        # Optional fields
+        value = data.get('value')
+        global_default = data.get('global_default')
+        preemption_policy = data.get('preemption_policy')
+        description = data.get('description')
+
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        scheduling_v1 = client.SchedulingV1Api()
+
+        patch_body = {}
+
+        # PriorityClass.spec.value field is immutable and cannot be updated
+        if value not in (None, ''):
+            return jsonify({'error': 'PriorityClass.value güncellenemez. Yeni bir PriorityClass oluşturun veya mevcut nesneyi silip yeniden yaratın.'}), 400
+
+        # Only set globalDefault if provided and not empty string
+        if global_default is not None and global_default != '':
+            if isinstance(global_default, str):
+                gd = global_default.strip().lower() in ['true', '1', 'yes', 'on']
+            else:
+                gd = bool(global_default)
+            patch_body['globalDefault'] = gd
+
+        # preemptionPolicy: empty string clears the field, None means no change
+        if preemption_policy is not None:
+            patch_body['preemptionPolicy'] = preemption_policy if preemption_policy != '' else None
+
+        # description: empty string clears
+        if description is not None:
+            patch_body['description'] = description if description != '' else None
+
+        if not patch_body:
+            return jsonify({'error': 'nothing to update'}), 400
+
+        scheduling_v1.patch_priority_class(name=name, body=patch_body)
+        return jsonify({'status': 'ok', 'name': name})
+    except ApiException as e:
+        try:
+            return jsonify({'error': e.body}), e.status
+        except Exception:
+            return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Delete PriorityClass (cluster-scoped)
+@app.route('/k8s-explorer/delete-priority-class', methods=['POST'])
+def delete_priority_class():
+    try:
+        data = request.get_json(force=True) or {}
+        name = data.get('name')
+        if not name:
+            return jsonify({'error': 'name is required'}), 400
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        scheduling_v1 = client.SchedulingV1Api()
+        scheduling_v1.delete_priority_class(name=name)
+        return jsonify({'status': 'deleted', 'name': name})
+    except ApiException as e:
+        try:
+            return jsonify({'error': e.body}), e.status
+        except Exception:
+            return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Get a single PDB details
+@app.route('/k8s-explorer/pdb')
+def get_pdb():
+    try:
+        name = request.args.get('name')
+        namespace = request.args.get('namespace')
+        if not name or not namespace:
+            return jsonify({'error': 'name and namespace are required'}), 400
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        policy_v1 = client.PolicyV1Api()
+        pdb = policy_v1.read_namespaced_pod_disruption_budget(name=name, namespace=namespace)
+        md = pdb.metadata
+        spec = pdb.spec or {}
+        status = pdb.status or {}
+        def int_or_str(val):
+            try:
+                return str(val) if val is not None else None
+            except Exception:
+                return None
+        return jsonify({'pdb': {
+            'namespace': getattr(md, 'namespace', None),
+            'name': getattr(md, 'name', None),
+            'min_available': int_or_str(getattr(spec, 'min_available', None)),
+            'max_unavailable': int_or_str(getattr(spec, 'max_unavailable', None)),
+            'disruptions_allowed': getattr(status, 'disruptions_allowed', None),
+            'current_healthy': getattr(status, 'current_healthy', None),
+            'desired_healthy': getattr(status, 'desired_healthy', None),
+            'expected_pods': getattr(status, 'expected_pods', None),
+            'creation_timestamp': md.creation_timestamp.isoformat() if getattr(md, 'creation_timestamp', None) else None,
+            'selector': getattr(spec, 'selector', None).to_dict() if getattr(spec, 'selector', None) else None
+        }})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Update PDB (minAvailable/maxUnavailable)
+@app.route('/k8s-explorer/update-pdb', methods=['POST'])
+def update_pdb():
+    try:
+        data = request.get_json(force=True) or {}
+        name = data.get('name')
+        namespace = data.get('namespace')
+        min_av = data.get('min_available')
+        max_un = data.get('max_unavailable')
+        if not name or not namespace:
+            return jsonify({'error': 'name and namespace are required'}), 400
+        if (min_av is None or min_av == '') and (max_un is None or max_un == ''):
+            return jsonify({'error': 'nothing to update'}), 400
+
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        policy_v1 = client.PolicyV1Api()
+
+        def parse_int_or_str(v):
+            if v is None or v == '':
+                return None
+            # If purely digits, send as int; else keep as string (supports percentages like '50%')
+            try:
+                if isinstance(v, (int, float)) or (isinstance(v, str) and v.strip().isdigit()):
+                    return int(v)
+            except Exception:
+                pass
+            return str(v)
+
+        patch_spec = {}
+        pav = parse_int_or_str(min_av)
+        pmax = parse_int_or_str(max_un)
+
+        # Validate: Kubernetes PDB allows only one of minAvailable or maxUnavailable
+        if pav is not None and pmax is not None:
+            return jsonify({'error': 'min_available ve max_unavailable aynı anda ayarlanamaz. Yalnızca birini doldurun.'}), 400
+
+        # If setting one, ensure the other is cleared to avoid server-side validation errors
+        if pav is not None:
+            patch_spec['minAvailable'] = pav
+            # If max was provided as empty or missing, explicitly clear it
+            if max_un == '' or max_un is None:
+                patch_spec['maxUnavailable'] = None
+        if pmax is not None:
+            patch_spec['maxUnavailable'] = pmax
+            if min_av == '' or min_av is None:
+                patch_spec['minAvailable'] = None
+
+        patch_body = {'spec': patch_spec}
+        policy_v1.patch_namespaced_pod_disruption_budget(name=name, namespace=namespace, body=patch_body)
+        return jsonify({'status': 'ok', 'name': name, 'namespace': namespace})
+    except ApiException as e:
+        try:
+            return jsonify({'error': e.body}), e.status
+        except Exception:
+            return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Delete PDB
+@app.route('/k8s-explorer/delete-pdb', methods=['POST'])
+def delete_pdb():
+    try:
+        data = request.get_json(force=True) or {}
+        name = data.get('name')
+        namespace = data.get('namespace')
+        if not name or not namespace:
+            return jsonify({'error': 'name and namespace are required'}), 400
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        policy_v1 = client.PolicyV1Api()
+        policy_v1.delete_namespaced_pod_disruption_budget(name=name, namespace=namespace)
+        return jsonify({'status': 'deleted', 'name': name, 'namespace': namespace})
+    except ApiException as e:
+        try:
+            return jsonify({'error': e.body}), e.status
+        except Exception:
+            return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # Prometheus endpoint autodiscovery (Kubernetes üzerinden)
 @app.route('/k8s-explorer/prometheus-url')
 def prometheus_url():

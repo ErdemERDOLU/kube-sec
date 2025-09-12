@@ -468,14 +468,11 @@
         </h5>
       </div>
       <div class="card-body">
-        <div class="text-center py-5">
-          <i class="bi bi-arrows-expand text-muted" style="font-size: 4rem;"></i>
-          <h4 class="mt-3 text-muted">HPA Simulation</h4>
-          <p class="text-muted">Horizontal Pod Autoscaler yapılandırması ve simülasyonu</p>
-          <button class="btn btn-success">
-            <i class="bi bi-play-circle me-2"></i>HPA Simülasyonu Başlat
-          </button>
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+          <label for="hpaNamespaceFilter" class="form-label mb-0">Namespace:</label>
+          <select id="hpaNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
         </div>
+        <div id="hpa-table-container"><div class="text-muted">Yükleniyor...</div></div>
       </div>
     </div>
   </div>
@@ -488,14 +485,11 @@
         </h5>
       </div>
       <div class="card-body">
-        <div class="text-center py-5">
-          <i class="bi bi-shield-check text-muted" style="font-size: 4rem;"></i>
-          <h4 class="mt-3 text-muted">PDB Simulation</h4>
-          <p class="text-muted">Pod Disruption Budget yapılandırması ve simülasyonu</p>
-          <button class="btn btn-primary" style="background: var(--purple-gradient); border: none;">
-            <i class="bi bi-play-circle me-2"></i>PDB Simülasyonu Başlat
-          </button>
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+          <label for="pdbNamespaceFilter" class="form-label mb-0">Namespace:</label>
+          <select id="pdbNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
         </div>
+        <div id="pdb-table-container"><div class="text-muted">Yükleniyor...</div></div>
       </div>
     </div>
   </div>
@@ -508,14 +502,12 @@
         </h5>
       </div>
       <div class="card-body">
-        <div class="text-center py-5">
-          <i class="bi bi-sort-numeric-down text-muted" style="font-size: 4rem;"></i>
-          <h4 class="mt-3 text-muted">Priority Classes Simulation</h4>
-          <p class="text-muted">Pod öncelik sınıfları yapılandırması ve simülasyonu</p>
-          <button class="btn btn-primary" style="background: var(--indigo-gradient); border: none;">
-            <i class="bi bi-play-circle me-2"></i>Priority Simülasyonu Başlat
-          </button>
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+          <label for="pcNamespaceFilter" class="form-label mb-0">Namespace:</label>
+          <select id="pcNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
+          <small class="text-muted">Not: PriorityClass cluster-scope’tur; filtre sadece varsayılan seçim için görüntülenir.</small>
         </div>
+        <div id="pc-table-container"><div class="text-muted">Yükleniyor...</div></div>
       </div>
     </div>
   </div>
@@ -528,14 +520,12 @@
         </h5>
       </div>
       <div class="card-body">
-        <div class="text-center py-5">
-          <i class="bi bi-cpu text-muted" style="font-size: 4rem;"></i>
-          <h4 class="mt-3 text-muted">Runtime Classes Simulation</h4>
-          <p class="text-muted">Container runtime sınıfları yapılandırması ve simülasyonu</p>
-          <button class="btn btn-dark">
-            <i class="bi bi-play-circle me-2"></i>Runtime Simülasyonu Başlat
-          </button>
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+          <label for="rcNamespaceFilter" class="form-label mb-0">Namespace:</label>
+          <select id="rcNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
+          <small class="text-muted">Not: RuntimeClass cluster-scope’tur; filtre sadece varsayılan seçim için görüntülenir.</small>
         </div>
+        <div id="rc-table-container"><div class="text-muted">Yükleniyor...</div></div>
       </div>
     </div>
   </div>
@@ -548,21 +538,18 @@
         </h5>
       </div>
       <div class="card-body">
-        <div class="text-center py-5">
-          <i class="bi bi-clock-history text-muted" style="font-size: 4rem;"></i>
-          <h4 class="mt-3 text-muted">Leases Simulation</h4>
-          <p class="text-muted">Kubernetes lease objelerinin yapılandırması ve simülasyonu</p>
-          <button class="btn btn-info">
-            <i class="bi bi-play-circle me-2"></i>Lease Simülasyonu Başlat
-          </button>
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+          <label for="leasesNamespaceFilter" class="form-label mb-0">Namespace:</label>
+          <select id="leasesNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
         </div>
+        <div id="leases-table-container"><div class="text-muted">Yükleniyor...</div></div>
       </div>
     </div>
   </div>
 
   <div class="tab-pane fade" id="webhooks" role="tabpanel">
     <div class="row g-4">
-      <div class="col-lg-6">
+  <div class="col-12">
         <div class="config-card">
           <div class="card-header text-white" style="background: var(--warning-gradient);">
             <h5 class="mb-0 fw-bold">
@@ -570,18 +557,16 @@
             </h5>
           </div>
           <div class="card-body">
-            <div class="text-center py-4">
-              <i class="bi bi-webhook text-muted" style="font-size: 3rem;"></i>
-              <h5 class="mt-3 text-muted">Mutation Webhooks</h5>
-              <p class="text-muted">Kubernetes kaynaklarını değiştiren webhook'lar</p>
-              <button class="btn btn-warning">
-                <i class="bi bi-play-circle me-2"></i>Mutation Simülasyonu
-              </button>
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+              <label for="mutatingNamespaceFilter" class="form-label mb-0">Namespace:</label>
+              <select id="mutatingNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
             </div>
+            <div id="mutating-table-container"><div class="text-muted">Yükleniyor...</div></div>
+    <div id="mutating-pagination" class="d-flex justify-content-between align-items-center mt-2"></div>
           </div>
         </div>
       </div>
-      <div class="col-lg-6">
+  <div class="col-12">
         <div class="config-card">
           <div class="card-header text-white" style="background: var(--danger-gradient);">
             <h5 class="mb-0 fw-bold">
@@ -589,14 +574,12 @@
             </h5>
           </div>
           <div class="card-body">
-            <div class="text-center py-4">
-              <i class="bi bi-shield-exclamation text-muted" style="font-size: 3rem;"></i>
-              <h5 class="mt-3 text-muted">Validation Webhooks</h5>
-              <p class="text-muted">Kubernetes kaynaklarını doğrulayan webhook'lar</p>
-              <button class="btn btn-danger">
-                <i class="bi bi-play-circle me-2"></i>Validation Simülasyonu
-              </button>
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+              <label for="validatingNamespaceFilter" class="form-label mb-0">Namespace:</label>
+              <select id="validatingNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
             </div>
+            <div id="validating-table-container"><div class="text-muted">Yükleniyor...</div></div>
+    <div id="validating-pagination" class="d-flex justify-content-between align-items-center mt-2"></div>
           </div>
         </div>
       </div>
@@ -701,6 +684,48 @@ function showToast(message, type = 'success') {
   });
   
   toast.show();
+}
+
+// Generic confirmation modal helper
+function openConfirmModal({ title = 'Onay', message = 'Emin misiniz?', confirmText = 'Onayla', confirmBtnClass = 'btn-danger', onConfirm }) {
+  const id = 'confirmModal-' + Date.now();
+  const html = `
+    <div class="modal fade" id="${id}" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">${title}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <p class="mb-0">${message}</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+            <button type="button" class="btn ${confirmBtnClass}" id="${id}-confirmBtn">${confirmText}</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+  const el = document.getElementById(id);
+  const modal = new bootstrap.Modal(el);
+  const btn = el.querySelector('#' + id + '-confirmBtn');
+  el.addEventListener('hidden.bs.modal', () => { try { modal.dispose(); el.remove(); } catch(_){} });
+  btn.addEventListener('click', async () => {
+    const original = btn.textContent;
+    btn.disabled = true; btn.textContent = 'İşleniyor...';
+    try {
+      if (onConfirm) await onConfirm();
+      modal.hide();
+    } catch (e) {
+      // keep modal open; errors should be surfaced by onConfirm via showToast
+      console.debug('confirmModal onConfirm error', e);
+    } finally {
+      btn.disabled = false; btn.textContent = original;
+    }
+  });
+  modal.show();
 }
 
 window.showConfigMap = function(name, namespace) {
@@ -1107,16 +1132,134 @@ document.addEventListener('DOMContentLoaded', function() {
           fetchAndRenderSecretsTable();
         });
       }
+      // populate HPA namespace select
+      const hpaSel = document.getElementById('hpaNamespaceFilter');
+      if (hpaSel) {
+        // ensure default and all exist first
+        const ensureOpt = (val, text) => {
+          if (![...hpaSel.options].some(o => o.value === val)) {
+            const opt = document.createElement('option');
+            opt.value = val; opt.text = text; hpaSel.appendChild(opt);
+          }
+        };
+        ensureOpt('default', 'default');
+        ensureOpt('all', 'Tümü');
+        j.namespaces.forEach(ns => ensureOpt(ns, ns));
+        hpaSel.value = j.namespaces.includes('default') ? 'default' : 'all';
+        hpaSel.addEventListener('change', () => {
+          const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+          if (activeTab === 'hpa') fetchAndRenderHPATable();
+        });
+      }
+      // populate PDB namespace select
+      const pdbSel = document.getElementById('pdbNamespaceFilter');
+      if (pdbSel) {
+        const ensureOpt2 = (val, text) => {
+          if (![...pdbSel.options].some(o => o.value === val)) {
+            const opt = document.createElement('option'); opt.value = val; opt.text = text; pdbSel.appendChild(opt);
+          }
+        };
+        ensureOpt2('default', 'default');
+        ensureOpt2('all', 'Tümü');
+        j.namespaces.forEach(ns => ensureOpt2(ns, ns));
+        pdbSel.value = j.namespaces.includes('default') ? 'default' : 'all';
+        pdbSel.addEventListener('change', () => {
+          const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+          if (activeTab === 'pdb') fetchAndRenderPDBTable();
+        });
+      }
+      // populate PriorityClasses pseudo-namespace select (cluster-scoped; for UX parity)
+      const pcSel = document.getElementById('pcNamespaceFilter');
+      if (pcSel) {
+        const ensureOpt3 = (val, text) => {
+          if (![...pcSel.options].some(o => o.value === val)) {
+            const opt = document.createElement('option'); opt.value = val; opt.text = text; pcSel.appendChild(opt);
+          }
+        };
+        ensureOpt3('default', 'default');
+        ensureOpt3('all', 'Tümü');
+        j.namespaces.forEach(ns => ensureOpt3(ns, ns));
+        pcSel.value = j.namespaces.includes('default') ? 'default' : 'all';
+        pcSel.addEventListener('change', () => {
+          const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+          if (activeTab === 'priority-classes') fetchAndRenderPriorityClassesTable();
+        });
+      }
+      // populate RuntimeClasses pseudo-namespace select (cluster-scoped; for UX parity)
+      const rcSel = document.getElementById('rcNamespaceFilter');
+      if (rcSel) {
+        const ensureOpt4 = (val, text) => {
+          if (![...rcSel.options].some(o => o.value === val)) {
+            const opt = document.createElement('option'); opt.value = val; opt.text = text; rcSel.appendChild(opt);
+          }
+        };
+        ensureOpt4('default', 'default');
+        ensureOpt4('all', 'Tümü');
+        j.namespaces.forEach(ns => ensureOpt4(ns, ns));
+        rcSel.value = j.namespaces.includes('default') ? 'default' : 'all';
+        rcSel.addEventListener('change', () => {
+          const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+          if (activeTab === 'runtime-classes') fetchAndRenderRuntimeClassesTable();
+        });
+      }
+      // populate Leases namespace select
+      const leasesSel = document.getElementById('leasesNamespaceFilter');
+      if (leasesSel) {
+        const ensureOpt5 = (val, text) => {
+          if (![...leasesSel.options].some(o => o.value === val)) {
+            const opt = document.createElement('option'); opt.value = val; opt.text = text; leasesSel.appendChild(opt);
+          }
+        };
+        ensureOpt5('default', 'default');
+        ensureOpt5('all', 'Tümü');
+        j.namespaces.forEach(ns => ensureOpt5(ns, ns));
+        leasesSel.value = j.namespaces.includes('default') ? 'default' : 'all';
+        leasesSel.addEventListener('change', () => {
+          const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+          if (activeTab === 'leases') fetchAndRenderLeasesTable();
+        });
+      }
+      // populate Mutating/Validating Webhooks namespace selects
+      const mutSel = document.getElementById('mutatingNamespaceFilter');
+      if (mutSel) {
+        const ensureOpt6 = (val, text) => {
+          if (![...mutSel.options].some(o => o.value === val)) {
+            const opt = document.createElement('option'); opt.value = val; opt.text = text; mutSel.appendChild(opt);
+          }
+        };
+        ensureOpt6('default', 'default');
+        ensureOpt6('all', 'Tümü');
+        j.namespaces.forEach(ns => ensureOpt6(ns, ns));
+        mutSel.value = j.namespaces.includes('default') ? 'default' : 'all';
+        mutSel.addEventListener('change', () => {
+          const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+          if (activeTab === 'webhooks') fetchAndRenderMutatingWebhooksTable();
+        });
+      }
+      const valSel = document.getElementById('validatingNamespaceFilter');
+      if (valSel) {
+        const ensureOpt7 = (val, text) => {
+          if (![...valSel.options].some(o => o.value === val)) {
+            const opt = document.createElement('option'); opt.value = val; opt.text = text; valSel.appendChild(opt);
+          }
+        };
+        ensureOpt7('default', 'default');
+        ensureOpt7('all', 'Tümü');
+        j.namespaces.forEach(ns => ensureOpt7(ns, ns));
+        valSel.value = j.namespaces.includes('default') ? 'default' : 'all';
+        valSel.addEventListener('change', () => {
+          const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+          if (activeTab === 'webhooks') fetchAndRenderValidatingWebhooksTable();
+        });
+      }
     }
     // trigger initial render for the active tab (configmaps by default)
     const activeTabAfterNs = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
-    if (activeTabAfterNs === 'configmaps') {
-      setTimeout(fetchAndRenderConfigMapsTable, 50);
-    }
+    setTimeout(() => handleTabChange(activeTabAfterNs), 50);
   }).catch(() => {
     // if namespace list fetch fails, still try to render active tab
     const activeTabAfterNs = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
-    if (activeTabAfterNs === 'configmaps') setTimeout(fetchAndRenderConfigMapsTable, 50);
+    setTimeout(() => handleTabChange(activeTabAfterNs), 50);
   });
   
   document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
@@ -1337,6 +1480,25 @@ function handleTabChange(tabId) {
       break;
     case 'limit-ranges':
       fetchAndRenderLimitRangesTable();
+      break;
+    case 'hpa':
+      fetchAndRenderHPATable();
+      break;
+    case 'pdb':
+      fetchAndRenderPDBTable();
+      break;
+    case 'priority-classes':
+      fetchAndRenderPriorityClassesTable();
+      break;
+    case 'runtime-classes':
+      fetchAndRenderRuntimeClassesTable();
+      break;
+    case 'leases':
+      fetchAndRenderLeasesTable();
+      break;
+    case 'webhooks':
+      fetchAndRenderMutatingWebhooksTable();
+      fetchAndRenderValidatingWebhooksTable();
       break;
   }
 }
@@ -1579,6 +1741,839 @@ async function fetchAndRenderLimitRangesTable() {
   } catch (error) {
     container.innerHTML = '<div class="alert alert-danger">Limit Range listesi yüklenirken hata oluştu: ' + error.message + '</div>';
   }
+}
+
+// HPA table rendering
+async function fetchAndRenderHPATable() {
+  const container = document.getElementById('hpa-table-container');
+  if (!container) return;
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">HPA listesi yükleniyor...</span></div>';
+
+  try {
+    const sel = document.getElementById('hpaNamespaceFilter');
+    const ns = sel && sel.value ? sel.value : 'default';
+    const url = ns && ns !== 'all' ? `/k8s-explorer/hpa-summary?namespace=${encodeURIComponent(ns)}` : '/k8s-explorer/hpa-summary';
+    const resp = await fetch(url);
+    const data = await resp.json();
+    const hpas = data.hpas || [];
+
+  let html = `
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Namespace</th>
+              <th>Name</th>
+              <th>Target</th>
+              <th>Replicas (cur/desired)</th>
+              <th>Min/Max</th>
+        <th>Age</th>
+        <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    hpas.forEach(h => {
+      const age = h.creation_timestamp ? calculateAge(h.creation_timestamp) : 'Unknown';
+      const target = [h.target_kind, h.target_name].filter(Boolean).join('/');
+      const cur = h.current_replicas ?? '-';
+      const des = h.desired_replicas ?? '-';
+      const min = h.min_replicas ?? '-';
+      const max = h.max_replicas ?? '-';
+      html += `
+        <tr>
+          <td><span class="badge bg-primary">${h.namespace}</span></td>
+          <td><strong>${h.name}</strong></td>
+          <td>${target || '-'}</td>
+          <td><span class="badge bg-info">${cur} / ${des}</span></td>
+          <td><span class="badge bg-secondary">${min} / ${max}</span></td>
+          <td>${age}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary me-1 btn-edit-hpa" data-name="${h.name}" data-namespace="${h.namespace}"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-sm btn-outline-danger btn-delete-hpa" data-name="${h.name}" data-namespace="${h.namespace}"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>
+      `;
+    });
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+    // Attach handlers
+    container.querySelectorAll('.btn-edit-hpa').forEach(btn => btn.addEventListener('click', () => {
+      const name = btn.getAttribute('data-name');
+      const namespace = btn.getAttribute('data-namespace');
+      openHpaEditModal(name, namespace);
+    }));
+    container.querySelectorAll('.btn-delete-hpa').forEach(btn => btn.addEventListener('click', () => {
+      const name = btn.getAttribute('data-name');
+      const namespace = btn.getAttribute('data-namespace');
+      openConfirmModal({
+        title: 'HPA Sil',
+        message: `"${name}" HPA'sini "${namespace}" namespace'inde silmek istediğinizden emin misiniz?`,
+        confirmText: 'Evet, Sil',
+        confirmBtnClass: 'btn-danger',
+        onConfirm: async () => {
+          try {
+            const resp = await fetch('/k8s-explorer/delete-hpa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, namespace }) });
+            const j = await resp.json();
+            if (j.error) { showToast('Silme hatası: ' + j.error, 'error'); return; }
+            showToast('HPA başarıyla silindi', 'success');
+            fetchAndRenderHPATable();
+          } catch (e) { showToast('Silme hatası: ' + e.message, 'error'); }
+        }
+      });
+    }));
+  } catch (err) {
+    container.innerHTML = '<div class="alert alert-danger">HPA listesi yüklenirken hata oluştu: ' + err.message + '</div>';
+  }
+}
+
+// PDB table rendering
+async function fetchAndRenderPDBTable() {
+  const container = document.getElementById('pdb-table-container');
+  if (!container) return;
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">PDB listesi yükleniyor...</span></div>';
+
+  try {
+    const sel = document.getElementById('pdbNamespaceFilter');
+    const ns = sel && sel.value ? sel.value : 'default';
+    const url = ns && ns !== 'all' ? `/k8s-explorer/pdb-summary?namespace=${encodeURIComponent(ns)}` : '/k8s-explorer/pdb-summary';
+    const resp = await fetch(url);
+    const data = await resp.json();
+    const pdbs = data.pdbs || [];
+
+    let html = `
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Namespace</th>
+              <th>Name</th>
+              <th>MinAvailable</th>
+              <th>MaxUnavailable</th>
+              <th>Disruptions</th>
+              <th>Healthy (cur/desired)</th>
+              <th>Expected Pods</th>
+              <th>Age</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    pdbs.forEach(p => {
+      const age = p.creation_timestamp ? calculateAge(p.creation_timestamp) : 'Unknown';
+      const disr = p.disruptions_allowed ?? '-';
+      const healthy = `${p.current_healthy ?? '-'} / ${p.desired_healthy ?? '-'}`;
+      html += `
+        <tr>
+          <td><span class="badge bg-primary">${p.namespace}</span></td>
+          <td><strong>${p.name}</strong></td>
+          <td>${p.min_available ?? '-'}</td>
+          <td>${p.max_unavailable ?? '-'}</td>
+          <td><span class="badge bg-info">${disr}</span></td>
+          <td>${healthy}</td>
+          <td>${p.expected_pods ?? '-'}</td>
+          <td>${age}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary me-1 btn-edit-pdb" data-name="${p.name}" data-namespace="${p.namespace}"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-sm btn-outline-danger btn-delete-pdb" data-name="${p.name}" data-namespace="${p.namespace}"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>
+      `;
+    });
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+    // Attach PDB handlers
+    container.querySelectorAll('.btn-edit-pdb').forEach(btn => btn.addEventListener('click', () => {
+      const name = btn.getAttribute('data-name');
+      const namespace = btn.getAttribute('data-namespace');
+      openPdbEditModal(name, namespace);
+    }));
+  container.querySelectorAll('.btn-delete-pdb').forEach(btn => btn.addEventListener('click', async () => {
+      const name = btn.getAttribute('data-name');
+      const namespace = btn.getAttribute('data-namespace');
+      openConfirmModal({
+    title: 'PDB Sil',
+    message: `"${name}" PDB'sini "${namespace}" namespace'inde silmek istediğinizden emin misiniz?`,
+        confirmText: 'Evet, Sil',
+        confirmBtnClass: 'btn-danger',
+        onConfirm: async () => {
+          try {
+      const resp = await fetch('/k8s-explorer/delete-pdb', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, namespace }) });
+            const j = await resp.json();
+            if (j.error) { showToast('Silme hatası: ' + j.error, 'error'); return; }
+      showToast('PDB başarıyla silindi', 'success');
+      fetchAndRenderPDBTable();
+          } catch (e) { showToast('Silme hatası: ' + e.message, 'error'); }
+        }
+      });
+    }));
+  } catch (err) {
+    container.innerHTML = '<div class="alert alert-danger">PDB listesi yüklenirken hata oluştu: ' + err.message + '</div>';
+  }
+}
+
+function openPdbEditModal(name, namespace) {
+  const existing = document.getElementById('pdbEditModal');
+  if (existing) { const inst = bootstrap.Modal.getInstance(existing); if (inst) inst.dispose(); existing.remove(); }
+
+  fetch(`/k8s-explorer/pdb?name=${encodeURIComponent(name)}&namespace=${encodeURIComponent(namespace)}`)
+    .then(r => r.json())
+    .then(data => {
+  if (data.error) { showToast('PDB okunamadı: ' + data.error, 'error'); return; }
+      const p = data.pdb || { name, namespace };
+      const min = p.min_available ?? '';
+      const max = p.max_unavailable ?? '';
+      const modalHtml = `
+        <div class="modal fade" id="pdbEditModal" tabindex="-1">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">PDB Düzenle: ${p.name}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-2"><strong>Namespace:</strong> <span class="badge bg-primary">${p.namespace}</span></div>
+                <div class="row g-3">
+                  <div class="col">
+                    <label class="form-label">minAvailable</label>
+                    <input type="text" class="form-control" id="pdbMinInput" placeholder="örn: 1 veya 50%" value="${min}">
+                  </div>
+                  <div class="col">
+                    <label class="form-label">maxUnavailable</label>
+                    <input type="text" class="form-control" id="pdbMaxInput" placeholder="örn: 1 veya 25%" value="${max}">
+                  </div>
+                </div>
+                <small class="text-muted">Sayı veya yüzde (ör. 50%) kabul edilir.</small>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-primary" id="pdbSaveBtn">Kaydet</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      const el = document.getElementById('pdbEditModal');
+      const modal = new bootstrap.Modal(el);
+      el.addEventListener('hidden.bs.modal', () => { modal.dispose(); el.remove(); });
+      el.querySelector('#pdbSaveBtn').addEventListener('click', async () => {
+        const minRaw = el.querySelector('#pdbMinInput').value;
+        const maxRaw = el.querySelector('#pdbMaxInput').value;
+        const minVal = (minRaw === '' ? null : minRaw);
+        const maxVal = (maxRaw === '' ? null : maxRaw);
+        if (minVal !== null && maxVal !== null) { showToast('minAvailable ve maxUnavailable aynı anda girilemez. Lütfen yalnızca birini doldurun.', 'error'); return; }
+        try {
+          const resp = await fetch('/k8s-explorer/update-pdb', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: p.name, namespace: p.namespace, min_available: minVal, max_unavailable: maxVal }) });
+          const j = await resp.json();
+          if (j.error) { showToast('Güncelleme hatası: ' + j.error, 'error'); return; }
+          modal.hide();
+          showToast('PDB güncellendi', 'success');
+          fetchAndRenderPDBTable();
+        } catch (e) { showToast('Güncelleme hatası: ' + e.message, 'error'); }
+      });
+      modal.show();
+    })
+    .catch(e => alert('PDB getirilemedi: ' + e.message));
+}
+
+function openHpaEditModal(name, namespace) {
+  // Clean existing
+  const existing = document.getElementById('hpaEditModal');
+  if (existing) { const inst = bootstrap.Modal.getInstance(existing); if (inst) inst.dispose(); existing.remove(); }
+
+  // Fetch current
+  fetch(`/k8s-explorer/hpa?name=${encodeURIComponent(name)}&namespace=${encodeURIComponent(namespace)}`)
+    .then(r => r.json())
+    .then(data => {
+  if (data.error) { showToast('HPA okunamadı: ' + data.error, 'error'); return; }
+      const h = data.hpa || { name, namespace };
+      const min = h.min_replicas ?? '';
+      const max = h.max_replicas ?? '';
+      const target = [h.target_kind, h.target_name].filter(Boolean).join('/') || '-';
+
+      const modalHtml = `
+        <div class="modal fade" id="hpaEditModal" tabindex="-1">
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">HPA Düzenle: ${h.name}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-2"><strong>Namespace:</strong> <span class="badge bg-primary">${h.namespace}</span></div>
+                <div class="mb-3"><strong>Target:</strong> ${target}</div>
+                <div class="row g-3">
+                  <div class="col">
+                    <label class="form-label">Min Replicas</label>
+                    <input type="number" min="0" class="form-control" id="hpaMinInput" value="${min}">
+                  </div>
+                  <div class="col">
+                    <label class="form-label">Max Replicas</label>
+                    <input type="number" min="1" class="form-control" id="hpaMaxInput" value="${max}">
+                  </div>
+                </div>
+                <small class="text-muted">Yalnızca min/max kopya sayıları güncellenir.</small>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-primary" id="hpaSaveBtn">Kaydet</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      const el = document.getElementById('hpaEditModal');
+      const modal = new bootstrap.Modal(el);
+      el.addEventListener('hidden.bs.modal', () => { modal.dispose(); el.remove(); });
+      el.querySelector('#hpaSaveBtn').addEventListener('click', async () => {
+        const minVal = el.querySelector('#hpaMinInput').value;
+        const maxVal = el.querySelector('#hpaMaxInput').value;
+        try {
+          const resp = await fetch('/k8s-explorer/update-hpa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: h.name, namespace: h.namespace, min_replicas: minVal === '' ? null : Number(minVal), max_replicas: maxVal === '' ? null : Number(maxVal) }) });
+          const j = await resp.json();
+          if (j.error) { showToast('Güncelleme hatası: ' + j.error, 'error'); return; }
+          modal.hide();
+          showToast('HPA güncellendi', 'success');
+          fetchAndRenderHPATable();
+        } catch (e) { showToast('Güncelleme hatası: ' + e.message, 'error'); }
+      });
+      modal.show();
+    })
+  .catch(e => showToast('HPA getirilemedi: ' + e.message, 'error'));
+}
+
+// Priority Classes table rendering
+async function fetchAndRenderPriorityClassesTable() {
+  const container = document.getElementById('pc-table-container');
+  if (!container) return;
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">PriorityClass listesi yükleniyor...</span></div>';
+
+  try {
+    const sel = document.getElementById('pcNamespaceFilter');
+    const ns = sel && sel.value ? sel.value : 'default';
+    const url = ns && ns !== 'all' ? `/k8s-explorer/priority-classes-summary?namespace=${encodeURIComponent(ns)}` : '/k8s-explorer/priority-classes-summary';
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    const pcs = data.priority_classes || [];
+
+    let html = `
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Value</th>
+              <th>Global Default</th>
+              <th>Preemption</th>
+              <th>Description</th>
+              <th>Age</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    pcs.forEach(pc => {
+      const age = pc.creation_timestamp ? calculateAge(pc.creation_timestamp) : 'Unknown';
+      const gdef = pc.global_default ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>';
+      html += `
+        <tr>
+          <td><strong>${pc.name || '-'}</strong></td>
+          <td><span class="badge bg-info">${pc.value ?? '-'}</span></td>
+          <td>${gdef}</td>
+          <td>${pc.preemption_policy || '-'}</td>
+          <td style="max-width: 420px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${pc.description || ''}">${pc.description || ''}</td>
+          <td>${age}</td>
+          <td>
+            <button class=\"btn btn-sm btn-outline-primary me-1 btn-edit-pc\" data-name=\"${pc.name}\"><i class=\"bi bi-pencil\"></i></button>
+            <button class=\"btn btn-sm btn-outline-danger btn-delete-pc\" data-name=\"${pc.name}\"><i class=\"bi bi-trash\"></i></button>
+          </td>
+        </tr>
+      `;
+    });
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+
+    // Attach PC handlers
+    container.querySelectorAll('.btn-edit-pc').forEach(btn => btn.addEventListener('click', () => {
+      const name = btn.getAttribute('data-name');
+      openPcEditModal(name);
+    }));
+    container.querySelectorAll('.btn-delete-pc').forEach(btn => btn.addEventListener('click', () => {
+      const name = btn.getAttribute('data-name');
+      openConfirmModal({
+        title: 'PriorityClass Sil',
+        message: `"${name}" PriorityClass'ını silmek istediğinizden emin misiniz?`,
+        confirmText: 'Evet, Sil',
+        confirmBtnClass: 'btn-danger',
+        onConfirm: async () => {
+          try {
+            const resp = await fetch('/k8s-explorer/delete-priority-class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+            const j = await resp.json();
+            if (j.error) { showToast('Silme hatası: ' + j.error, 'error'); return; }
+            showToast('PriorityClass başarıyla silindi', 'success');
+            fetchAndRenderPriorityClassesTable();
+          } catch (e) { showToast('Silme hatası: ' + e.message, 'error'); }
+        }
+      });
+    }));
+  } catch (err) {
+    container.innerHTML = '<div class="alert alert-danger">PriorityClass listesi yüklenirken hata oluştu: ' + err.message + '</div>';
+  }
+}
+
+// Runtime Classes table rendering
+async function fetchAndRenderRuntimeClassesTable() {
+  const container = document.getElementById('rc-table-container');
+  if (!container) return;
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">RuntimeClass listesi yükleniyor...</span></div>';
+
+  try {
+    const sel = document.getElementById('rcNamespaceFilter');
+    const ns = sel && sel.value ? sel.value : 'default';
+    const url = ns && ns !== 'all' ? `/k8s-explorer/runtime-classes-summary?namespace=${encodeURIComponent(ns)}` : '/k8s-explorer/runtime-classes-summary';
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    const rcs = data.runtime_classes || [];
+
+  let html = `
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Handler</th>
+              <th>Node Selector</th>
+              <th>Tolerations</th>
+              <th>Overhead</th>
+              <th>Age</th>
+        <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    rcs.forEach(rc => {
+      const age = rc.creation_timestamp ? calculateAge(rc.creation_timestamp) : 'Unknown';
+      const nodeSel = rc.scheduling && rc.scheduling.node_selector ? Object.entries(rc.scheduling.node_selector).map(([k,v])=>`${k}=${v}`).join(', ') : '-';
+      const tolerations = rc.scheduling && Array.isArray(rc.scheduling.tolerations) ? rc.scheduling.tolerations.length : 0;
+      const overhead = rc.overhead ? JSON.stringify(rc.overhead) : '-';
+      html += `
+        <tr>
+          <td><strong>${rc.name || '-'}</strong></td>
+          <td><span class="badge bg-secondary">${rc.handler || '-'}</span></td>
+          <td>${nodeSel}</td>
+          <td><span class="badge bg-info">${tolerations}</span></td>
+          <td><code>${overhead}</code></td>
+          <td>${age}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-primary me-1 btn-edit-rc" data-name="${rc.name}"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-sm btn-outline-danger btn-delete-rc" data-name="${rc.name}"><i class="bi bi-trash"></i></button>
+          </td>
+        </tr>
+      `;
+    });
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+
+    // Attach RC handlers
+    container.querySelectorAll('.btn-edit-rc').forEach(btn => btn.addEventListener('click', () => {
+      const name = btn.getAttribute('data-name');
+      openRcEditModal(name);
+    }));
+    container.querySelectorAll('.btn-delete-rc').forEach(btn => btn.addEventListener('click', () => {
+      const name = btn.getAttribute('data-name');
+      deleteRuntimeClass(name);
+    }));
+  } catch (err) {
+    container.innerHTML = '<div class="alert alert-danger">RuntimeClass listesi yüklenirken hata oluştu: ' + err.message + '</div>';
+  }
+}
+
+// Leases table rendering
+async function fetchAndRenderLeasesTable() {
+  const container = document.getElementById('leases-table-container');
+  if (!container) return;
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Lease listesi yükleniyor...</span></div>';
+
+  try {
+    const sel = document.getElementById('leasesNamespaceFilter');
+    const ns = sel && sel.value ? sel.value : 'default';
+    const url = ns && ns !== 'all' ? `/k8s-explorer/leases-summary?namespace=${encodeURIComponent(ns)}` : '/k8s-explorer/leases-summary';
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    const leases = data.leases || [];
+
+    let html = `
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Namespace</th>
+              <th>Name</th>
+              <th>Holder Identity</th>
+              <th>Duration (s)</th>
+              <th>Acquire Time</th>
+              <th>Renew Time</th>
+              <th>Transitions</th>
+              <th>Age</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    leases.forEach(le => {
+      const age = le.creation_timestamp ? calculateAge(le.creation_timestamp) : 'Unknown';
+      html += `
+        <tr>
+          <td><span class="badge bg-secondary">${le.namespace || '-'}</span></td>
+          <td><strong>${le.name || '-'}</strong></td>
+          <td>${le.holder_identity || '-'}</td>
+          <td>${le.lease_duration_seconds ?? '-'}</td>
+          <td><code>${le.acquire_time || '-'}</code></td>
+          <td><code>${le.renew_time || '-'}</code></td>
+          <td>${le.lease_transitions ?? '-'}</td>
+          <td>${age}</td>
+        </tr>
+      `;
+    });
+
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = '<div class="alert alert-danger">Lease listesi yüklenirken hata oluştu: ' + err.message + '</div>';
+  }
+}
+
+// Mutating Webhooks table rendering
+let __mutatingPage = 1;
+const __mutatingPageSize = 5;
+async function fetchAndRenderMutatingWebhooksTable(page = __mutatingPage) {
+  const container = document.getElementById('mutating-table-container');
+  if (!container) return;
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-4"><div class="loading-spinner me-2"></div><span class="text-muted">Mutating webhook listesi yükleniyor...</span></div>';
+
+  try {
+    const sel = document.getElementById('mutatingNamespaceFilter');
+    const ns = sel && sel.value ? sel.value : 'default';
+    const url = ns && ns !== 'all' ? `/k8s-explorer/mutating-webhooks-summary?namespace=${encodeURIComponent(ns)}` : '/k8s-explorer/mutating-webhooks-summary';
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+  const items = data.mutating_webhooks || [];
+  // pagination calc
+  const total = items.length;
+  const totalPages = Math.max(1, Math.ceil(total / __mutatingPageSize));
+  __mutatingPage = Math.min(Math.max(1, page), totalPages);
+  const start = (__mutatingPage - 1) * __mutatingPageSize;
+  const pageItems = items.slice(start, start + __mutatingPageSize);
+
+    let html = `
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Webhooks</th>
+              <th>Services</th>
+              <th>Rules</th>
+              <th>Failure Policy</th>
+              <th>Age</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    pageItems.forEach(it => {
+      const age = it.creation_timestamp ? calculateAge(it.creation_timestamp) : 'Unknown';
+      const services = Array.isArray(it.services) && it.services.length ? it.services.map(s => `${s.namespace}/${s.name}${s.path ? s.path : ''}`).join('<br>') : '-';
+      html += `
+        <tr>
+          <td><strong>${it.name || '-'}</strong></td>
+          <td><span class="badge bg-info">${it.webhooks_count ?? 0}</span></td>
+          <td>${services}</td>
+          <td>${it.rules_count ?? 0}</td>
+          <td>${it.failure_policy || '-'}</td>
+          <td>${age}</td>
+        </tr>
+      `;
+    });
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+
+    const pager = document.getElementById('mutating-pagination');
+    if (pager) {
+      pager.innerHTML = `
+        <div class="small text-muted">Toplam: ${total} • Sayfa ${__mutatingPage}/${totalPages}</div>
+        <div class="btn-group btn-group-sm">
+          <button class="btn btn-outline-secondary" ${__mutatingPage===1?'disabled':''} id="mutPrev">Önceki</button>
+          <button class="btn btn-outline-secondary" ${__mutatingPage===totalPages?'disabled':''} id="mutNext">Sonraki</button>
+        </div>`;
+      const prev = document.getElementById('mutPrev');
+      const next = document.getElementById('mutNext');
+      if (prev) prev.addEventListener('click', () => fetchAndRenderMutatingWebhooksTable(__mutatingPage - 1));
+      if (next) next.addEventListener('click', () => fetchAndRenderMutatingWebhooksTable(__mutatingPage + 1));
+    }
+  } catch (err) {
+    container.innerHTML = '<div class="alert alert-danger">Mutating webhook listesi yüklenirken hata oluştu: ' + err.message + '</div>';
+  }
+}
+
+// Validating Webhooks table rendering
+let __validatingPage = 1;
+const __validatingPageSize = 5;
+async function fetchAndRenderValidatingWebhooksTable(page = __validatingPage) {
+  const container = document.getElementById('validating-table-container');
+  if (!container) return;
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-4"><div class="loading-spinner me-2"></div><span class="text-muted">Validating webhook listesi yükleniyor...</span></div>';
+
+  try {
+    const sel = document.getElementById('validatingNamespaceFilter');
+    const ns = sel && sel.value ? sel.value : 'default';
+    const url = ns && ns !== 'all' ? `/k8s-explorer/validating-webhooks-summary?namespace=${encodeURIComponent(ns)}` : '/k8s-explorer/validating-webhooks-summary';
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+  const items = data.validating_webhooks || [];
+  // pagination calc
+  const total = items.length;
+  const totalPages = Math.max(1, Math.ceil(total / __validatingPageSize));
+  __validatingPage = Math.min(Math.max(1, page), totalPages);
+  const start = (__validatingPage - 1) * __validatingPageSize;
+  const pageItems = items.slice(start, start + __validatingPageSize);
+
+    let html = `
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Webhooks</th>
+              <th>Services</th>
+              <th>Rules</th>
+              <th>Failure Policy</th>
+              <th>Age</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+    pageItems.forEach(it => {
+      const age = it.creation_timestamp ? calculateAge(it.creation_timestamp) : 'Unknown';
+      const services = Array.isArray(it.services) && it.services.length ? it.services.map(s => `${s.namespace}/${s.name}${s.path ? s.path : ''}`).join('<br>') : '-';
+      html += `
+        <tr>
+          <td><strong>${it.name || '-'}</strong></td>
+          <td><span class="badge bg-info">${it.webhooks_count ?? 0}</span></td>
+          <td>${services}</td>
+          <td>${it.rules_count ?? 0}</td>
+          <td>${it.failure_policy || '-'}</td>
+          <td>${age}</td>
+        </tr>
+      `;
+    });
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+
+    const pager = document.getElementById('validating-pagination');
+    if (pager) {
+      pager.innerHTML = `
+        <div class="small text-muted">Toplam: ${total} • Sayfa ${__validatingPage}/${totalPages}</div>
+        <div class="btn-group btn-group-sm">
+          <button class="btn btn-outline-secondary" ${__validatingPage===1?'disabled':''} id="valPrev">Önceki</button>
+          <button class="btn btn-outline-secondary" ${__validatingPage===totalPages?'disabled':''} id="valNext">Sonraki</button>
+        </div>`;
+      const prev = document.getElementById('valPrev');
+      const next = document.getElementById('valNext');
+      if (prev) prev.addEventListener('click', () => fetchAndRenderValidatingWebhooksTable(__validatingPage - 1));
+      if (next) next.addEventListener('click', () => fetchAndRenderValidatingWebhooksTable(__validatingPage + 1));
+    }
+  } catch (err) {
+    container.innerHTML = '<div class="alert alert-danger">Validating webhook listesi yüklenirken hata oluştu: ' + err.message + '</div>';
+  }
+}
+
+// Optional: edit/delete handlers for RuntimeClass
+function openRcEditModal(name) {
+  const existing = document.getElementById('rcEditModal');
+  if (existing) { const inst = bootstrap.Modal.getInstance(existing); if (inst) inst.dispose(); existing.remove(); }
+
+  fetch(`/k8s-explorer/runtime-class?name=${encodeURIComponent(name)}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) { showToast('RuntimeClass okunamadı: ' + data.error, 'error'); return; }
+      const rc = data.runtime_class || { name };
+      const nodeSelStr = rc.scheduling && rc.scheduling.node_selector ? Object.entries(rc.scheduling.node_selector).map(([k,v])=>`${k}=${v}`).join(',') : '';
+      const tolStr = rc.scheduling && rc.scheduling.tolerations ? JSON.stringify(rc.scheduling.tolerations, null, 2) : '';
+      const overheadStr = rc.overhead ? JSON.stringify(rc.overhead, null, 2) : '';
+
+      const modalHtml = `
+        <div class="modal fade" id="rcEditModal" tabindex="-1">
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">RuntimeClass Düzenle: ${rc.name}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <label class="form-label">Handler <span class="text-muted" style="font-weight: normal;">(immutable)</span></label>
+                  <input type="text" class="form-control" value="${rc.handler || ''}" disabled>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Node Selector (k=v,k2=v2)</label>
+                  <input type="text" class="form-control" id="rcNodeSelectorInput" placeholder="env=prod,disktype=ssd" value="${nodeSelStr}">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Tolerations (JSON array)</label>
+                  <textarea class="form-control" id="rcTolerationsInput" rows="4" placeholder='[{"key":"dedicated","operator":"Equal","value":"gpu","effect":"NoSchedule"}]'>${tolStr}</textarea>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Overhead (JSON object)</label>
+                  <textarea class="form-control" id="rcOverheadInput" rows="4" placeholder='{"podFixed":{"cpu":"100m","memory":"128Mi"}}'>${overheadStr}</textarea>
+                </div>
+                <small class="text-muted">Handler alanı değiştirilemez. Node selector virgülle ayrılmış anahtar=değer çiftleridir. Tolerations ve Overhead JSON bekler.</small>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-primary" id="rcSaveBtn">Kaydet</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      const el = document.getElementById('rcEditModal');
+      const modal = new bootstrap.Modal(el);
+      el.addEventListener('hidden.bs.modal', () => { modal.dispose(); el.remove(); });
+      el.querySelector('#rcSaveBtn').addEventListener('click', async () => {
+        const nodeSelVal = el.querySelector('#rcNodeSelectorInput').value;
+        const tolVal = el.querySelector('#rcTolerationsInput').value;
+        const overheadVal = el.querySelector('#rcOverheadInput').value;
+        const payload = { name: rc.name };
+        payload.node_selector = nodeSelVal; // empty string clears
+        payload.tolerations = tolVal; // empty string clears; backend parses JSON if not empty
+        payload.overhead = overheadVal; // empty string clears; backend parses JSON if not empty
+        try {
+          const resp = await fetch('/k8s-explorer/update-runtime-class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          const j = await resp.json();
+          if (j.error) { showToast('Güncelleme hatası: ' + j.error, 'error'); return; }
+          modal.hide();
+          showToast('RuntimeClass güncellendi', 'success');
+          fetchAndRenderRuntimeClassesTable();
+        } catch (e) { showToast('Güncelleme hatası: ' + e.message, 'error'); }
+      });
+      modal.show();
+    })
+    .catch(e => showToast('RuntimeClass getirilemedi: ' + e.message, 'error'));
+}
+
+function deleteRuntimeClass(name) {
+  openConfirmModal({
+    title: 'RuntimeClass Sil',
+    message: `"${name}" RuntimeClass'ını silmek istediğinizden emin misiniz?`,
+    confirmText: 'Evet, Sil',
+    confirmBtnClass: 'btn-danger',
+    onConfirm: async () => {
+      try {
+        const resp = await fetch('/k8s-explorer/delete-runtime-class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+        const j = await resp.json();
+        if (j.error) { showToast('Silme hatası: ' + j.error, 'error'); return; }
+        showToast('RuntimeClass başarıyla silindi', 'success');
+        fetchAndRenderRuntimeClassesTable();
+      } catch (e) { showToast('Silme hatası: ' + e.message, 'error'); }
+    }
+  });
+}
+
+
+function openPcEditModal(name) {
+  const existing = document.getElementById('pcEditModal');
+  if (existing) { const inst = bootstrap.Modal.getInstance(existing); if (inst) inst.dispose(); existing.remove(); }
+
+  fetch(`/k8s-explorer/priority-class?name=${encodeURIComponent(name)}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) { showToast('PriorityClass okunamadı: ' + data.error, 'error'); return; }
+      const pc = data.priority_class || { name };
+      const modalHtml = `
+        <div class=\"modal fade\" id=\"pcEditModal\" tabindex=\"-1\">
+          <div class=\"modal-dialog\">
+            <div class=\"modal-content\">
+              <div class=\"modal-header\">
+                <h5 class=\"modal-title\">PriorityClass Düzenle: ${pc.name}</h5>
+                <button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\"></button>
+              </div>
+              <div class=\"modal-body\">
+                <div class=\"row g-3\">
+                  <div class=\"col-6\">
+                    <label class=\"form-label\">Value <span class=\"text-muted\" style=\"font-weight: normal;\">(immutable)</span></label>
+                    <input type=\"number\" class=\"form-control\" id=\"pcValueInput\" value=\"${pc.value ?? ''}\" disabled>
+                  </div>
+                  <div class=\"col-6\">
+                    <label class=\"form-label\">Global Default</label>
+                    <select class=\"form-select\" id=\"pcGlobalDefaultInput\">
+                      <option value=\"\" ${pc.global_default === null || pc.global_default === undefined ? 'selected' : ''}>Değiştirme</option>
+                      <option value=\"true\" ${pc.global_default === true ? 'selected' : ''}>true</option>
+                      <option value=\"false\" ${pc.global_default === false ? 'selected' : ''}>false</option>
+                    </select>
+                  </div>
+                  <div class=\"col-6\">
+                    <label class=\"form-label\">Preemption Policy</label>
+                    <input type=\"text\" class=\"form-control\" id=\"pcPreemptionInput\" placeholder=\"PreemptLowerPriority\" value=\"${pc.preemption_policy ?? ''}\">
+                  </div>
+                  <div class=\"col-12\">
+                    <label class=\"form-label\">Description</label>
+                    <textarea class=\"form-control\" id=\"pcDescriptionInput\" rows=\"3\">${pc.description ?? ''}</textarea>
+                  </div>
+                </div>
+                <small class=\"text-muted\">Value alanı Kubernetes tarafından güncellemede değiştirilemez (immutable). Diğer alanlar: boş bırakılırsa değiştirilmez. Global Default için "Değiştirme" mevcut değeri korur.</small>
+              </div>
+              <div class=\"modal-footer\">
+                <button type=\"button\" class=\"btn btn-secondary\" data-bs-dismiss=\"modal\">Kapat</button>
+                <button type=\"button\" class=\"btn btn-primary\" id=\"pcSaveBtn\">Kaydet</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      const el = document.getElementById('pcEditModal');
+      const modal = new bootstrap.Modal(el);
+      el.addEventListener('hidden.bs.modal', () => { modal.dispose(); el.remove(); });
+      el.querySelector('#pcSaveBtn').addEventListener('click', async () => {
+  const valueRaw = el.querySelector('#pcValueInput').value; // disabled; gönderilmeyecek
+        const gdRaw = el.querySelector('#pcGlobalDefaultInput').value; // '' means do not change
+        const preemptRaw = el.querySelector('#pcPreemptionInput').value;
+        const descRaw = el.querySelector('#pcDescriptionInput').value;
+
+        const payload = { name: pc.name };
+  // value immutable: gönderme
+        if (gdRaw !== '') payload.global_default = gdRaw; // backend parses truthy/falsey
+        if (preemptRaw !== undefined) payload.preemption_policy = preemptRaw; // empty clears
+        if (descRaw !== undefined) payload.description = descRaw; // empty clears
+
+        try {
+          const resp = await fetch('/k8s-explorer/update-priority-class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          const j = await resp.json();
+          if (j.error) { showToast('Güncelleme hatası: ' + j.error, 'error'); return; }
+          modal.hide();
+          showToast('PriorityClass güncellendi', 'success');
+          fetchAndRenderPriorityClassesTable();
+        } catch (e) { showToast('Güncelleme hatası: ' + e.message, 'error'); }
+      });
+      modal.show();
+    })
+    .catch(e => showToast('PriorityClass getirilemedi: ' + e.message, 'error'));
 }
 
 function calculateAge(timestamp) {
@@ -2025,9 +3020,6 @@ window.deleteSecret = function(name, namespace) {
   });
 };
 
-  container.querySelectorAll('.btn-view-secret').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.showSecret && window.showSecret(name, namespace); } catch(e){console.error(e);} }));
-  container.querySelectorAll('.btn-edit-secret').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.editSecret && window.editSecret(name, namespace); } catch(e){console.error(e);} }));
-  container.querySelectorAll('.btn-delete-secret').forEach(btn => btn.addEventListener('click', (e) => { e.stopPropagation(); const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.deleteSecret && window.deleteSecret(name, namespace); } catch(e){console.error(e);} }));
 
 document.addEventListener('click', function(event) {
   if (event.target.matches('[data-action="view-configmap"]')) {

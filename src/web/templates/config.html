@@ -469,10 +469,10 @@
       </div>
       <div class="card-body">
         <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-          <label for="hpaNamespaceFilter" class="form-label mb-0">Namespace:</label>
+          <label for="hpaNamespaceFilter" class="form-label mb-0">{{ t('label.namespace') }}</label>
           <select id="hpaNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
         </div>
-        <div id="hpa-table-container"><div class="text-muted">Yükleniyor...</div></div>
+  <div id="hpa-table-container"><div class="text-muted">{{ t('loading') }}</div></div>
       </div>
     </div>
   </div>
@@ -486,10 +486,10 @@
       </div>
       <div class="card-body">
         <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-          <label for="pdbNamespaceFilter" class="form-label mb-0">Namespace:</label>
+          <label for="pdbNamespaceFilter" class="form-label mb-0">{{ t('label.namespace') }}</label>
           <select id="pdbNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
         </div>
-        <div id="pdb-table-container"><div class="text-muted">Yükleniyor...</div></div>
+  <div id="pdb-table-container"><div class="text-muted">{{ t('loading') }}</div></div>
       </div>
     </div>
   </div>
@@ -503,11 +503,11 @@
       </div>
       <div class="card-body">
         <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-          <label for="pcNamespaceFilter" class="form-label mb-0">Namespace:</label>
+          <label for="pcNamespaceFilter" class="form-label mb-0">{{ t('label.namespace') }}</label>
           <select id="pcNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
           <small class="text-muted">Not: PriorityClass cluster-scope’tur; filtre sadece varsayılan seçim için görüntülenir.</small>
         </div>
-        <div id="pc-table-container"><div class="text-muted">Yükleniyor...</div></div>
+  <div id="pc-table-container"><div class="text-muted">{{ t('loading') }}</div></div>
       </div>
     </div>
   </div>
@@ -521,11 +521,11 @@
       </div>
       <div class="card-body">
         <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-          <label for="rcNamespaceFilter" class="form-label mb-0">Namespace:</label>
+          <label for="rcNamespaceFilter" class="form-label mb-0">{{ t('label.namespace') }}</label>
           <select id="rcNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
           <small class="text-muted">Not: RuntimeClass cluster-scope’tur; filtre sadece varsayılan seçim için görüntülenir.</small>
         </div>
-        <div id="rc-table-container"><div class="text-muted">Yükleniyor...</div></div>
+  <div id="rc-table-container"><div class="text-muted">{{ t('loading') }}</div></div>
       </div>
     </div>
   </div>
@@ -539,10 +539,10 @@
       </div>
       <div class="card-body">
         <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-          <label for="leasesNamespaceFilter" class="form-label mb-0">Namespace:</label>
+          <label for="leasesNamespaceFilter" class="form-label mb-0">{{ t('label.namespace') }}</label>
           <select id="leasesNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
         </div>
-        <div id="leases-table-container"><div class="text-muted">Yükleniyor...</div></div>
+  <div id="leases-table-container"><div class="text-muted">{{ t('loading') }}</div></div>
       </div>
     </div>
   </div>
@@ -558,10 +558,10 @@
           </div>
           <div class="card-body">
             <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-              <label for="mutatingNamespaceFilter" class="form-label mb-0">Namespace:</label>
+              <label for="mutatingNamespaceFilter" class="form-label mb-0">{{ t('label.namespace') }}</label>
               <select id="mutatingNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
             </div>
-            <div id="mutating-table-container"><div class="text-muted">Yükleniyor...</div></div>
+            <div id="mutating-table-container"><div class="text-muted">{{ t('loading') }}</div></div>
     <div id="mutating-pagination" class="d-flex justify-content-between align-items-center mt-2"></div>
           </div>
         </div>
@@ -575,10 +575,10 @@
           </div>
           <div class="card-body">
             <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-              <label for="validatingNamespaceFilter" class="form-label mb-0">Namespace:</label>
+              <label for="validatingNamespaceFilter" class="form-label mb-0">{{ t('label.namespace') }}</label>
               <select id="validatingNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
             </div>
-            <div id="validating-table-container"><div class="text-muted">Yükleniyor...</div></div>
+            <div id="validating-table-container"><div class="text-muted">{{ t('loading') }}</div></div>
     <div id="validating-pagination" class="d-flex justify-content-between align-items-center mt-2"></div>
           </div>
         </div>
@@ -1505,7 +1505,7 @@ function handleTabChange(tabId) {
 
 async function fetchAndRenderConfigMapsTable() {
   const container = document.getElementById('configmaps-table-container');
-  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">ConfigMap listesi yükleniyor...</span></div>';
+  container.innerHTML = `<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">${(window.i18n && window.i18n['loading'] && (window.i18n['loading'][window.locale]||window.i18n['loading']['tr'])) || 'Yükleniyor...'}</span></div>`;
   
   try {
   const ns = document.getElementById('configNamespaceSelect') ? document.getElementById('configNamespaceSelect').value : 'all';
@@ -1573,7 +1573,7 @@ async function fetchAndRenderConfigMapsTable() {
 
 async function fetchAndRenderSecretsTable() {
   const container = document.getElementById('secrets-table-container');
-  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Secret listesi yükleniyor...</span></div>';
+  container.innerHTML = `<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">${(window.i18n && window.i18n['loading'] && (window.i18n['loading'][window.locale]||window.i18n['loading']['tr'])) || 'Yükleniyor...'}</span></div>`;
   
   try {
   const ns = document.getElementById('secretsNamespaceSelect') ? document.getElementById('secretsNamespaceSelect').value : 'all';
@@ -1637,7 +1637,7 @@ async function fetchAndRenderSecretsTable() {
 
 async function fetchAndRenderResourceQuotasTable() {
   const container = document.getElementById('resource-quotas-table-container');
-  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Resource Quota listesi yükleniyor...</span></div>';
+  container.innerHTML = `<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">${(window.i18n && window.i18n['loading'] && (window.i18n['loading'][window.locale]||window.i18n['loading']['tr'])) || 'Yükleniyor...'}</span></div>`;
   
   try {
     const response = await fetch('/k8s-explorer/resource-quotas-summary');
@@ -1693,7 +1693,7 @@ async function fetchAndRenderResourceQuotasTable() {
 
 async function fetchAndRenderLimitRangesTable() {
   const container = document.getElementById('limit-ranges-table-container');
-  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Limit Range listesi yükleniyor...</span></div>';
+  container.innerHTML = `<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">${(window.i18n && window.i18n['loading'] && (window.i18n['loading'][window.locale]||window.i18n['loading']['tr'])) || 'Yükleniyor...'}</span></div>`;
   
   try {
     const response = await fetch('/k8s-explorer/limit-ranges-summary');
@@ -1747,7 +1747,7 @@ async function fetchAndRenderLimitRangesTable() {
 async function fetchAndRenderHPATable() {
   const container = document.getElementById('hpa-table-container');
   if (!container) return;
-  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">HPA listesi yükleniyor...</span></div>';
+  container.innerHTML = `<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">${(window.i18n && window.i18n['loading'] && (window.i18n['loading'][window.locale]||window.i18n['loading']['tr'])) || 'Yükleniyor...'}</span></div>`;
 
   try {
     const sel = document.getElementById('hpaNamespaceFilter');
@@ -1833,7 +1833,7 @@ async function fetchAndRenderHPATable() {
 async function fetchAndRenderPDBTable() {
   const container = document.getElementById('pdb-table-container');
   if (!container) return;
-  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">PDB listesi yükleniyor...</span></div>';
+  container.innerHTML = `<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">${(window.i18n && window.i18n['loading'] && (window.i18n['loading'][window.locale]||window.i18n['loading']['tr'])) || 'Yükleniyor...'}</span></div>`;
 
   try {
     const sel = document.getElementById('pdbNamespaceFilter');
@@ -2052,7 +2052,7 @@ function openHpaEditModal(name, namespace) {
 async function fetchAndRenderPriorityClassesTable() {
   const container = document.getElementById('pc-table-container');
   if (!container) return;
-  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">PriorityClass listesi yükleniyor...</span></div>';
+  container.innerHTML = `<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">${(window.i18n && window.i18n['loading'] && (window.i18n['loading'][window.locale]||window.i18n['loading']['tr'])) || 'Yükleniyor...'}</span></div>`;
 
   try {
     const sel = document.getElementById('pcNamespaceFilter');
@@ -2134,7 +2134,7 @@ async function fetchAndRenderPriorityClassesTable() {
 async function fetchAndRenderRuntimeClassesTable() {
   const container = document.getElementById('rc-table-container');
   if (!container) return;
-  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">RuntimeClass listesi yükleniyor...</span></div>';
+  container.innerHTML = `<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">${(window.i18n && window.i18n['loading'] && (window.i18n['loading'][window.locale]||window.i18n['loading']['tr'])) || 'Yükleniyor...'}</span></div>`;
 
   try {
     const sel = document.getElementById('rcNamespaceFilter');
@@ -2204,7 +2204,7 @@ async function fetchAndRenderRuntimeClassesTable() {
 async function fetchAndRenderLeasesTable() {
   const container = document.getElementById('leases-table-container');
   if (!container) return;
-  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Lease listesi yükleniyor...</span></div>';
+  container.innerHTML = `<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">${(window.i18n && window.i18n['loading'] && (window.i18n['loading'][window.locale]||window.i18n['loading']['tr'])) || 'Yükleniyor...'}</span></div>`;
 
   try {
     const sel = document.getElementById('leasesNamespaceFilter');
@@ -2262,7 +2262,7 @@ const __mutatingPageSize = 5;
 async function fetchAndRenderMutatingWebhooksTable(page = __mutatingPage) {
   const container = document.getElementById('mutating-table-container');
   if (!container) return;
-  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-4"><div class="loading-spinner me-2"></div><span class="text-muted">Mutating webhook listesi yükleniyor...</span></div>';
+  container.innerHTML = `<div class="d-flex align-items-center justify-content-center py-4"><div class="loading-spinner me-2"></div><span class="text-muted">${(window.i18n && window.i18n['loading'] && (window.i18n['loading'][window.locale]||window.i18n['loading']['tr'])) || 'Yükleniyor...'}</span></div>`;
 
   try {
     const sel = document.getElementById('mutatingNamespaceFilter');

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, redirect, make_response
 from flask_cors import CORS
 from scanner.k8s_scanner import K8sScanner
 from kubernetes import client, config
@@ -65,6 +65,132 @@ def favicon():
 
 harbor_trivy_cache = {}
 harbor_trivy_cache_time = {}
+
+# --- Simple i18n setup ---
+I18N = {
+    'nav.home': {'tr': 'Ana Sayfa', 'en': 'Home'},
+    'nav.security': {'tr': 'Güvenlik', 'en': 'Security'},
+    'nav.mesh': {'tr': 'Mesh Görselleştirme', 'en': 'Mesh Visualization'},
+    'nav.vulns': {'tr': 'Zafiyetler', 'en': 'Vulnerabilities'},
+    'nav.exec': {'tr': 'Pod Exec Olayları', 'en': 'Pod Exec Events'},
+    'nav.priv': {'tr': 'Privileged/Root/RBAC', 'en': 'Privileged/Root/RBAC'},
+    'nav.cmsecrets': {'tr': 'ConfigMap Gizli Bilgi', 'en': 'ConfigMap Secret Data'},
+    'nav.yamllint': {'tr': 'YAML Linter', 'en': 'YAML Linter'},
+    'nav.trivy': {'tr': 'Harbor Trivy Sonuçları', 'en': 'Harbor Trivy Results'},
+    'nav.explorer': {'tr': 'Kubernetes Explorer', 'en': 'Kubernetes Explorer'},
+    'nav.nodes': {'tr': "Node's", 'en': 'Nodes'},
+    'nav.workloads': {'tr': 'Workloads', 'en': 'Workloads'},
+    'nav.config': {'tr': 'Config', 'en': 'Config'},
+    'theme.toggle': {'tr': 'Tema Değiştir', 'en': 'Toggle Theme'},
+    'footer.created': {'tr': 'Oluşturan', 'en': 'Created by'},
+    'footer.app': {'tr': 'Kubernetes Security Checker', 'en': 'Kubernetes Security Checker'},
+    'brand': {'tr': 'Kube-Sec', 'en': 'Kube-Sec'},
+    'loading': {'tr': 'Yükleniyor...', 'en': 'Loading...'},
+    'label.namespace': {'tr': 'Namespace:', 'en': 'Namespace:'},
+    # Home page
+    'home.page_title': {'tr': 'Ana Sayfa - Kubernetes Security Checker', 'en': 'Home - Kubernetes Security Checker'},
+    'home.hero.title': {'tr': 'Kubernetes Security Checker', 'en': 'Kubernetes Security Checker'},
+    'home.hero.lead': {
+        'tr': 'Kubernetes ortamlarınızda güvenlik açıklarını tespit edin, ayrıcalıklı container kullanımlarını analiz edin ve cluster güvenliğinizi artırın.',
+        'en': 'Detect security issues in your Kubernetes environments, analyze privileged container usage, and improve your cluster security.'
+    },
+    'home.hero.btn.mesh': {'tr': 'Mesh Görselleştirme', 'en': 'Visualize Mesh'},
+    'home.hero.btn.scan': {'tr': 'Zafiyetleri Tara', 'en': 'Scan Vulnerabilities'},
+    # Features
+    'home.feat.security.title': {'tr': 'Güvenlik Analizi', 'en': 'Security Analysis'},
+    'home.feat.security.text': {
+        'tr': "Kubernetes cluster'ınızdaki güvenlik açıklarını, ayrıcalıklı container'ları ve RBAC risklerini detaylı olarak analiz edin.",
+        'en': 'Analyze security issues in your Kubernetes cluster, privileged containers, and RBAC risks in detail.'
+    },
+    'home.feat.security.cta': {'tr': 'Analiz Et', 'en': 'Analyze'},
+
+    'home.feat.mesh.title': {'tr': 'Network Mesh', 'en': 'Network Mesh'},
+    'home.feat.mesh.text': {
+        'tr': 'Pod iletişimlerini, service bağlantılarını ve network topolojisini interaktif grafiklerle görselleştirin.',
+        'en': 'Visualize pod communications, service connections, and network topology with interactive graphs.'
+    },
+    'home.feat.mesh.cta': {'tr': 'Görselleştir', 'en': 'Visualize'},
+
+    'home.feat.explorer.title': {'tr': 'Kubernetes Explorer', 'en': 'Kubernetes Explorer'},
+    'home.feat.explorer.text': {
+        'tr': 'Cluster kaynaklarınızı keşfedin, YAML dosyalarını düzenleyin ve pod loglarını gerçek zamanlı takip edin.',
+        'en': 'Explore cluster resources, edit YAML files, and follow pod logs in real time.'
+    },
+    'home.feat.explorer.cta': {'tr': 'Keşfet', 'en': 'Explore'},
+
+    'home.feat.workloads.title': {'tr': 'Workload Yönetimi', 'en': 'Workload Management'},
+    'home.feat.workloads.text': {
+        'tr': "Deployment'ları, DaemonSet'leri ve Pod'ları merkezi bir arayüzden yönetin ve durumlarını izleyin.",
+        'en': 'Manage Deployments, DaemonSets, and Pods from a central interface and monitor their status.'
+    },
+    'home.feat.workloads.cta': {'tr': 'Yönet', 'en': 'Manage'},
+
+    'home.feat.nodes.title': {'tr': 'Node Monitoring', 'en': 'Node Monitoring'},
+    'home.feat.nodes.text': {
+        'tr': "Kubernetes node'larınızın kaynak kullanımını, durumunu ve performans metriklerini izleyin.",
+        'en': 'Monitor resource usage, status, and performance metrics of your Kubernetes nodes.'
+    },
+    'home.feat.nodes.cta': {'tr': 'İzle', 'en': 'Monitor'},
+
+    'home.feat.linter.title': {'tr': 'YAML Linter', 'en': 'YAML Linter'},
+    'home.feat.linter.text': {
+        'tr': 'Kubernetes YAML dosyalarınızı doğrulayın, syntax hatalarını tespit edin ve best practice önerilerini alın.',
+        'en': 'Validate your Kubernetes YAML files, detect syntax errors, and get best practice recommendations.'
+    },
+    'home.feat.linter.cta': {'tr': 'Doğrula', 'en': 'Validate'},
+
+    # About section
+    'home.about.title': {'tr': 'Uygulama Hakkında', 'en': 'About the Application'},
+    'home.about.lead': {
+        'tr': 'Bu uygulama, Kubernetes ortamlarında güvenlik açıklarını, ayrıcalıklı container kullanımlarını, root kullanıcı risklerini, RBAC (Role-Based Access Control) riskli rolleri ve pod exec olaylarını merkezi bir web arayüzünde görselleştirmek için geliştirilmiştir.',
+        'en': 'This application is built to visualize security issues in Kubernetes environments, privileged container usage, root user risks, risky RBAC roles, and pod exec events in a central web interface.'
+    },
+    'home.about.goal': {
+        'tr': 'Amacımız: Kubernetes yöneticilerinin ve DevOps ekiplerinin, cluster güvenliğini kolayca analiz edebilmesi ve riskli alanları hızlıca tespit edebilmesidir. Ağ topolojisi, pod iletişimi ve güvenlik zafiyetleri tek ekranda sunulur.',
+        'en': 'Our goal: Enable Kubernetes admins and DevOps teams to easily analyze cluster security and quickly identify risky areas. Network topology, pod communication, and security vulnerabilities are presented on a single screen.'
+    },
+    'home.about.footer': {
+        'tr': 'One Plus Mon ekibi olarak, bulut ve konteyner güvenliği alanında açık kaynak çözümler üretmekteyiz.',
+        'en': 'As the One Plus Mon team, we produce open-source solutions in cloud and container security.'
+    },
+    'home.oss.title': {'tr': 'Açık Kaynak', 'en': 'Open Source'},
+    'home.oss.desc': {
+        'tr': 'Topluluk katkısı ile geliştirilen güvenli Kubernetes altyapıları için.',
+        'en': 'For secure Kubernetes infrastructures developed with community contributions.'
+    },
+}
+
+def translate(key: str, lang: str) -> str:
+    try:
+        d = I18N.get(key)
+        if not d:
+            return key
+        return d.get(lang) or d.get('tr') or key
+    except Exception:
+        return key
+
+@app.context_processor
+def inject_i18n():
+    try:
+        lang = request.cookies.get('lang') or 'tr'
+    except Exception:
+        lang = 'tr'
+    return {
+        't': lambda key: translate(key, lang),
+    'current_locale': lang,
+    'i18n_json': I18N
+    }
+
+@app.route('/set-locale')
+def set_locale():
+    lang = request.args.get('lang', 'tr')
+    if lang not in ('tr', 'en'):
+        lang = 'tr'
+    next_url = request.args.get('next') or request.referrer or '/'
+    resp = redirect(next_url)
+    # 180 days
+    resp.set_cookie('lang', lang, max_age=60*60*24*180, httponly=False, samesite='Lax')
+    return resp
 
 
 # HPA summary endpoint

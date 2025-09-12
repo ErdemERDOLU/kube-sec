@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Ana Sayfa - Kubernetes Security Checker{% endblock %}
+{% block title %}{{ t('home.page_title') }}{% endblock %}
 
 {% block content %}
 <div class="row">
@@ -8,17 +8,14 @@
         <div class="card bg-primary text-white">
             <div class="card-body p-5 text-center">
                 <i class="bi bi-shield-check display-1 mb-4"></i>
-                <h1 class="display-4 fw-bold mb-3">Kubernetes Security Checker</h1>
-                <p class="lead mb-4">
-                    Kubernetes ortamlarınızda güvenlik açıklarını tespit edin, 
-                    ayrıcalıklı container kullanımlarını analiz edin ve cluster güvenliğinizi artırın.
-                </p>
+                <h1 class="display-4 fw-bold mb-3">{{ t('home.hero.title') }}</h1>
+                <p class="lead mb-4">{{ t('home.hero.lead') }}</p>
                 <div class="d-flex gap-3 justify-content-center flex-wrap">
                     <a href="/mesh" class="btn btn-light btn-lg">
-                        <i class="bi bi-diagram-3 me-2"></i>Mesh Görselleştirme
+                        <i class="bi bi-diagram-3 me-2"></i>{{ t('home.hero.btn.mesh') }}
                     </a>
                     <a href="/vulnerabilities" class="btn btn-outline-light btn-lg">
-                        <i class="bi bi-bug me-2"></i>Zafiyetleri Tara
+                        <i class="bi bi-bug me-2"></i>{{ t('home.hero.btn.scan') }}
                     </a>
                 </div>
             </div>
@@ -33,13 +30,10 @@
                      style="width: 80px; height: 80px;">
                     <i class="bi bi-shield-exclamation text-primary" style="font-size: 2rem;"></i>
                 </div>
-                <h4 class="card-title">Güvenlik Analizi</h4>
-                <p class="card-text text-muted">
-                    Kubernetes cluster'ınızdaki güvenlik açıklarını, ayrıcalıklı container'ları 
-                    ve RBAC risklerini detaylı olarak analiz edin.
-                </p>
+                <h4 class="card-title">{{ t('home.feat.security.title') }}</h4>
+                <p class="card-text text-muted">{{ t('home.feat.security.text') }}</p>
                 <a href="/vulnerabilities" class="btn btn-primary">
-                    <i class="bi bi-arrow-right me-1"></i>Analiz Et
+                    <i class="bi bi-arrow-right me-1"></i>{{ t('home.feat.security.cta') }}
                 </a>
             </div>
         </div>
@@ -52,13 +46,10 @@
                      style="width: 80px; height: 80px;">
                     <i class="bi bi-diagram-3 text-success" style="font-size: 2rem;"></i>
                 </div>
-                <h4 class="card-title">Network Mesh</h4>
-                <p class="card-text text-muted">
-                    Pod iletişimlerini, service bağlantılarını ve network topolojisini 
-                    interaktif grafiklerle görselleştirin.
-                </p>
+                <h4 class="card-title">{{ t('home.feat.mesh.title') }}</h4>
+                <p class="card-text text-muted">{{ t('home.feat.mesh.text') }}</p>
                 <a href="/mesh" class="btn btn-success">
-                    <i class="bi bi-arrow-right me-1"></i>Görselleştir
+                    <i class="bi bi-arrow-right me-1"></i>{{ t('home.feat.mesh.cta') }}
                 </a>
             </div>
         </div>
@@ -71,13 +62,10 @@
                      style="width: 80px; height: 80px;">
                     <i class="bi bi-compass text-info" style="font-size: 2rem;"></i>
                 </div>
-                <h4 class="card-title">Kubernetes Explorer</h4>
-                <p class="card-text text-muted">
-                    Cluster kaynaklarınızı keşfedin, YAML dosyalarını düzenleyin 
-                    ve pod loglarını gerçek zamanlı takip edin.
-                </p>
+                <h4 class="card-title">{{ t('home.feat.explorer.title') }}</h4>
+                <p class="card-text text-muted">{{ t('home.feat.explorer.text') }}</p>
                 <a href="/k8s-explorer" class="btn btn-info">
-                    <i class="bi bi-arrow-right me-1"></i>Keşfet
+                    <i class="bi bi-arrow-right me-1"></i>{{ t('home.feat.explorer.cta') }}
                 </a>
             </div>
         </div>
@@ -90,13 +78,10 @@
                      style="width: 80px; height: 80px;">
                     <i class="bi bi-layers text-warning" style="font-size: 2rem;"></i>
                 </div>
-                <h4 class="card-title">Workload Yönetimi</h4>
-                <p class="card-text text-muted">
-                    Deployment'ları, DaemonSet'leri ve Pod'ları merkezi bir arayüzden 
-                    yönetin ve durumlarını izleyin.
-                </p>
+                <h4 class="card-title">{{ t('home.feat.workloads.title') }}</h4>
+                <p class="card-text text-muted">{{ t('home.feat.workloads.text') }}</p>
                 <a href="/workloads" class="btn btn-warning">
-                    <i class="bi bi-arrow-right me-1"></i>Yönet
+                    <i class="bi bi-arrow-right me-1"></i>{{ t('home.feat.workloads.cta') }}
                 </a>
             </div>
         </div>
@@ -109,13 +94,10 @@
                      style="width: 80px; height: 80px;">
                     <i class="bi bi-hdd-stack text-danger" style="font-size: 2rem;"></i>
                 </div>
-                <h4 class="card-title">Node Monitoring</h4>
-                <p class="card-text text-muted">
-                    Kubernetes node'larınızın kaynak kullanımını, durumunu 
-                    ve performans metriklerini izleyin.
-                </p>
+                <h4 class="card-title">{{ t('home.feat.nodes.title') }}</h4>
+                <p class="card-text text-muted">{{ t('home.feat.nodes.text') }}</p>
                 <a href="/nodes" class="btn btn-danger">
-                    <i class="bi bi-arrow-right me-1"></i>İzle
+                    <i class="bi bi-arrow-right me-1"></i>{{ t('home.feat.nodes.cta') }}
                 </a>
             </div>
         </div>
@@ -128,13 +110,10 @@
                      style="width: 80px; height: 80px;">
                     <i class="bi bi-code-slash text-secondary" style="font-size: 2rem;"></i>
                 </div>
-                <h4 class="card-title">YAML Linter</h4>
-                <p class="card-text text-muted">
-                    Kubernetes YAML dosyalarınızı doğrulayın, syntax hatalarını 
-                    tespit edin ve best practice önerilerini alın.
-                </p>
+                <h4 class="card-title">{{ t('home.feat.linter.title') }}</h4>
+                <p class="card-text text-muted">{{ t('home.feat.linter.text') }}</p>
                 <a href="/yaml-linter" class="btn btn-secondary">
-                    <i class="bi bi-arrow-right me-1"></i>Doğrula
+                    <i class="bi bi-arrow-right me-1"></i>{{ t('home.feat.linter.cta') }}
                 </a>
             </div>
         </div>
@@ -150,33 +129,20 @@
                     <div class="col-lg-8">
                         <h2 class="mb-4">
                             <i class="bi bi-info-circle text-primary me-2"></i>
-                            Uygulama Hakkında
+                            {{ t('home.about.title') }}
                         </h2>
-                        <p class="lead mb-3">
-                            Bu uygulama, Kubernetes ortamlarında güvenlik açıklarını, ayrıcalıklı container 
-                            kullanımlarını, root kullanıcı risklerini, RBAC (Role-Based Access Control) 
-                            riskli rolleri ve pod exec olaylarını merkezi bir web arayüzünde görselleştirmek 
-                            için geliştirilmiştir.
-                        </p>
-                        <p class="mb-3">
-                            <strong>Amacımız:</strong> Kubernetes yöneticilerinin ve DevOps ekiplerinin, 
-                            cluster güvenliğini kolayca analiz edebilmesi ve riskli alanları hızlıca 
-                            tespit edebilmesidir. Ağ topolojisi, pod iletişimi ve güvenlik zafiyetleri 
-                            tek ekranda sunulur.
-                        </p>
+                        <p class="lead mb-3">{{ t('home.about.lead') }}</p>
+                        <p class="mb-3">{{ t('home.about.goal') }}</p>
                         <p class="text-muted mb-0">
                             <i class="bi bi-people me-2"></i>
-                            <strong>One Plus Mon</strong> ekibi olarak, bulut ve konteyner güvenliği 
-                            alanında açık kaynak çözümler üretmekteyiz.
+                            <strong>One Plus Mon</strong> {{ t('home.about.footer') }}
                         </p>
                     </div>
                     <div class="col-lg-4 text-center">
                         <div class="bg-light rounded-3 p-4">
                             <i class="bi bi-award text-primary display-1 mb-3"></i>
-                            <h5>Açık Kaynak</h5>
-                            <p class="text-muted mb-0">
-                                Topluluk katkısı ile geliştirilen güvenli Kubernetes altyapıları için.
-                            </p>
+                            <h5>{{ t('home.oss.title') }}</h5>
+                            <p class="text-muted mb-0">{{ t('home.oss.desc') }}</p>
                         </div>
                     </div>
                 </div>

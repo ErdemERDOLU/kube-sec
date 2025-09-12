@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="tr" data-bs-theme="light">
+<html lang="{{ current_locale or 'tr' }}" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -191,7 +191,7 @@
         <div class="container-fluid">
             <a class="navbar-brand d-flex align-items-center" href="/">
                 <i class="bi bi-shield-check me-2"></i>
-                Kube-Sec
+                {{ t('brand') }}
             </a>
             
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
@@ -203,70 +203,81 @@
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="/">
-                            <i class="bi bi-house me-1"></i>Ana Sayfa
+                            <i class="bi bi-house me-1"></i>{{ t('nav.home') }}
                         </a>
                     </li>
                     
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="guvenlikDropdown" role="button" 
                            data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-shield-exclamation me-1"></i>Güvenlik
+                            <i class="bi bi-shield-exclamation me-1"></i>{{ t('nav.security') }}
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="guvenlikDropdown">
                             <li><a class="dropdown-item" href="/mesh">
-                                <i class="bi bi-diagram-3 me-2"></i>Mesh Görselleştirme
+                                <i class="bi bi-diagram-3 me-2"></i>{{ t('nav.mesh') }}
                             </a></li>
                             <li><a class="dropdown-item" href="/vulnerabilities">
-                                <i class="bi bi-bug me-2"></i>Zafiyetler
+                                <i class="bi bi-bug me-2"></i>{{ t('nav.vulns') }}
                             </a></li>
                             <li><a class="dropdown-item" href="/exec-events-page">
-                                <i class="bi bi-terminal me-2"></i>Pod Exec Olayları
+                                <i class="bi bi-terminal me-2"></i>{{ t('nav.exec') }}
                             </a></li>
                             <li><a class="dropdown-item" href="/privileged-containers-page">
-                                <i class="bi bi-key me-2"></i>Privileged/Root/RBAC
+                                <i class="bi bi-key me-2"></i>{{ t('nav.priv') }}
                             </a></li>
                             <li><a class="dropdown-item" href="/configmap-secrets">
-                                <i class="bi bi-file-lock me-2"></i>ConfigMap Gizli Bilgi
+                                <i class="bi bi-file-lock me-2"></i>{{ t('nav.cmsecrets') }}
                             </a></li>
                             <li><a class="dropdown-item" href="/yaml-linter">
-                                <i class="bi bi-code-slash me-2"></i>YAML Linter
+                                <i class="bi bi-code-slash me-2"></i>{{ t('nav.yamllint') }}
                             </a></li>
                             <li><a class="dropdown-item" href="/harbor-trivy">
-                                <i class="bi bi-search me-2"></i>Harbor Trivy Sonuçları
+                                <i class="bi bi-search me-2"></i>{{ t('nav.trivy') }}
                             </a></li>
                         </ul>
                     </li>
                     
                     <li class="nav-item">
                         <a class="nav-link" href="/k8s-explorer">
-                            <i class="bi bi-compass me-1"></i>Kubernetes Explorer
+                            <i class="bi bi-compass me-1"></i>{{ t('nav.explorer') }}
                         </a>
                     </li>
                     
                     <li class="nav-item">
                         <a class="nav-link" href="/nodes">
-                            <i class="bi bi-hdd-stack me-1"></i>Node's
+                            <i class="bi bi-hdd-stack me-1"></i>{{ t('nav.nodes') }}
                         </a>
                     </li>
                     
                     <li class="nav-item">
                         <a class="nav-link" href="/workloads">
-                            <i class="bi bi-layers me-1"></i>Workloads
+                            <i class="bi bi-layers me-1"></i>{{ t('nav.workloads') }}
                         </a>
                     </li>
                     
                     <!-- Added Config tab next to Workloads -->
                     <li class="nav-item">
                         <a class="nav-link" href="/config">
-                            <i class="bi bi-gear me-1"></i>Config
+                            <i class="bi bi-gear me-1"></i>{{ t('nav.config') }}
                         </a>
                     </li>
                 </ul>
                 
                 <!-- Theme toggle -->
-                <button class="theme-toggle me-2" onclick="toggleTheme()" title="Tema Değiştir">
+                <button class="theme-toggle me-2" onclick="toggleTheme()" title="{{ t('theme.toggle') }}">
                     <i class="bi bi-moon-fill" id="theme-icon"></i>
                 </button>
+
+                <!-- Language switcher -->
+                <div class="dropdown">
+                  <button class="btn btn-sm btn-light dropdown-toggle" type="button" id="langDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-translate me-1"></i>{{ current_locale == 'en' and 'English' or 'Türkçe' }}
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="langDropdown">
+                    <li><a class="dropdown-item" href="/set-locale?lang=tr&next={{ request.path }}">Türkçe</a></li>
+                    <li><a class="dropdown-item" href="/set-locale?lang=en&next={{ request.path }}">English</a></li>
+                  </ul>
+                </div>
             </div>
         </div>
     </nav>
@@ -288,6 +299,11 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // expose locale and i18n to JS
+        window.locale = "{{ current_locale or 'tr' }}";
+        window.i18n = JSON.parse(decodeURIComponent("{{ (i18n_json | tojson | urlencode) | safe }}"));
+    </script>
     
     <!-- Theme Toggle Script -->
     <script>
@@ -319,8 +335,9 @@
         });
         
         // Loading state helper
-        function showLoading(element, text = 'Yükleniyor...') {
-            element.innerHTML = `<span class="loading-spinner me-2"></span>${text}`;
+    function showLoading(element, text) {
+            const t = text || "{{ t('loading') }}";
+            element.innerHTML = `<span class="loading-spinner me-2"></span>${t}`;
             element.disabled = true;
         }
         

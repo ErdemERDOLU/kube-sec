@@ -81,6 +81,7 @@ I18N = {
     'nav.nodes': {'tr': "Node's", 'en': 'Nodes'},
     'nav.workloads': {'tr': 'Workloads', 'en': 'Workloads'},
     'nav.config': {'tr': 'Config', 'en': 'Config'},
+    'nav.network': {'tr': 'Network', 'en': 'Network'},
     'theme.toggle': {'tr': 'Tema Değiştir', 'en': 'Toggle Theme'},
     'footer.created': {'tr': 'Oluşturan', 'en': 'Created by'},
     'footer.app': {'tr': 'Kubernetes Security Checker', 'en': 'Kubernetes Security Checker'},
@@ -2314,6 +2315,11 @@ def workloads_page():
 def config_page():
     return render_template('config.html')
 
+# Network page (Services, Endpoints, Ingress, Ingress Classes, Network Policies)
+@app.route('/network')
+def network_page():
+    return render_template('network.html')
+
 @app.route('/k8s-explorer/configmaps-summary')
 def configmaps_summary():
     try:
@@ -2863,6 +2869,183 @@ def k8s_explorer_namespaces():
         return jsonify({'error': str(e)}), 500
 
 
+# --- Network summaries (namespaced when applicable) ---
+@app.route('/k8s-explorer/services-summary')
+def services_summary():
+    try:
+        namespace = request.args.get('namespace')
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        v1 = client.CoreV1Api()
+        if namespace and namespace != 'all':
+            items = v1.list_namespaced_service(namespace).items
+        else:
+            items = v1.list_service_for_all_namespaces().items
+        result = []
+        for svc in items:
+            spec = svc.spec
+            ports = []
+            for p in (spec.ports or []):
+                try:
+                    ports.append({'port': p.port, 'targetPort': getattr(p, 'target_port', None), 'protocol': p.protocol})
+                except Exception:
+                    ports.append({'port': getattr(p, 'port', None)})
+            result.append({
+                'namespace': svc.metadata.namespace,
+                'name': svc.metadata.name,
+                'type': getattr(spec, 'type', None),
+                'cluster_ip': getattr(spec, 'cluster_ip', None),
+                'external_ip': (spec.external_i_ps or spec.external_ips)[0] if getattr(spec, 'external_i_ps', None) or getattr(spec, 'external_ips', None) else None,
+                'ports': ports,
+                'creation_timestamp': svc.metadata.creation_timestamp.isoformat() if getattr(svc.metadata, 'creation_timestamp', None) else None
+            })
+        return jsonify({'services': result})
+    except Exception as e:
+        return jsonify({'services': [], 'error': str(e)})
+
+
+@app.route('/k8s-explorer/endpoints-summary')
+def endpoints_summary():
+    try:
+        namespace = request.args.get('namespace')
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        v1 = client.CoreV1Api()
+        if namespace and namespace != 'all':
+            items = v1.list_namespaced_endpoints(namespace).items
+        else:
+            items = v1.list_endpoints_for_all_namespaces().items
+        result = []
+        for ep in items:
+            subsets = []
+            for ss in (ep.subsets or []):
+                addresses = [{'ip': a.ip, 'targetRef': getattr(a, 'target_ref', None) and {'kind': a.target_ref.kind, 'name': a.target_ref.name}} for a in (ss.addresses or [])]
+                not_ready = [{'ip': a.ip, 'targetRef': getattr(a, 'target_ref', None) and {'kind': a.target_ref.kind, 'name': a.target_ref.name}} for a in (ss.not_ready_addresses or [])]
+                ports = [{'name': p.name, 'port': p.port, 'protocol': p.protocol} for p in (ss.ports or [])]
+                subsets.append({'addresses': addresses, 'not_ready_addresses': not_ready, 'ports': ports})
+            result.append({
+                'namespace': ep.metadata.namespace,
+                'name': ep.metadata.name,
+                'subsets': subsets,
+                'creation_timestamp': ep.metadata.creation_timestamp.isoformat() if getattr(ep.metadata, 'creation_timestamp', None) else None
+            })
+        return jsonify({'endpoints': result})
+    except Exception as e:
+        return jsonify({'endpoints': [], 'error': str(e)})
+
+
+@app.route('/k8s-explorer/ingresses-summary')
+def ingresses_summary():
+    try:
+        namespace = request.args.get('namespace')
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        net_v1 = client.NetworkingV1Api()
+        if namespace and namespace != 'all':
+            items = net_v1.list_namespaced_ingress(namespace).items
+        else:
+            items = net_v1.list_ingress_for_all_namespaces().items
+        result = []
+        for ing in items:
+            hosts = []
+            try:
+                for rule in (ing.spec.rules or []) or []:
+                    if getattr(rule, 'host', None):
+                        hosts.append(rule.host)
+            except Exception:
+                pass
+            result.append({
+                'namespace': ing.metadata.namespace,
+                'name': ing.metadata.name,
+                'class': getattr(ing.spec, 'ingress_class_name', None),
+                'hosts': hosts,
+                'creation_timestamp': ing.metadata.creation_timestamp.isoformat() if getattr(ing.metadata, 'creation_timestamp', None) else None
+            })
+        return jsonify({'ingresses': result})
+    except Exception as e:
+        return jsonify({'ingresses': [], 'error': str(e)})
+
+
+@app.route('/k8s-explorer/ingress-classes-summary')
+def ingress_classes_summary():
+    try:
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        net_v1 = client.NetworkingV1Api()
+        items = net_v1.list_ingress_class().items
+        result = []
+        for ic in items:
+            params = None
+            try:
+                params = getattr(ic.spec, 'parameters', None)
+                if params:
+                    params = {
+                        'apiGroup': getattr(params, 'api_group', None) or getattr(params, 'apiGroup', None),
+                        'kind': getattr(params, 'kind', None),
+                        'name': getattr(params, 'name', None),
+                        'scope': getattr(params, 'scope', None),
+                        'namespace': getattr(params, 'namespace', None),
+                    }
+            except Exception:
+                params = None
+            result.append({
+                'name': ic.metadata.name,
+                'controller': getattr(ic.spec, 'controller', None),
+                'parameters': params,
+                'creation_timestamp': ic.metadata.creation_timestamp.isoformat() if getattr(ic.metadata, 'creation_timestamp', None) else None
+            })
+        return jsonify({'ingress_classes': result})
+    except Exception as e:
+        return jsonify({'ingress_classes': [], 'error': str(e)})
+
+
+@app.route('/k8s-explorer/network-policies-summary')
+def network_policies_summary():
+    try:
+        namespace = request.args.get('namespace')
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        net_v1 = client.NetworkingV1Api()
+        if namespace and namespace != 'all':
+            items = net_v1.list_namespaced_network_policy(namespace).items
+        else:
+            items = net_v1.list_network_policy_for_all_namespaces().items
+        result = []
+        for np in items:
+            spec = np.spec
+            ingress_rules = len(getattr(spec, 'ingress', []) or []) if spec else 0
+            egress_rules = len(getattr(spec, 'egress', []) or []) if spec else 0
+            pod_selector = getattr(spec, 'pod_selector', None)
+            pod_selector_match = getattr(pod_selector, 'match_labels', None) if pod_selector else None
+            result.append({
+                'namespace': np.metadata.namespace,
+                'name': np.metadata.name,
+                'policy_types': getattr(spec, 'policy_types', None) if spec else None,
+                'ingress_rules': ingress_rules,
+                'egress_rules': egress_rules,
+                'pod_selector': pod_selector_match,
+                'creation_timestamp': np.metadata.creation_timestamp.isoformat() if getattr(np.metadata, 'creation_timestamp', None) else None
+            })
+        return jsonify({'network_policies': result})
+    except Exception as e:
+        return jsonify({'network_policies': [], 'error': str(e)})
+
+
 @app.errorhandler(Exception)
 def handle_exception(e):
     import sys
@@ -3137,6 +3320,57 @@ def k8s_explorer_service_detail():
                 return jsonify({'deployments': [], 'error': 'Service selector veya label ile eşleşen deployment bulunamadı.'})
     except Exception as e:
         return jsonify({'error': str(e)})
+
+@app.route('/k8s-explorer/service-details')
+def k8s_explorer_service_details():
+    namespace = request.args.get('namespace')
+    name = request.args.get('name')
+    if not namespace or not name:
+        return jsonify({'error': 'namespace ve name zorunlu'}), 400
+    try:
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        core_v1 = client.CoreV1Api()
+        svc = core_v1.read_namespaced_service(name, namespace)
+        md = svc.metadata
+        spec = svc.spec
+        status = getattr(svc, 'status', None)
+        ports = []
+        for p in (spec.ports or []) if spec else []:
+            ports.append({
+                'name': getattr(p, 'name', None),
+                'port': getattr(p, 'port', None),
+                'protocol': getattr(p, 'protocol', None),
+                'targetPort': getattr(p, 'target_port', None),
+                'nodePort': getattr(p, 'node_port', None)
+            })
+        details = {
+            'metadata': {
+                'name': getattr(md, 'name', None),
+                'namespace': getattr(md, 'namespace', None),
+                'labels': md.labels or {},
+                'annotations': md.annotations or {},
+                'creation_timestamp': md.creation_timestamp.isoformat() if getattr(md, 'creation_timestamp', None) else None,
+                'uid': getattr(md, 'uid', None)
+            },
+            'spec': {
+                'type': getattr(spec, 'type', None) if spec else None,
+                'cluster_ip': getattr(spec, 'cluster_ip', None) if spec else None,
+                'external_ips': getattr(spec, 'external_ips', None) if spec else None,
+                'selector': getattr(spec, 'selector', None) if spec else None,
+                'session_affinity': getattr(spec, 'session_affinity', None) if spec else None,
+                'ports': ports
+            },
+            'status': {
+                'load_balancer': getattr(getattr(status, 'load_balancer', None), 'ingress', None) if status else None
+            }
+        }
+        return jsonify({'service': details})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/k8s-explorer/deployment')
 def k8s_explorer_deployment_detail():

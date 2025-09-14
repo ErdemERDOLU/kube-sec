@@ -1684,6 +1684,10 @@ def k8s_explorer_delete():
             apps_v1.delete_namespaced_stateful_set(name=name, namespace=namespace, body=client.V1DeleteOptions())
             return jsonify({'ok': True}), 200
 
+        elif obj_type in ('endpoint', 'endpoints'):
+            core_v1.delete_namespaced_endpoints(name=name, namespace=namespace)
+            return jsonify({'ok': True, 'deleted': {'type': 'endpoints', 'namespace': namespace, 'name': name}}), 200
+
         else:
             return jsonify({'error': f'Unsupported resource type: {obj_type}'}), 400
 
@@ -2787,6 +2791,9 @@ def k8s_explorer_yaml():
             elif obj_type == 'service':
                 kube_client.core_v1 = client.CoreV1Api()
                 obj = kube_client.core_v1.read_namespaced_service(name, namespace, _preload_content=False)
+            elif obj_type == 'endpoints':
+                kube_client.core_v1 = client.CoreV1Api()
+                obj = kube_client.core_v1.read_namespaced_endpoints(name, namespace, _preload_content=False)
             elif obj_type == 'deployment':
                 kube_client.apps_v1 = client.AppsV1Api()
                 obj = kube_client.apps_v1.read_namespaced_deployment(name, namespace, _preload_content=False)
@@ -2833,6 +2840,9 @@ def k8s_explorer_yaml():
             elif obj_type == 'service':
                 kube_client.core_v1 = client.CoreV1Api()
                 kube_client.core_v1.patch_namespaced_service(name, namespace, body)
+            elif obj_type == 'endpoints':
+                kube_client.core_v1 = client.CoreV1Api()
+                kube_client.core_v1.patch_namespaced_endpoints(name, namespace, body)
             elif obj_type == 'deployment':
                 kube_client.apps_v1 = client.AppsV1Api()
                 kube_client.apps_v1.patch_namespaced_deployment(name, namespace, body)
@@ -2890,15 +2900,34 @@ def services_summary():
             ports = []
             for p in (spec.ports or []):
                 try:
-                    ports.append({'port': p.port, 'targetPort': getattr(p, 'target_port', None), 'protocol': p.protocol})
+                    ports.append({'port': p.port, 'targetPort': getattr(p, 'target_port', None), 'protocol': getattr(p, 'protocol', None)})
                 except Exception:
                     ports.append({'port': getattr(p, 'port', None)})
+
+            # externalIPs alanını güvenle çek
+            ext_ips = None
+            try:
+                ext_ips = getattr(spec, 'external_i_ps', None)
+                if not ext_ips:
+                    ext_ips = getattr(spec, 'external_ips', None)
+            except Exception:
+                ext_ips = None
+            external_ip = None
+            try:
+                if isinstance(ext_ips, list) and ext_ips:
+                    external_ip = ext_ips[0]
+                elif isinstance(ext_ips, str):
+                    external_ip = ext_ips
+            except Exception:
+                external_ip = None
+
             result.append({
                 'namespace': svc.metadata.namespace,
                 'name': svc.metadata.name,
                 'type': getattr(spec, 'type', None),
                 'cluster_ip': getattr(spec, 'cluster_ip', None),
-                'external_ip': (spec.external_i_ps or spec.external_ips)[0] if getattr(spec, 'external_i_ps', None) or getattr(spec, 'external_ips', None) else None,
+                'external_ip': external_ip,
+                'selector': getattr(spec, 'selector', None) or {},
                 'ports': ports,
                 'creation_timestamp': svc.metadata.creation_timestamp.isoformat() if getattr(svc.metadata, 'creation_timestamp', None) else None
             })
@@ -2924,10 +2953,16 @@ def endpoints_summary():
         result = []
         for ep in items:
             subsets = []
-            for ss in (ep.subsets or []):
-                addresses = [{'ip': a.ip, 'targetRef': getattr(a, 'target_ref', None) and {'kind': a.target_ref.kind, 'name': a.target_ref.name}} for a in (ss.addresses or [])]
-                not_ready = [{'ip': a.ip, 'targetRef': getattr(a, 'target_ref', None) and {'kind': a.target_ref.kind, 'name': a.target_ref.name}} for a in (ss.not_ready_addresses or [])]
-                ports = [{'name': p.name, 'port': p.port, 'protocol': p.protocol} for p in (ss.ports or [])]
+            for ss in (ep.subsets or []) or []:
+                def to_tr(a):
+                    try:
+                        tr = getattr(a, 'target_ref', None) or getattr(a, 'targetRef', None)
+                        return {'kind': getattr(tr, 'kind', None), 'name': getattr(tr, 'name', None)} if tr else None
+                    except Exception:
+                        return None
+                addresses = [{'ip': getattr(a, 'ip', None), 'targetRef': to_tr(a)} for a in (ss.addresses or [])]
+                not_ready = [{'ip': getattr(a, 'ip', None), 'targetRef': to_tr(a)} for a in (ss.not_ready_addresses or [])]
+                ports = [{'name': getattr(p, 'name', None), 'port': getattr(p, 'port', None), 'protocol': getattr(p, 'protocol', None)} for p in (ss.ports or [])]
                 subsets.append({'addresses': addresses, 'not_ready_addresses': not_ready, 'ports': ports})
             result.append({
                 'namespace': ep.metadata.namespace,
@@ -2958,15 +2993,20 @@ def ingresses_summary():
         for ing in items:
             hosts = []
             try:
-                for rule in (ing.spec.rules or []) or []:
-                    if getattr(rule, 'host', None):
-                        hosts.append(rule.host)
+                rules = getattr(ing.spec, 'rules', None) or []
+                for rule in rules:
+                    h = getattr(rule, 'host', None)
+                    if h:
+                        hosts.append(h)
             except Exception:
                 pass
+            ing_class = getattr(ing.spec, 'ingress_class_name', None)
+            if not ing_class:
+                ing_class = getattr(ing.spec, 'ingressClassName', None)
             result.append({
                 'namespace': ing.metadata.namespace,
                 'name': ing.metadata.name,
-                'class': getattr(ing.spec, 'ingress_class_name', None),
+                'class': ing_class,
                 'hosts': hosts,
                 'creation_timestamp': ing.metadata.creation_timestamp.isoformat() if getattr(ing.metadata, 'creation_timestamp', None) else None
             })
@@ -3000,10 +3040,22 @@ def ingress_classes_summary():
                     }
             except Exception:
                 params = None
+            # Detect default ingress class via annotation networking.kubernetes.io/default-ingress-class=true
+            is_default = False
+            try:
+                ann = getattr(ic.metadata, 'annotations', {}) or {}
+                val = ann.get('ingressclass.kubernetes.io/is-default-class') or ann.get('networking.kubernetes.io/default-ingress-class')
+                if isinstance(val, str):
+                    is_default = val.lower() in ('true', '1', 'yes')
+                elif isinstance(val, bool):
+                    is_default = val
+            except Exception:
+                is_default = False
             result.append({
                 'name': ic.metadata.name,
                 'controller': getattr(ic.spec, 'controller', None),
                 'parameters': params,
+                'is_default': is_default,
                 'creation_timestamp': ic.metadata.creation_timestamp.isoformat() if getattr(ic.metadata, 'creation_timestamp', None) else None
             })
         return jsonify({'ingress_classes': result})

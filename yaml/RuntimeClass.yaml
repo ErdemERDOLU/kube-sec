@@ -6,4 +6,4 @@ metadata:
   # RuntimeClass is a non-namespaced resource.
   name: myclass 
 # The name of the corresponding CRI configuration
-handler: myconfiguration 
+handler: myconfiguration

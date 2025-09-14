@@ -1,218 +1,954 @@
 {% extends 'base.html' %}
 
-{% block title %}Network - Kubernetes Security Checker{% endblock %}
+{% block title %}Network Dashboard - Kubernetes Security Checker{% endblock %}
 
 {% block content %}
-<div class="container py-3">
-  <h2 class="mb-3"><i class="bi bi-diagram-3 me-2"></i>Network</h2>
-
-  <ul class="nav nav-tabs" id="networkTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-      <button class="nav-link active" id="services-tab" data-bs-toggle="tab" data-bs-target="#services" type="button" role="tab">Services</button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="endpoints-tab" data-bs-toggle="tab" data-bs-target="#endpoints" type="button" role="tab">Endpoints</button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="ingresses-tab" data-bs-toggle="tab" data-bs-target="#ingresses" type="button" role="tab">Ingresses</button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="ingress-classes-tab" data-bs-toggle="tab" data-bs-target="#ingress-classes" type="button" role="tab">Ingress Classes</button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button class="nav-link" id="network-policies-tab" data-bs-toggle="tab" data-bs-target="#network-policies" type="button" role="tab">Network Policies</button>
-    </li>
-  </ul>
-
-  <div class="tab-content p-3 bg-white border border-top-0 rounded-bottom shadow-sm" id="networkTabsContent">
-    <!-- Services -->
-    <div class="tab-pane fade show active" id="services" role="tabpanel">
-      <div class="d-flex align-items-center mb-2">
-        <label class="me-2">{{ t('label.namespace') }}</label>
-        <select id="servicesNamespaceFilter" class="form-select form-select-sm" style="width:auto">
-          <option value="default">default</option>
-          <option value="all">all</option>
-        </select>
-      </div>
-      <div class="table-responsive">
-        <table class="table table-striped table-hover">
-          <thead>
-            <tr>
-              <th>Namespace</th>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Cluster IP</th>
-              <th>External IP</th>
-              <th>Ports</th>
-              <th>Age</th>
-              <th style="width:220px;">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="servicesTableBody">
-            <tr><td colspan="8">{{ t('loading') }}</td></tr>
-          </tbody>
-        </table>
+<div class="container-fluid py-4">
+  <!-- Added modern hero section with network overview stats -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="hero-section bg-gradient-primary text-white rounded-4 p-4 mb-4">
+        <div class="d-flex align-items-center justify-content-between">
+          <div>
+            <h1 class="display-5 fw-bold mb-2 text-balance">
+              <i class="fas fa-network-wired me-3"></i>Network Dashboard
+            </h1>
+            <p class="lead mb-0 text-pretty">Real-time monitoring of your Kubernetes network infrastructure</p>
+          </div>
+          <!-- Removed the network stats boxes on the right side -->
+        </div>
       </div>
     </div>
+  </div>
 
-    <!-- Endpoints -->
-    <div class="tab-pane fade" id="endpoints" role="tabpanel">
-      <div class="d-flex align-items-center mb-2">
-        <label class="me-2">{{ t('label.namespace') }}</label>
-        <select id="endpointsNamespaceFilter" class="form-select form-select-sm" style="width:auto">
-          <option value="default">default</option>
-          <option value="all">all</option>
-        </select>
-      </div>
-      <div class="table-responsive">
-        <table class="table table-striped table-hover">
-          <thead>
-            <tr>
-              <th>Namespace</th>
-              <th>Name</th>
-              <th>Subsets</th>
-              <th>Age</th>
-            </tr>
-          </thead>
-          <tbody id="endpointsTableBody">
-            <tr><td colspan="4">{{ t('loading') }}</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+  <!-- Removed the entire network topology visualization section -->
 
-    <!-- Ingresses -->
-    <div class="tab-pane fade" id="ingresses" role="tabpanel">
-      <div class="d-flex align-items-center mb-2">
-        <label class="me-2">{{ t('label.namespace') }}</label>
-        <select id="ingressesNamespaceFilter" class="form-select form-select-sm" style="width:auto">
-          <option value="default">default</option>
-          <option value="all">all</option>
-        </select>
-      </div>
-      <div class="table-responsive">
-        <table class="table table-striped table-hover">
-          <thead>
-            <tr>
-              <th>Namespace</th>
-              <th>Name</th>
-              <th>Class</th>
-              <th>Hosts</th>
-              <th>Age</th>
-            </tr>
-          </thead>
-          <tbody id="ingressesTableBody">
-            <tr><td colspan="5">{{ t('loading') }}</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+  <!-- Redesigned navigation tabs with modern styling -->
+  <div class="row">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm rounded-4">
+        <div class="card-header bg-transparent border-0 p-4">
+          <ul class="nav nav-pills nav-fill modern-tabs" id="networkTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active rounded-pill" id="services-tab" data-bs-toggle="pill" data-bs-target="#services" type="button" role="tab">
+                <i class="fas fa-cogs me-2"></i>Services
+                <span class="badge bg-primary ms-2" id="servicesBadge">0</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link rounded-pill" id="endpoints-tab" data-bs-toggle="pill" data-bs-target="#endpoints" type="button" role="tab">
+                <i class="fas fa-plug me-2"></i>Endpoints
+                <span class="badge bg-secondary ms-2" id="endpointsBadge">0</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link rounded-pill" id="ingresses-tab" data-bs-toggle="pill" data-bs-target="#ingresses" type="button" role="tab">
+                <i class="fas fa-door-open me-2"></i>Ingresses
+                <span class="badge bg-info ms-2" id="ingressesBadge">0</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link rounded-pill" id="ingress-classes-tab" data-bs-toggle="pill" data-bs-target="#ingress-classes" type="button" role="tab">
+                <i class="fas fa-layer-group me-2"></i>Ingress Classes
+                <span class="badge bg-warning ms-2" id="ingressClassesBadge">0</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link rounded-pill" id="network-policies-tab" data-bs-toggle="pill" data-bs-target="#network-policies" type="button" role="tab">
+                <i class="fas fa-shield-alt me-2"></i>Network Policies
+                <span class="badge bg-success ms-2" id="networkPoliciesBadge">0</span>
+              </button>
+            </li>
+          </ul>
+        </div>
 
-    <!-- Ingress Classes -->
-    <div class="tab-pane fade" id="ingress-classes" role="tabpanel">
-      <div class="table-responsive">
-        <table class="table table-striped table-hover">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Controller</th>
-              <th>Parameters</th>
-              <th>Age</th>
-            </tr>
-          </thead>
-          <tbody id="ingressClassesTableBody">
-            <tr><td colspan="4">{{ t('loading') }}</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+        <div class="card-body p-4">
+          <div class="tab-content" id="networkTabsContent">
+            <!-- Enhanced Services tab with modern card design -->
+            <div class="tab-pane fade show active" id="services" role="tabpanel">
+              <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
+                <div class="filter-controls d-flex align-items-center gap-3">
+                  <div class="input-group" style="width: 250px;">
+                    <span class="input-group-text bg-light border-end-0">
+                      <i class="fas fa-search text-muted"></i>
+                    </span>
+                    <input type="text" class="form-control border-start-0" id="servicesSearch" placeholder="Search services...">
+                  </div>
+                  <div class="input-group" style="width: 250px;">
+                    <span class="input-group-text bg-light border-end-0">
+                      <i class="fas fa-filter text-muted"></i>
+                    </span>
+                    <select id="servicesNamespaceFilter" class="form-select border-start-0">
+                      <option value="default">default</option>
+                      <option value="all">all namespaces</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="view-controls">
+                  <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-secondary active" onclick="toggleView('services', 'grid')">
+                      <i class="fas fa-th"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="toggleView('services', 'list')">
+                      <i class="fas fa-list"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row g-4" id="servicesGrid">
+                <div class="col-12 text-center py-5">
+                  <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                  </div>
+                  <p class="text-muted">Loading services...</p>
+                </div>
+              </div>
+            </div>
 
-    <!-- Network Policies -->
-    <div class="tab-pane fade" id="network-policies" role="tabpanel">
-      <div class="d-flex align-items-center mb-2">
-        <label class="me-2">{{ t('label.namespace') }}</label>
-        <select id="networkPoliciesNamespaceFilter" class="form-select form-select-sm" style="width:auto">
-          <option value="default">default</option>
-          <option value="all">all</option>
-        </select>
-      </div>
-      <div class="table-responsive">
-        <table class="table table-striped table-hover">
-          <thead>
-            <tr>
-              <th>Namespace</th>
-              <th>Name</th>
-              <th>Policy Types</th>
-              <th>Ingress Rules</th>
-              <th>Egress Rules</th>
-              <th>Pod Selector</th>
-              <th>Age</th>
-            </tr>
-          </thead>
-          <tbody id="networkPoliciesTableBody">
-            <tr><td colspan="7">{{ t('loading') }}</td></tr>
-          </tbody>
-        </table>
+            <!-- Enhanced Endpoints tab with modern card design -->
+            <div class="tab-pane fade" id="endpoints" role="tabpanel">
+              <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
+                <div class="filter-controls d-flex align-items-center gap-3">
+                  <div class="input-group" style="width: 250px;">
+                    <span class="input-group-text bg-light border-end-0">
+                      <i class="fas fa-search text-muted"></i>
+                    </span>
+                    <input type="text" class="form-control border-start-0" id="endpointsSearch" placeholder="Search endpoints...">
+                  </div>
+                  <div class="input-group" style="width: 250px;">
+                    <span class="input-group-text bg-light border-end-0">
+                      <i class="fas fa-filter text-muted"></i>
+                    </span>
+                    <select id="endpointsNamespaceFilter" class="form-select border-start-0">
+                      <option value="default">default</option>
+                      <option value="all">all namespaces</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row g-4" id="endpointsGrid">
+                <div class="col-12 text-center py-5">
+                  <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                  </div>
+                  <p class="text-muted">Loading endpoints...</p>
+                </div>
+              </div>
+            </div>
+
+
+            <!-- Enhanced Ingresses tab -->
+            <div class="tab-pane fade" id="ingresses" role="tabpanel">
+              <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
+                <div class="filter-controls d-flex align-items-center gap-3">
+                  <div class="input-group" style="width: 250px;">
+                    <span class="input-group-text bg-light border-end-0">
+                      <i class="fas fa-filter text-muted"></i>
+                    </span>
+                    <select id="ingressesNamespaceFilter" class="form-select border-start-0">
+                      <option value="default">default</option>
+                      <option value="all">all namespaces</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row g-4" id="ingressesGrid">
+                <div class="col-12 text-center py-5">
+                  <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                  </div>
+                  <p class="text-muted">Loading ingresses...</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Enhanced Ingress Classes tab -->
+            <div class="tab-pane fade" id="ingress-classes" role="tabpanel">
+              <div class="row g-4" id="ingressClassesGrid">
+                <div class="col-12 text-center py-5">
+                  <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                  </div>
+                  <p class="text-muted">Loading ingress classes...</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Enhanced Network Policies tab -->
+            <div class="tab-pane fade" id="network-policies" role="tabpanel">
+              <div class="d-flex flex-wrap align-items-center justify-content-between mb-4">
+                <div class="filter-controls d-flex align-items-center gap-3">
+                  <div class="input-group" style="width: 250px;">
+                    <span class="input-group-text bg-light border-end-0">
+                      <i class="fas fa-filter text-muted"></i>
+                    </span>
+                    <select id="networkPoliciesNamespaceFilter" class="form-select border-start-0">
+                      <option value="default">default</option>
+                      <option value="all">all namespaces</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row g-4" id="networkPoliciesGrid">
+                <div class="col-12 text-center py-5">
+                  <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                  </div>
+                  <p class="text-muted">Loading network policies...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Service Detail Modal -->
-<div class="modal fade" id="serviceDetailModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Service Details</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <pre class="mb-0" id="serviceDetailPre" style="white-space: pre-wrap;"></pre>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- YAML Edit Modal (reuses global YAML editor via /k8s-explorer/yaml) -->
-<div class="modal fade" id="serviceYamlModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Edit Service YAML</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <textarea id="serviceYamlTextarea" class="form-control" rows="18" spellcheck="false"></textarea>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-primary" id="saveServiceYamlBtn">Save</button>
-      </div>
-    </div>
-  </div>
-</div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-  function timeAgo(iso) {
-    if (!iso) return '-';
-    try {
-      const d = new Date(iso);
-      const diff = (Date.now() - d.getTime())/1000;
-      if (diff < 60) return Math.floor(diff) + 's';
-      if (diff < 3600) return Math.floor(diff/60) + 'm';
-      if (diff < 86400) return Math.floor(diff/3600) + 'h';
-      return Math.floor(diff/86400) + 'd';
-    } catch { return '-'; }
+<style>
+  .hero-section {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
   }
 
-  // Generic confirmation modal helper (local)
-  function openConfirmModal({ title = 'Onay', message = 'Emin misiniz?', confirmText = 'Onayla', confirmBtnClass = 'btn-danger', onConfirm }) {
-    const id = 'confirmModal-' + Date.now();
+  .modern-tabs .nav-link {
+    background: transparent;
+    border: 2px solid transparent;
+    color: #6c757d;
+    font-weight: 500;
+    margin: 0 0.25rem;
+    transition: all 0.3s ease;
+  }
+
+  .modern-tabs .nav-link:hover {
+    background: rgba(13, 110, 253, 0.1);
+    color: #0d6efd;
+    transform: translateY(-2px);
+  }
+
+  .modern-tabs .nav-link.active {
+    background: linear-gradient(135deg, #0d6efd, #6610f2);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3);
+  }
+
+  .service-card, .endpoint-card, .ingress-card, .network-policy-card {
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    overflow: hidden;
+  }
+
+  .service-card:hover, .endpoint-card:hover, .ingress-card:hover, .network-policy-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  }
+
+  .service-card .card-header {
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    border-bottom: none;
+    padding: 1rem 1.25rem;
+  }
+
+  .endpoint-card .card-header {
+    background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+    border-bottom: none;
+    padding: 1rem 1.25rem;
+  }
+
+  .ingress-card .card-header {
+    background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
+    border-bottom: none;
+    padding: 1rem 1.25rem;
+  }
+
+  .network-policy-card .card-header {
+    background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+    border-bottom: none;
+    padding: 1rem 1.25rem;
+  }
+
+  .metric-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f8f9fa;
+  }
+
+  .metric-item:last-child {
+    border-bottom: none;
+  }
+
+  .metric-label {
+    font-weight: 500;
+    color: #6c757d;
+    font-size: 0.875rem;
+  }
+
+  .metric-value {
+    font-weight: 600;
+    color: #212529;
+    font-size: 0.875rem;
+  }
+
+  .status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .status-running {
+    background: linear-gradient(135deg, #d4edda, #c3e6cb);
+    color: #155724;
+  }
+
+  .status-pending {
+    background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+    color: #856404;
+  }
+
+  .status-failed {
+    background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+    color: #721c24;
+  }
+
+  .action-btn {
+    border-radius: 0.5rem;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    transition: all 0.2s ease;
+    border: none;
+  }
+
+  .action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .btn-info-custom {
+    background: linear-gradient(135deg, #17a2b8, #138496);
+    color: white;
+  }
+
+  .btn-warning-custom {
+    background: linear-gradient(135deg, #ffc107, #e0a800);
+    color: #212529;
+  }
+
+  .btn-danger-custom {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    color: white;
+  }
+
+  .filter-controls .input-group {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    border-radius: 0.75rem;
+    overflow: hidden;
+  }
+
+  .filter-controls .form-control, .filter-controls .form-select {
+    border: none;
+    padding: 0.75rem 1rem;
+  }
+
+  .filter-controls .input-group-text {
+    border: none;
+  }
+
+  .view-controls .btn-group .btn {
+    border-radius: 0.5rem;
+    margin: 0 0.125rem;
+  }
+
+  @media (max-width: 768px) {
+    .filter-controls {
+      flex-direction: column;
+      align-items: stretch !important;
+      gap: 1rem !important;
+    }
+    
+    .filter-controls .input-group {
+      width: 100% !important;
+    }
+  }
+</style>
+
+<script>
+  let currentData = {
+    services: [],
+    endpoints: [],
+    ingresses: [],
+    ingressClasses: [],
+    networkPolicies: []
+  };
+
+  let currentView = {
+    services: 'grid',
+    endpoints: 'grid',
+    ingresses: 'grid',
+    networkPolicies: 'grid'
+  };
+
+  // Initialize the page
+  document.addEventListener('DOMContentLoaded', function() {
+    loadNamespaces();
+    loadNetworkData();
+    setupEventListeners();
+  });
+
+  function loadNamespaces() {
+    fetch('/k8s-explorer/namespaces')
+      .then(r => r.json())
+      .then(j => {
+        const namespaces = j.namespaces || [];
+  populateNamespaceSelect('servicesNamespaceFilter', namespaces);
+  populateNamespaceSelect('endpointsNamespaceFilter', namespaces);
+      })
+      .catch(e => {
+        console.error('Namespaces yüklenemedi', e);
+        // Sessiz geç, mevcut statik seçenekler kalsın
+      });
+  }
+
+  function populateNamespaceSelect(selectId, namespaces) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    const opts = [];
+    // default her zaman en üstte (varsa selected)
+    const hasDefault = namespaces.includes('default');
+    opts.push(`<option value="default" ${hasDefault ? 'selected' : ''}>default</option>`);
+    // all namespaces seçeneği
+    opts.push('<option value="all">all namespaces</option>');
+    // diğer namespace’ler (default hariç)
+    namespaces
+      .filter(n => n !== 'default')
+      .sort((a,b) => a.localeCompare(b))
+      .forEach(ns => opts.push(`<option value="${ns}">${ns}</option>`));
+    sel.innerHTML = opts.join('');
+  }
+
+  function setupEventListeners() {
+    // Search functionality
+    document.getElementById('servicesSearch')?.addEventListener('input', function() {
+      filterAndDisplayServices();
+    });
+    document.getElementById('endpointsSearch')?.addEventListener('input', function() {
+      filterAndDisplayEndpoints();
+    });
+
+    // Namespace filters
+    document.getElementById('servicesNamespaceFilter')?.addEventListener('change', function() {
+      filterAndDisplayServices();
+    });
+
+    document.getElementById('endpointsNamespaceFilter')?.addEventListener('change', function() {
+      filterAndDisplayEndpoints();
+    });
+
+    document.getElementById('ingressesNamespaceFilter')?.addEventListener('change', function() {
+      filterAndDisplayIngresses();
+    });
+
+    document.getElementById('networkPoliciesNamespaceFilter')?.addEventListener('change', function() {
+      filterAndDisplayNetworkPolicies();
+    });
+  }
+
+  function loadNetworkData() {
+    const fetchArray = (url, key) => fetch(url).then(r => {
+      if (!r.ok) throw new Error(`${url} ${r.status}`);
+      return r.json();
+    }).then(j => j[key] || []).catch(err => { throw err; });
+
+    Promise.all([
+      fetchArray('/k8s-explorer/services-summary', 'services'),
+      fetchArray('/k8s-explorer/endpoints-summary', 'endpoints'),
+      fetchArray('/k8s-explorer/ingresses-summary', 'ingresses'),
+      fetchArray('/k8s-explorer/ingress-classes-summary', 'ingress_classes'),
+      fetchArray('/k8s-explorer/network-policies-summary', 'network_policies')
+    ]).then(([services, endpoints, ingresses, ingressClasses, networkPolicies]) => {
+      currentData = { services, endpoints, ingresses, ingressClasses, networkPolicies };
+      updateBadges();
+      filterAndDisplayServices();
+      filterAndDisplayEndpoints();
+      filterAndDisplayIngresses();
+      displayIngressClasses();
+      filterAndDisplayNetworkPolicies();
+    }).catch(error => {
+      console.error('Error loading network data:', error);
+      showError('Failed to load network data');
+    });
+  }
+
+  function updateBadges() {
+    document.getElementById('servicesBadge').textContent = currentData.services.length;
+    document.getElementById('endpointsBadge').textContent = currentData.endpoints.length;
+    document.getElementById('ingressesBadge').textContent = currentData.ingresses.length;
+    document.getElementById('ingressClassesBadge').textContent = currentData.ingressClasses.length;
+    document.getElementById('networkPoliciesBadge').textContent = currentData.networkPolicies.length;
+  }
+
+  function createServiceCard(service) {
+    const ports = (service.ports||[]).map(p => `${p.port}/${p.protocol}`).join(', ');
+    const selector = Object.entries(service.selector||{}).map(([k,v]) => `${k}=${v}`).join(', ');
+    
+    return `
+      <div class="col-lg-6 col-md-12">
+        <div class="card service-card h-100">
+          <div class="card-header">
+            <h6 class="mb-1 fw-bold">${service.name || ''}</h6>
+            <small class="opacity-75">${service.namespace || ''}</small>
+          </div>
+          <div class="card-body">
+            <div class="metric-item">
+              <span class="metric-label">Type</span>
+              <span class="metric-value">${service.type || '-'}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Cluster IP</span>
+              <span class="metric-value font-monospace">${service.cluster_ip || '-'}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Ports</span>
+              <span class="metric-value font-monospace">${ports || '-'}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Selector</span>
+              <span class="metric-value font-monospace small">${selector || '-'}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Age</span>
+              <span class="metric-value">${timeAgo(service.creation_timestamp)}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Actions</span>
+              <div class="metric-value">
+                <button class="btn btn-sm btn-info-custom action-btn me-1" onclick="viewServiceDetails('${service.name}', '${service.namespace}')">
+                  <i class="fas fa-eye me-1"></i>Detail
+                </button>
+                <button class="btn btn-sm btn-warning-custom action-btn me-1" onclick="editServiceYaml('${service.name}', '${service.namespace}')">
+                  <i class="fas fa-edit me-1"></i>Edit
+                </button>
+                <button class="btn btn-sm btn-danger-custom action-btn" onclick="deleteService('${service.name}', '${service.namespace}')">
+                  <i class="fas fa-trash me-1"></i>Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function createEndpointCard(endpoint) {
+    const subsets = (endpoint.subsets||[]).map(ss => {
+      const addrs = (ss.addresses||[]).map(a => a.ip).join(', ');
+      const naddrs = (ss.not_ready_addresses||[]).map(a => a.ip).join(', ');
+      const ports = (ss.ports||[]).map(p => `${p.name||''}:${p.port}/${p.protocol}`).join(', ');
+      return `${addrs}${naddrs?(' (notReady: '+naddrs+')'):''} | ${ports}`;
+    }).join(' ; ');
+
+    return `
+      <div class="col-lg-6 col-md-12">
+        <div class="card endpoint-card h-100">
+          <div class="card-header">
+            <h6 class="mb-1 fw-bold">${endpoint.name || ''}</h6>
+            <small class="opacity-75">${endpoint.namespace || ''}</small>
+          </div>
+          <div class="card-body">
+            <div class="metric-item">
+              <span class="metric-label">Subsets</span>
+              <span class="metric-value font-monospace small">${subsets || '-'}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Age</span>
+              <span class="metric-value">${timeAgo(endpoint.creation_timestamp)}</span>
+            </div>
+            <!-- Added detail, edit, and delete buttons for endpoints -->
+            <div class="metric-item">
+              <span class="metric-label">Actions</span>
+              <div class="metric-value">
+                <button class="btn btn-sm btn-info-custom action-btn me-1" onclick="viewEndpointDetails('${endpoint.name}', '${endpoint.namespace}')">
+                  <i class="fas fa-eye me-1"></i>Detail
+                </button>
+                <button class="btn btn-sm btn-warning-custom action-btn me-1" onclick="editEndpoint('${endpoint.name}', '${endpoint.namespace}')">
+                  <i class="fas fa-edit me-1"></i>Edit
+                </button>
+                <button class="btn btn-sm btn-danger-custom action-btn" onclick="deleteEndpoint('${endpoint.name}', '${endpoint.namespace}')">
+                  <i class="fas fa-trash me-1"></i>Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function createIngressCard(ingress) {
+    const hosts = (ingress.hosts||[]).join(', ');
+    
+    return `
+      <div class="col-lg-6 col-md-12">
+        <div class="card ingress-card h-100">
+          <div class="card-header">
+            <h6 class="mb-1 fw-bold">${ingress.name || ''}</h6>
+            <small class="opacity-75">${ingress.namespace || ''}</small>
+          </div>
+          <div class="card-body">
+            <div class="metric-item">
+              <span class="metric-label">Class</span>
+              <span class="metric-value">${ingress.class || '-'}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Hosts</span>
+              <span class="metric-value font-monospace">${hosts || '-'}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Age</span>
+              <span class="metric-value">${timeAgo(ingress.creation_timestamp)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function createIngressClassCard(ingressClass) {
+    return `
+      <div class="col-lg-6 col-md-12">
+        <div class="card ingress-card h-100">
+          <div class="card-header">
+            <h6 class="mb-1 fw-bold">${ingressClass.name || ''}</h6>
+          </div>
+          <div class="card-body">
+            <div class="metric-item">
+              <span class="metric-label">Controller</span>
+              <span class="metric-value font-monospace">${ingressClass.controller || '-'}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Default</span>
+              <span class="metric-value">${ingressClass.is_default ? 'Yes' : 'No'}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Age</span>
+              <span class="metric-value">${timeAgo(ingressClass.creation_timestamp)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function createNetworkPolicyCard(policy) {
+    const podSelector = Object.entries(policy.pod_selector||{}).map(([k,v]) => `${k}=${v}`).join(', ');
+    
+    return `
+      <div class="col-lg-6 col-md-12">
+        <div class="card network-policy-card h-100">
+          <div class="card-header">
+            <h6 class="mb-1 fw-bold">${policy.name || ''}</h6>
+            <small class="opacity-75">${policy.namespace || ''}</small>
+          </div>
+          <div class="card-body">
+            <div class="metric-item">
+              <span class="metric-label">Pod Selector</span>
+              <span class="metric-value font-monospace small">${podSelector || 'All pods'}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Policy Types</span>
+              <span class="metric-value">${(policy.policy_types||[]).join(', ') || '-'}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Age</span>
+              <span class="metric-value">${timeAgo(policy.creation_timestamp)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function viewEndpointDetails(name, namespace) {
+    const endpoint = currentData.endpoints.find(e => e.name === name && e.namespace === namespace);
+    if (endpoint) {
+      const modalContent = `
+        <div class="modal fade" id="endpointDetailModal" tabindex="-1">
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Endpoint Details: ${name}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <pre class="bg-light p-3 rounded" style="max-height:60vh; overflow:auto;">${escapeHtml(JSON.stringify(endpoint, null, 2))}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.insertAdjacentHTML('beforeend', modalContent);
+      new bootstrap.Modal(document.getElementById('endpointDetailModal')).show();
+    }
+  }
+
+  async function editEndpoint(name, namespace) {
+    const modalId = 'endpointYamlModal';
+    const existing = document.getElementById(modalId);
+    if (existing) existing.remove();
+    try {
+      const getUrl = `/k8s-explorer/yaml?type=endpoints&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`;
+      const r = await fetch(getUrl);
+      const text = await r.text();
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const modal = `
+        <div class="modal fade" id="${modalId}" tabindex="-1">
+          <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Edit Endpoint YAML: ${name}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <textarea id="endpointYamlEditor" class="form-control font-monospace" rows="24" spellcheck="false">${escapeHtml(text)}</textarea>
+              </div>
+              <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="saveEndpointYamlBtn">
+                  <i class="fas fa-save me-1"></i>Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      document.body.insertAdjacentHTML('beforeend', modal);
+      const modalEl = document.getElementById(modalId);
+      const bsModal = new bootstrap.Modal(modalEl);
+      modalEl.querySelector('#saveEndpointYamlBtn').addEventListener('click', async () => {
+        try {
+          const yamlText = document.getElementById('endpointYamlEditor').value;
+          const pr = await fetch('/k8s-explorer/yaml', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'endpoints', namespace, name, yaml: yamlText })
+          });
+          const pj = await pr.json().catch(() => ({}));
+          if (!pr.ok || pj.error) throw new Error(pj.error || `HTTP ${pr.status}`);
+          showToast('Endpoint YAML güncellendi', 'success');
+          bsModal.hide();
+          loadNetworkData();
+        } catch (e) {
+          showToast('Endpoint YAML kaydedilemedi: ' + e.message, 'error');
+        }
+      });
+      bsModal.show();
+    } catch (e) {
+      showToast('Endpoint YAML yüklenemedi: ' + e.message, 'error');
+    }
+  }
+
+  function deleteEndpoint(name, namespace) {
+    openConfirmModal('Endpoint Sil', `"${name}" endpoint kaynağını silmek istediğinize emin misiniz?`, async () => {
+      try {
+        const r = await fetch('/k8s-explorer/delete', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'endpoints', namespace, name })
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || j.error) throw new Error(j.error || `HTTP ${r.status}`);
+        showToast('Endpoint silindi', 'success');
+        loadNetworkData();
+      } catch (e) {
+        showToast('Endpoint silinemedi: ' + e.message, 'error');
+      }
+    });
+  }
+
+  function filterAndDisplayServices() {
+    const searchTerm = document.getElementById('servicesSearch')?.value.toLowerCase() || '';
+    const namespaceFilter = document.getElementById('servicesNamespaceFilter')?.value || 'default';
+    
+    let filtered = currentData.services.filter(service => {
+      const matchesSearch = !searchTerm || 
+        service.name.toLowerCase().includes(searchTerm) ||
+        service.namespace.toLowerCase().includes(searchTerm);
+      const matchesNamespace = namespaceFilter === 'all' || service.namespace === namespaceFilter;
+      return matchesSearch && matchesNamespace;
+    });
+
+    displayServices(filtered);
+  }
+
+  function filterAndDisplayEndpoints() {
+    const namespaceFilter = document.getElementById('endpointsNamespaceFilter')?.value || 'default';
+    const searchTerm = (document.getElementById('endpointsSearch')?.value || '').toLowerCase();
+    
+    let filtered = currentData.endpoints.filter(endpoint => {
+      const matchesNs = namespaceFilter === 'all' || endpoint.namespace === namespaceFilter;
+      const matchesSearch = !searchTerm ||
+        (endpoint.name || '').toLowerCase().includes(searchTerm) ||
+        (endpoint.namespace || '').toLowerCase().includes(searchTerm);
+      return matchesNs && matchesSearch;
+    });
+
+    displayEndpoints(filtered);
+  }
+
+  function filterAndDisplayIngresses() {
+    const namespaceFilter = document.getElementById('ingressesNamespaceFilter')?.value || 'default';
+    
+    let filtered = currentData.ingresses.filter(ingress => {
+      return namespaceFilter === 'all' || ingress.namespace === namespaceFilter;
+    });
+
+    displayIngresses(filtered);
+  }
+
+  function filterAndDisplayNetworkPolicies() {
+    const namespaceFilter = document.getElementById('networkPoliciesNamespaceFilter')?.value || 'default';
+    
+    let filtered = currentData.networkPolicies.filter(policy => {
+      return namespaceFilter === 'all' || policy.namespace === namespaceFilter;
+    });
+
+    displayNetworkPolicies(filtered);
+  }
+
+  function displayServices(services) {
+    const container = document.getElementById('servicesGrid');
+    if (services.length === 0) {
+      container.innerHTML = `
+        <div class="col-12 text-center py-5">
+          <i class="fas fa-cogs text-muted mb-3" style="font-size: 3rem;"></i>
+          <p class="text-muted">No services found</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = services.map(createServiceCard).join('');
+  }
+
+  async function viewServiceDetails(name, namespace) {
+    try {
+      const url = `/k8s-explorer/service-details?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`;
+      const r = await fetch(url);
+      const j = await r.json();
+      if (!r.ok || j.error) { throw new Error(j.error || `HTTP ${r.status}`); }
+      const svc = j.service || j;
+      const modalId = 'serviceDetailModal';
+      const existing = document.getElementById(modalId);
+      if (existing) existing.remove();
+      const modalContent = `
+        <div class="modal fade" id="${modalId}" tabindex="-1">
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Service Details: ${name}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <pre class="bg-light p-3 rounded" style="max-height:60vh; overflow:auto;">${escapeHtml(JSON.stringify(svc, null, 2))}</pre>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      document.body.insertAdjacentHTML('beforeend', modalContent);
+      new bootstrap.Modal(document.getElementById(modalId)).show();
+    } catch (e) {
+      showToast('Service detayları yüklenemedi: ' + e.message, 'error');
+    }
+  }
+
+  async function editServiceYaml(name, namespace) {
+    const modalId = 'serviceYamlModal';
+    const existing = document.getElementById(modalId);
+    if (existing) existing.remove();
+    try {
+      const getUrl = `/k8s-explorer/yaml?type=service&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`;
+      const r = await fetch(getUrl);
+      const text = await r.text();
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const modal = `
+        <div class="modal fade" id="${modalId}" tabindex="-1">
+          <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title">Edit YAML: ${name}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <textarea id="serviceYamlEditor" class="form-control font-monospace" rows="24" spellcheck="false">${escapeHtml(text)}</textarea>
+              </div>
+              <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" id="saveServiceYamlBtn">
+                  <i class="fas fa-save me-1"></i>Save
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      document.body.insertAdjacentHTML('beforeend', modal);
+      const modalEl = document.getElementById(modalId);
+      const bsModal = new bootstrap.Modal(modalEl);
+      modalEl.querySelector('#saveServiceYamlBtn').addEventListener('click', async () => {
+        try {
+          const yamlText = document.getElementById('serviceYamlEditor').value;
+          const pr = await fetch('/k8s-explorer/yaml', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'service', namespace, name, yaml: yamlText })
+          });
+          const pj = await pr.json().catch(() => ({}));
+          if (!pr.ok || pj.error) throw new Error(pj.error || `HTTP ${pr.status}`);
+          showToast('Service YAML güncellendi', 'success');
+          bsModal.hide();
+          loadNetworkData();
+        } catch (e) {
+          showToast('YAML kaydedilemedi: ' + e.message, 'error');
+        }
+      });
+      bsModal.show();
+    } catch (e) {
+      showToast('YAML yüklenemedi: ' + e.message, 'error');
+    }
+  }
+
+  function deleteService(name, namespace) {
+    openConfirmModal('Servisi Sil', `"${name}" servisini silmek istediğinize emin misiniz?`, async () => {
+      try {
+        const r = await fetch('/k8s-explorer/delete', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'service', namespace, name })
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || j.error) throw new Error(j.error || `HTTP ${r.status}`);
+        showToast('Service silindi', 'success');
+        loadNetworkData();
+      } catch (e) {
+        showToast('Service silinemedi: ' + e.message, 'error');
+      }
+    });
+  }
+
+  function openConfirmModal(title, message, onConfirm) {
+    const id = 'confirmModalGeneric';
+    const existing = document.getElementById(id);
+    if (existing) existing.remove();
     const html = `
       <div class="modal fade" id="${id}" tabindex="-1">
         <div class="modal-dialog">
@@ -222,11 +958,11 @@
               <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-              <p class="mb-0">${message}</p>
+              <p>${message}</p>
             </div>
             <div class="modal-footer">
               <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-              <button type="button" class="btn ${confirmBtnClass}" id="${id}-confirmBtn">${confirmText}</button>
+              <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Sil</button>
             </div>
           </div>
         </div>
@@ -234,244 +970,156 @@
     document.body.insertAdjacentHTML('beforeend', html);
     const el = document.getElementById(id);
     const modal = new bootstrap.Modal(el);
-    const btn = el.querySelector('#' + id + '-confirmBtn');
-    el.addEventListener('hidden.bs.modal', () => { try { modal.dispose(); el.remove(); } catch(_){} });
-    btn.addEventListener('click', async () => {
-      const original = btn.textContent;
-      btn.disabled = true; btn.textContent = 'İşleniyor...';
-      try {
-        if (onConfirm) await onConfirm();
-        modal.hide();
-      } catch (e) {
-        console.debug('confirmModal onConfirm error', e);
-      } finally {
-        btn.disabled = false; btn.textContent = original;
-      }
+    el.querySelector('#confirmDeleteBtn').addEventListener('click', async () => {
+      try { await onConfirm(); } finally { modal.hide(); }
     });
     modal.show();
   }
 
-  async function loadServices() {
-    const ns = document.getElementById('servicesNamespaceFilter').value;
-    const url = '/k8s-explorer/services-summary' + (ns ? ('?namespace=' + encodeURIComponent(ns)) : '');
-    const tbody = document.getElementById('servicesTableBody');
-    tbody.innerHTML = '<tr><td colspan="8">' + (window.i18n?.['loading']?.[window.locale] || 'Loading...') + '</td></tr>';
-    try {
-      const res = await fetch(url);
-      const data = await res.json();
-      const rows = (data.services||[]).map(s => {
-        const ports = (s.ports||[]).map(p => `${p.port}${p.protocol?('/'+p.protocol):''}`).join(', ');
-        const ns = s.namespace||'';
-        const name = s.name||'';
-        return `<tr>
-          <td>${ns}</td>
-          <td>${name}</td>
-          <td>${s.type||''}</td>
-          <td>${s.cluster_ip||''}</td>
-          <td>${s.external_ip||''}</td>
-          <td>${ports}</td>
-          <td>${timeAgo(s.creation_timestamp)}</td>
-          <td>
-            <button class="btn btn-sm btn-outline-info me-1" onclick="showServiceDetails('${ns}','${name}')"><i class="bi bi-info-circle"></i> Detail</button>
-            <button class="btn btn-sm btn-outline-secondary me-1" onclick="openServiceYaml('${ns}','${name}')"><i class="bi bi-pencil-square"></i> Edit</button>
-            <button class="btn btn-sm btn-outline-danger" onclick="deleteService('${ns}','${name}')"><i class="bi bi-trash"></i> Delete</button>
-          </td>
-        </tr>`;
-      }).join('');
-      tbody.innerHTML = rows || '<tr><td colspan="8">-</td></tr>';
-    } catch (e) {
-      tbody.innerHTML = `<tr><td colspan="8">Error: ${e}</td></tr>`;
+  function showToast(message, type = 'success') {
+    const bg = type === 'error' ? 'bg-danger' : (type === 'warning' ? 'bg-warning text-dark' : 'bg-success');
+    const toast = `
+      <div class="toast align-items-center text-white ${bg} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+          <div class="toast-body">${message}</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      </div>`;
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.className = 'toast-container position-fixed top-0 end-0 p-3';
+      document.body.appendChild(container);
+    }
+    container.insertAdjacentHTML('beforeend', toast);
+    const el = container.lastElementChild;
+    new bootstrap.Toast(el, { delay: 3500 }).show();
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;');
+  }
+
+  function displayEndpoints(endpoints) {
+    const container = document.getElementById('endpointsGrid');
+    if (endpoints.length === 0) {
+      container.innerHTML = `
+        <div class="col-12 text-center py-5">
+          <i class="fas fa-plug text-muted mb-3" style="font-size: 3rem;"></i>
+          <p class="text-muted">No endpoints found</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = endpoints.map(createEndpointCard).join('');
+  }
+
+  function displayIngresses(ingresses) {
+    const container = document.getElementById('ingressesGrid');
+    if (ingresses.length === 0) {
+      container.innerHTML = `
+        <div class="col-12 text-center py-5">
+          <i class="fas fa-door-open text-muted mb-3" style="font-size: 3rem;"></i>
+          <p class="text-muted">No ingresses found</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = ingresses.map(createIngressCard).join('');
+  }
+
+  function displayIngressClasses() {
+    const container = document.getElementById('ingressClassesGrid');
+    if (currentData.ingressClasses.length === 0) {
+      container.innerHTML = `
+        <div class="col-12 text-center py-5">
+          <i class="fas fa-layer-group text-muted mb-3" style="font-size: 3rem;"></i>
+          <p class="text-muted">No ingress classes found</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = currentData.ingressClasses.map(createIngressClassCard).join('');
+  }
+
+  function displayNetworkPolicies(policies) {
+    const container = document.getElementById('networkPoliciesGrid');
+    if (policies.length === 0) {
+      container.innerHTML = `
+        <div class="col-12 text-center py-5">
+          <i class="fas fa-shield-alt text-muted mb-3" style="font-size: 3rem;"></i>
+          <p class="text-muted">No network policies found</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = policies.map(createNetworkPolicyCard).join('');
+  }
+
+  function toggleView(section, view) {
+    currentView[section] = view;
+    
+    // Update button states
+    const buttons = document.querySelectorAll(`#${section} .view-controls .btn`);
+    buttons.forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Re-render with new view
+    switch(section) {
+      case 'services':
+        filterAndDisplayServices();
+        break;
+      case 'endpoints':
+        filterAndDisplayEndpoints();
+        break;
+      case 'ingresses':
+        filterAndDisplayIngresses();
+        break;
+      case 'networkPolicies':
+        filterAndDisplayNetworkPolicies();
+        break;
     }
   }
 
-  async function loadEndpoints() {
-    const ns = document.getElementById('endpointsNamespaceFilter').value;
-    const url = '/k8s-explorer/endpoints-summary' + (ns ? ('?namespace=' + encodeURIComponent(ns)) : '');
-    const tbody = document.getElementById('endpointsTableBody');
-    tbody.innerHTML = '<tr><td colspan="4">' + (window.i18n?.['loading']?.[window.locale] || 'Loading...') + '</td></tr>';
-    try {
-      const res = await fetch(url);
-      const data = await res.json();
-      const rows = (data.endpoints||[]).map(ep => {
-        const subsets = (ep.subsets||[]).map(ss => {
-          const addrs = (ss.addresses||[]).map(a => a.ip).join(', ');
-          const naddrs = (ss.not_ready_addresses||[]).map(a => a.ip).join(', ');
-          const ports = (ss.ports||[]).map(p => `${p.name||''}:${p.port}/${p.protocol}`).join(', ');
-          return `${addrs}${naddrs?(' (notReady: '+naddrs+')'):''} | ${ports}`;
-        }).join(' ; ');
-        return `<tr>
-          <td>${ep.namespace||''}</td>
-          <td>${ep.name||''}</td>
-          <td>${subsets||''}</td>
-          <td>${timeAgo(ep.creation_timestamp)}</td>
-        </tr>`;
-      }).join('');
-      tbody.innerHTML = rows || '<tr><td colspan="4">-</td></tr>';
-    } catch (e) {
-      tbody.innerHTML = `<tr><td colspan="4">Error: ${e}</td></tr>`;
-    }
+  function timeAgo(timestamp) {
+    if (!timestamp) return '-';
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffInSeconds = Math.floor((now - time) / 1000);
+    
+    if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return `${Math.floor(diffInSeconds / 86400)}d ago`;
   }
 
-  async function loadIngresses() {
-    const ns = document.getElementById('ingressesNamespaceFilter').value;
-    const url = '/k8s-explorer/ingresses-summary' + (ns ? ('?namespace=' + encodeURIComponent(ns)) : '');
-    const tbody = document.getElementById('ingressesTableBody');
-    tbody.innerHTML = '<tr><td colspan="5">' + (window.i18n?.['loading']?.[window.locale] || 'Loading...') + '</td></tr>';
-    try {
-      const res = await fetch(url);
-      const data = await res.json();
-      const rows = (data.ingresses||[]).map(ing => {
-        const hosts = (ing.hosts||[]).join(', ');
-        return `<tr>
-          <td>${ing.namespace||''}</td>
-          <td>${ing.name||''}</td>
-          <td>${ing.class||''}</td>
-          <td>${hosts}</td>
-          <td>${timeAgo(ing.creation_timestamp)}</td>
-        </tr>`;
-      }).join('');
-      tbody.innerHTML = rows || '<tr><td colspan="5">-</td></tr>';
-    } catch (e) {
-      tbody.innerHTML = `<tr><td colspan="5">Error: ${e}</td></tr>`;
+  function showError(message) {
+    const toast = `
+      <div class="toast align-items-center text-white bg-danger border-0" role="alert">
+        <div class="d-flex">
+          <div class="toast-body">${message}</div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      </div>
+    `;
+    
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.className = 'toast-container position-fixed top-0 end-0 p-3';
+      document.body.appendChild(container);
     }
+    
+    container.insertAdjacentHTML('beforeend', toast);
+    const toastElement = container.lastElementChild;
+    new bootstrap.Toast(toastElement).show();
   }
-
-  async function loadIngressClasses() {
-    const tbody = document.getElementById('ingressClassesTableBody');
-    tbody.innerHTML = '<tr><td colspan="4">' + (window.i18n?.['loading']?.[window.locale] || 'Loading...') + '</td></tr>';
-    try {
-      const res = await fetch('/k8s-explorer/ingress-classes-summary');
-      const data = await res.json();
-      const rows = (data.ingress_classes||[]).map(ic => {
-        const params = ic.parameters ? JSON.stringify(ic.parameters) : '';
-        return `<tr>
-          <td>${ic.name||''}</td>
-          <td>${ic.controller||''}</td>
-          <td><code>${params}</code></td>
-          <td>${timeAgo(ic.creation_timestamp)}</td>
-        </tr>`;
-      }).join('');
-      tbody.innerHTML = rows || '<tr><td colspan="4">-</td></tr>';
-    } catch (e) {
-      tbody.innerHTML = `<tr><td colspan="4">Error: ${e}</td></tr>`;
-    }
-  }
-
-  async function loadNetworkPolicies() {
-    const ns = document.getElementById('networkPoliciesNamespaceFilter').value;
-    const url = '/k8s-explorer/network-policies-summary' + (ns ? ('?namespace=' + encodeURIComponent(ns)) : '');
-    const tbody = document.getElementById('networkPoliciesTableBody');
-    tbody.innerHTML = '<tr><td colspan="7">' + (window.i18n?.['loading']?.[window.locale] || 'Loading...') + '</td></tr>';
-    try {
-      const res = await fetch(url);
-      const data = await res.json();
-      const rows = (data.network_policies||[]).map(np => {
-        const types = (np.policy_types||[]).join(', ');
-        const sel = np.pod_selector ? JSON.stringify(np.pod_selector) : '';
-        return `<tr>
-          <td>${np.namespace||''}</td>
-          <td>${np.name||''}</td>
-          <td>${types}</td>
-          <td>${np.ingress_rules||0}</td>
-          <td>${np.egress_rules||0}</td>
-          <td><code>${sel}</code></td>
-          <td>${timeAgo(np.creation_timestamp)}</td>
-        </tr>`;
-      }).join('');
-      tbody.innerHTML = rows || '<tr><td colspan="7">-</td></tr>';
-    } catch (e) {
-      tbody.innerHTML = `<tr><td colspan="7">Error: ${e}</td></tr>`;
-    }
-  }
-
-  // Service actions
-  async function showServiceDetails(ns, name) {
-    try {
-      const res = await fetch(`/k8s-explorer/service-details?namespace=${encodeURIComponent(ns)}&name=${encodeURIComponent(name)}`);
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      const pre = document.getElementById('serviceDetailPre');
-      pre.textContent = JSON.stringify(data.service, null, 2);
-      const modal = new bootstrap.Modal(document.getElementById('serviceDetailModal'));
-      modal.show();
-    } catch (e) {
-      window.showUserToast && window.showUserToast('Detay alınamadı: ' + e, false);
-    }
-  }
-
-  async function openServiceYaml(ns, name) {
-    try {
-      // GET YAML
-      const res = await fetch(`/k8s-explorer/yaml?type=service&namespace=${encodeURIComponent(ns)}&name=${encodeURIComponent(name)}`);
-      if (!res.ok) throw new Error('YAML alınamadı');
-      const text = await res.text();
-      document.getElementById('serviceYamlTextarea').value = text;
-      const modalEl = document.getElementById('serviceYamlModal');
-      modalEl.dataset.ns = ns; modalEl.dataset.name = name;
-      const modal = new bootstrap.Modal(modalEl);
-      modal.show();
-    } catch (e) {
-      window.showUserToast && window.showUserToast('YAML alınamadı: ' + e, false);
-    }
-  }
-
-  document.getElementById('saveServiceYamlBtn').addEventListener('click', async () => {
-    const modalEl = document.getElementById('serviceYamlModal');
-    const ns = modalEl.dataset.ns; const name = modalEl.dataset.name;
-    const yaml = document.getElementById('serviceYamlTextarea').value;
-    try {
-      const res = await fetch('/k8s-explorer/yaml', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'service', namespace: ns, name, yaml })
-      });
-      if (!res.ok) throw new Error(await res.text());
-      bootstrap.Modal.getInstance(modalEl).hide();
-      window.showUserToast && window.showUserToast('Service YAML güncellendi.');
-      loadServices();
-    } catch (e) {
-      window.showUserToast && window.showUserToast('YAML güncellenemedi: ' + e, false);
-    }
-  });
-
-  function deleteService(ns, name) {
-    openConfirmModal({
-      title: 'Servisi Sil',
-      message: `${ns}/${name} servisini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`,
-      confirmText: 'Sil',
-      confirmBtnClass: 'btn-danger',
-      onConfirm: async () => {
-        try {
-          const res = await fetch('/k8s-explorer/delete', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type: 'service', namespace: ns, name })
-          });
-          const data = await res.json().catch(()=>({}));
-          if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
-          window.showUserToast && window.showUserToast('Service silindi.');
-          loadServices();
-        } catch (e) {
-          window.showUserToast && window.showUserToast('Service silinemedi: ' + e, false);
-          throw e; // modal açık kalsın diye
-        }
-      }
-    });
-  }
-
-  // Bind events
-  document.addEventListener('DOMContentLoaded', () => {
-    // Default loads
-    loadServices();
-    loadEndpoints();
-    loadIngresses();
-    loadIngressClasses();
-    loadNetworkPolicies();
-
-    document.getElementById('servicesNamespaceFilter').addEventListener('change', loadServices);
-    document.getElementById('endpointsNamespaceFilter').addEventListener('change', loadEndpoints);
-    document.getElementById('ingressesNamespaceFilter').addEventListener('change', loadIngresses);
-    document.getElementById('networkPoliciesNamespaceFilter').addEventListener('change', loadNetworkPolicies);
-  });
 </script>
 {% endblock %}

@@ -1,0 +1,477 @@
+{% extends 'base.html' %}
+
+{% block title %}Network - Kubernetes Security Checker{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+  <h2 class="mb-3"><i class="bi bi-diagram-3 me-2"></i>Network</h2>
+
+  <ul class="nav nav-tabs" id="networkTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="services-tab" data-bs-toggle="tab" data-bs-target="#services" type="button" role="tab">Services</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="endpoints-tab" data-bs-toggle="tab" data-bs-target="#endpoints" type="button" role="tab">Endpoints</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="ingresses-tab" data-bs-toggle="tab" data-bs-target="#ingresses" type="button" role="tab">Ingresses</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="ingress-classes-tab" data-bs-toggle="tab" data-bs-target="#ingress-classes" type="button" role="tab">Ingress Classes</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="network-policies-tab" data-bs-toggle="tab" data-bs-target="#network-policies" type="button" role="tab">Network Policies</button>
+    </li>
+  </ul>
+
+  <div class="tab-content p-3 bg-white border border-top-0 rounded-bottom shadow-sm" id="networkTabsContent">
+    <!-- Services -->
+    <div class="tab-pane fade show active" id="services" role="tabpanel">
+      <div class="d-flex align-items-center mb-2">
+        <label class="me-2">{{ t('label.namespace') }}</label>
+        <select id="servicesNamespaceFilter" class="form-select form-select-sm" style="width:auto">
+          <option value="default">default</option>
+          <option value="all">all</option>
+        </select>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-striped table-hover">
+          <thead>
+            <tr>
+              <th>Namespace</th>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Cluster IP</th>
+              <th>External IP</th>
+              <th>Ports</th>
+              <th>Age</th>
+              <th style="width:220px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="servicesTableBody">
+            <tr><td colspan="8">{{ t('loading') }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Endpoints -->
+    <div class="tab-pane fade" id="endpoints" role="tabpanel">
+      <div class="d-flex align-items-center mb-2">
+        <label class="me-2">{{ t('label.namespace') }}</label>
+        <select id="endpointsNamespaceFilter" class="form-select form-select-sm" style="width:auto">
+          <option value="default">default</option>
+          <option value="all">all</option>
+        </select>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-striped table-hover">
+          <thead>
+            <tr>
+              <th>Namespace</th>
+              <th>Name</th>
+              <th>Subsets</th>
+              <th>Age</th>
+            </tr>
+          </thead>
+          <tbody id="endpointsTableBody">
+            <tr><td colspan="4">{{ t('loading') }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Ingresses -->
+    <div class="tab-pane fade" id="ingresses" role="tabpanel">
+      <div class="d-flex align-items-center mb-2">
+        <label class="me-2">{{ t('label.namespace') }}</label>
+        <select id="ingressesNamespaceFilter" class="form-select form-select-sm" style="width:auto">
+          <option value="default">default</option>
+          <option value="all">all</option>
+        </select>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-striped table-hover">
+          <thead>
+            <tr>
+              <th>Namespace</th>
+              <th>Name</th>
+              <th>Class</th>
+              <th>Hosts</th>
+              <th>Age</th>
+            </tr>
+          </thead>
+          <tbody id="ingressesTableBody">
+            <tr><td colspan="5">{{ t('loading') }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Ingress Classes -->
+    <div class="tab-pane fade" id="ingress-classes" role="tabpanel">
+      <div class="table-responsive">
+        <table class="table table-striped table-hover">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Controller</th>
+              <th>Parameters</th>
+              <th>Age</th>
+            </tr>
+          </thead>
+          <tbody id="ingressClassesTableBody">
+            <tr><td colspan="4">{{ t('loading') }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Network Policies -->
+    <div class="tab-pane fade" id="network-policies" role="tabpanel">
+      <div class="d-flex align-items-center mb-2">
+        <label class="me-2">{{ t('label.namespace') }}</label>
+        <select id="networkPoliciesNamespaceFilter" class="form-select form-select-sm" style="width:auto">
+          <option value="default">default</option>
+          <option value="all">all</option>
+        </select>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-striped table-hover">
+          <thead>
+            <tr>
+              <th>Namespace</th>
+              <th>Name</th>
+              <th>Policy Types</th>
+              <th>Ingress Rules</th>
+              <th>Egress Rules</th>
+              <th>Pod Selector</th>
+              <th>Age</th>
+            </tr>
+          </thead>
+          <tbody id="networkPoliciesTableBody">
+            <tr><td colspan="7">{{ t('loading') }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Service Detail Modal -->
+<div class="modal fade" id="serviceDetailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Service Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <pre class="mb-0" id="serviceDetailPre" style="white-space: pre-wrap;"></pre>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- YAML Edit Modal (reuses global YAML editor via /k8s-explorer/yaml) -->
+<div class="modal fade" id="serviceYamlModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Service YAML</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <textarea id="serviceYamlTextarea" class="form-control" rows="18" spellcheck="false"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveServiceYamlBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function timeAgo(iso) {
+    if (!iso) return '-';
+    try {
+      const d = new Date(iso);
+      const diff = (Date.now() - d.getTime())/1000;
+      if (diff < 60) return Math.floor(diff) + 's';
+      if (diff < 3600) return Math.floor(diff/60) + 'm';
+      if (diff < 86400) return Math.floor(diff/3600) + 'h';
+      return Math.floor(diff/86400) + 'd';
+    } catch { return '-'; }
+  }
+
+  // Generic confirmation modal helper (local)
+  function openConfirmModal({ title = 'Onay', message = 'Emin misiniz?', confirmText = 'Onayla', confirmBtnClass = 'btn-danger', onConfirm }) {
+    const id = 'confirmModal-' + Date.now();
+    const html = `
+      <div class="modal fade" id="${id}" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">${title}</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <p class="mb-0">${message}</p>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+              <button type="button" class="btn ${confirmBtnClass}" id="${id}-confirmBtn">${confirmText}</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+    const el = document.getElementById(id);
+    const modal = new bootstrap.Modal(el);
+    const btn = el.querySelector('#' + id + '-confirmBtn');
+    el.addEventListener('hidden.bs.modal', () => { try { modal.dispose(); el.remove(); } catch(_){} });
+    btn.addEventListener('click', async () => {
+      const original = btn.textContent;
+      btn.disabled = true; btn.textContent = 'İşleniyor...';
+      try {
+        if (onConfirm) await onConfirm();
+        modal.hide();
+      } catch (e) {
+        console.debug('confirmModal onConfirm error', e);
+      } finally {
+        btn.disabled = false; btn.textContent = original;
+      }
+    });
+    modal.show();
+  }
+
+  async function loadServices() {
+    const ns = document.getElementById('servicesNamespaceFilter').value;
+    const url = '/k8s-explorer/services-summary' + (ns ? ('?namespace=' + encodeURIComponent(ns)) : '');
+    const tbody = document.getElementById('servicesTableBody');
+    tbody.innerHTML = '<tr><td colspan="8">' + (window.i18n?.['loading']?.[window.locale] || 'Loading...') + '</td></tr>';
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      const rows = (data.services||[]).map(s => {
+        const ports = (s.ports||[]).map(p => `${p.port}${p.protocol?('/'+p.protocol):''}`).join(', ');
+        const ns = s.namespace||'';
+        const name = s.name||'';
+        return `<tr>
+          <td>${ns}</td>
+          <td>${name}</td>
+          <td>${s.type||''}</td>
+          <td>${s.cluster_ip||''}</td>
+          <td>${s.external_ip||''}</td>
+          <td>${ports}</td>
+          <td>${timeAgo(s.creation_timestamp)}</td>
+          <td>
+            <button class="btn btn-sm btn-outline-info me-1" onclick="showServiceDetails('${ns}','${name}')"><i class="bi bi-info-circle"></i> Detail</button>
+            <button class="btn btn-sm btn-outline-secondary me-1" onclick="openServiceYaml('${ns}','${name}')"><i class="bi bi-pencil-square"></i> Edit</button>
+            <button class="btn btn-sm btn-outline-danger" onclick="deleteService('${ns}','${name}')"><i class="bi bi-trash"></i> Delete</button>
+          </td>
+        </tr>`;
+      }).join('');
+      tbody.innerHTML = rows || '<tr><td colspan="8">-</td></tr>';
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="8">Error: ${e}</td></tr>`;
+    }
+  }
+
+  async function loadEndpoints() {
+    const ns = document.getElementById('endpointsNamespaceFilter').value;
+    const url = '/k8s-explorer/endpoints-summary' + (ns ? ('?namespace=' + encodeURIComponent(ns)) : '');
+    const tbody = document.getElementById('endpointsTableBody');
+    tbody.innerHTML = '<tr><td colspan="4">' + (window.i18n?.['loading']?.[window.locale] || 'Loading...') + '</td></tr>';
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      const rows = (data.endpoints||[]).map(ep => {
+        const subsets = (ep.subsets||[]).map(ss => {
+          const addrs = (ss.addresses||[]).map(a => a.ip).join(', ');
+          const naddrs = (ss.not_ready_addresses||[]).map(a => a.ip).join(', ');
+          const ports = (ss.ports||[]).map(p => `${p.name||''}:${p.port}/${p.protocol}`).join(', ');
+          return `${addrs}${naddrs?(' (notReady: '+naddrs+')'):''} | ${ports}`;
+        }).join(' ; ');
+        return `<tr>
+          <td>${ep.namespace||''}</td>
+          <td>${ep.name||''}</td>
+          <td>${subsets||''}</td>
+          <td>${timeAgo(ep.creation_timestamp)}</td>
+        </tr>`;
+      }).join('');
+      tbody.innerHTML = rows || '<tr><td colspan="4">-</td></tr>';
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="4">Error: ${e}</td></tr>`;
+    }
+  }
+
+  async function loadIngresses() {
+    const ns = document.getElementById('ingressesNamespaceFilter').value;
+    const url = '/k8s-explorer/ingresses-summary' + (ns ? ('?namespace=' + encodeURIComponent(ns)) : '');
+    const tbody = document.getElementById('ingressesTableBody');
+    tbody.innerHTML = '<tr><td colspan="5">' + (window.i18n?.['loading']?.[window.locale] || 'Loading...') + '</td></tr>';
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      const rows = (data.ingresses||[]).map(ing => {
+        const hosts = (ing.hosts||[]).join(', ');
+        return `<tr>
+          <td>${ing.namespace||''}</td>
+          <td>${ing.name||''}</td>
+          <td>${ing.class||''}</td>
+          <td>${hosts}</td>
+          <td>${timeAgo(ing.creation_timestamp)}</td>
+        </tr>`;
+      }).join('');
+      tbody.innerHTML = rows || '<tr><td colspan="5">-</td></tr>';
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="5">Error: ${e}</td></tr>`;
+    }
+  }
+
+  async function loadIngressClasses() {
+    const tbody = document.getElementById('ingressClassesTableBody');
+    tbody.innerHTML = '<tr><td colspan="4">' + (window.i18n?.['loading']?.[window.locale] || 'Loading...') + '</td></tr>';
+    try {
+      const res = await fetch('/k8s-explorer/ingress-classes-summary');
+      const data = await res.json();
+      const rows = (data.ingress_classes||[]).map(ic => {
+        const params = ic.parameters ? JSON.stringify(ic.parameters) : '';
+        return `<tr>
+          <td>${ic.name||''}</td>
+          <td>${ic.controller||''}</td>
+          <td><code>${params}</code></td>
+          <td>${timeAgo(ic.creation_timestamp)}</td>
+        </tr>`;
+      }).join('');
+      tbody.innerHTML = rows || '<tr><td colspan="4">-</td></tr>';
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="4">Error: ${e}</td></tr>`;
+    }
+  }
+
+  async function loadNetworkPolicies() {
+    const ns = document.getElementById('networkPoliciesNamespaceFilter').value;
+    const url = '/k8s-explorer/network-policies-summary' + (ns ? ('?namespace=' + encodeURIComponent(ns)) : '');
+    const tbody = document.getElementById('networkPoliciesTableBody');
+    tbody.innerHTML = '<tr><td colspan="7">' + (window.i18n?.['loading']?.[window.locale] || 'Loading...') + '</td></tr>';
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      const rows = (data.network_policies||[]).map(np => {
+        const types = (np.policy_types||[]).join(', ');
+        const sel = np.pod_selector ? JSON.stringify(np.pod_selector) : '';
+        return `<tr>
+          <td>${np.namespace||''}</td>
+          <td>${np.name||''}</td>
+          <td>${types}</td>
+          <td>${np.ingress_rules||0}</td>
+          <td>${np.egress_rules||0}</td>
+          <td><code>${sel}</code></td>
+          <td>${timeAgo(np.creation_timestamp)}</td>
+        </tr>`;
+      }).join('');
+      tbody.innerHTML = rows || '<tr><td colspan="7">-</td></tr>';
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="7">Error: ${e}</td></tr>`;
+    }
+  }
+
+  // Service actions
+  async function showServiceDetails(ns, name) {
+    try {
+      const res = await fetch(`/k8s-explorer/service-details?namespace=${encodeURIComponent(ns)}&name=${encodeURIComponent(name)}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      const pre = document.getElementById('serviceDetailPre');
+      pre.textContent = JSON.stringify(data.service, null, 2);
+      const modal = new bootstrap.Modal(document.getElementById('serviceDetailModal'));
+      modal.show();
+    } catch (e) {
+      window.showUserToast && window.showUserToast('Detay alınamadı: ' + e, false);
+    }
+  }
+
+  async function openServiceYaml(ns, name) {
+    try {
+      // GET YAML
+      const res = await fetch(`/k8s-explorer/yaml?type=service&namespace=${encodeURIComponent(ns)}&name=${encodeURIComponent(name)}`);
+      if (!res.ok) throw new Error('YAML alınamadı');
+      const text = await res.text();
+      document.getElementById('serviceYamlTextarea').value = text;
+      const modalEl = document.getElementById('serviceYamlModal');
+      modalEl.dataset.ns = ns; modalEl.dataset.name = name;
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+    } catch (e) {
+      window.showUserToast && window.showUserToast('YAML alınamadı: ' + e, false);
+    }
+  }
+
+  document.getElementById('saveServiceYamlBtn').addEventListener('click', async () => {
+    const modalEl = document.getElementById('serviceYamlModal');
+    const ns = modalEl.dataset.ns; const name = modalEl.dataset.name;
+    const yaml = document.getElementById('serviceYamlTextarea').value;
+    try {
+      const res = await fetch('/k8s-explorer/yaml', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'service', namespace: ns, name, yaml })
+      });
+      if (!res.ok) throw new Error(await res.text());
+      bootstrap.Modal.getInstance(modalEl).hide();
+      window.showUserToast && window.showUserToast('Service YAML güncellendi.');
+      loadServices();
+    } catch (e) {
+      window.showUserToast && window.showUserToast('YAML güncellenemedi: ' + e, false);
+    }
+  });
+
+  function deleteService(ns, name) {
+    openConfirmModal({
+      title: 'Servisi Sil',
+      message: `${ns}/${name} servisini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`,
+      confirmText: 'Sil',
+      confirmBtnClass: 'btn-danger',
+      onConfirm: async () => {
+        try {
+          const res = await fetch('/k8s-explorer/delete', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'service', namespace: ns, name })
+          });
+          const data = await res.json().catch(()=>({}));
+          if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+          window.showUserToast && window.showUserToast('Service silindi.');
+          loadServices();
+        } catch (e) {
+          window.showUserToast && window.showUserToast('Service silinemedi: ' + e, false);
+          throw e; // modal açık kalsın diye
+        }
+      }
+    });
+  }
+
+  // Bind events
+  document.addEventListener('DOMContentLoaded', () => {
+    // Default loads
+    loadServices();
+    loadEndpoints();
+    loadIngresses();
+    loadIngressClasses();
+    loadNetworkPolicies();
+
+    document.getElementById('servicesNamespaceFilter').addEventListener('change', loadServices);
+    document.getElementById('endpointsNamespaceFilter').addEventListener('change', loadEndpoints);
+    document.getElementById('ingressesNamespaceFilter').addEventListener('change', loadIngresses);
+    document.getElementById('networkPoliciesNamespaceFilter').addEventListener('change', loadNetworkPolicies);
+  });
+</script>
+{% endblock %}

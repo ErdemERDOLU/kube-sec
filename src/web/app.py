@@ -82,6 +82,8 @@ I18N = {
     'nav.workloads': {'tr': 'Workloads', 'en': 'Workloads'},
     'nav.config': {'tr': 'Config', 'en': 'Config'},
     'nav.network': {'tr': 'Network', 'en': 'Network'},
+    'nav.storage': {'tr': 'Storage', 'en': 'Storage'},
+    'nav.access': {'tr': 'Access Control', 'en': 'Access Control'},
     'theme.toggle': {'tr': 'Tema Değiştir', 'en': 'Toggle Theme'},
     'footer.created': {'tr': 'Oluşturan', 'en': 'Created by'},
     'footer.app': {'tr': 'Kubernetes Security Checker', 'en': 'Kubernetes Security Checker'},
@@ -1630,76 +1632,77 @@ def yaml_lint_api():
 # Generic delete endpoint for various K8s resources
 @app.route('/k8s-explorer/delete', methods=['POST', 'DELETE'])
 def k8s_explorer_delete():
+    # Accept parameters from querystring OR JSON body
     try:
-        # Accept parameters from querystring OR JSON body (frontend uses JSON DELETE)
-        data = {}
         try:
             data = request.get_json(force=False) or {}
         except Exception:
             data = {}
 
-        obj_type = (request.args.get('type') or data.get('type') or '').lower()
-        namespace = request.args.get('namespace') or data.get('namespace')
-        name = request.args.get('name') or data.get('name')
+        obj_type = (request.args.get('type') or data.get('type') or '').lower().strip()
+        namespace = (request.args.get('namespace') or data.get('namespace') or '').strip()
+        name = (request.args.get('name') or data.get('name') or '').strip()
 
-        if not obj_type or not namespace or not name:
-            return jsonify({'error': 'type, namespace ve name zorunlu'}), 400
+        if not obj_type or not name:
+            return jsonify({'error': 'type ve name zorunlu'}), 400
+
+        namespaced_kinds = {'pod','service','deployment','deployments','replicaset','replicasets','daemonset','daemonsets','statefulset','statefulsets','endpoint','endpoints','pvc','persistentvolumeclaim','persistentvolumeclaims','serviceaccount','sa','role','rolebinding'}
+        cluster_scoped = {'pv','persistentvolume','persistentvolumes','storageclass','storageclasses','storage-class','sc','clusterrole','clusterrolebinding','node'}
+        if obj_type in namespaced_kinds and not namespace:
+            return jsonify({'error': 'namespaced kaynak için namespace zorunlu'}), 400
 
         config.load_kube_config()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        c = client.Configuration.get_default_copy(); c.verify_ssl=False; c.assert_hostname=False; client.Configuration.set_default(c)
+        core_v1 = client.CoreV1Api(); apps_v1 = client.AppsV1Api(); storage_v1 = client.StorageV1Api(); rbac_v1 = client.RbacAuthorizationV1Api()
 
-        core_v1 = client.CoreV1Api()
-        apps_v1 = client.AppsV1Api()
+        def ok(resp_type, extra=None):
+            d = {'ok': True, 'deleted': {'type': resp_type, 'name': name}}
+            if namespace:
+                d['deleted']['namespace'] = namespace
+            if extra:
+                d['deleted'].update(extra)
+            return jsonify(d), 200
 
-        # Perform deletion depending on resource type
         if obj_type == 'pod':
             core_v1.delete_namespaced_pod(name=name, namespace=namespace, grace_period_seconds=30)
-            # update pods cache immediately
-            try:
-                update_pods_summary_cache()
-            except Exception:
-                pass
-            return jsonify({'ok': True, 'deleted': {'type': 'pod', 'namespace': namespace, 'name': name}}), 200
-
-        elif obj_type == 'service':
-            core_v1.delete_namespaced_service(name=name, namespace=namespace)
-            return jsonify({'ok': True, 'deleted': {'type': 'service', 'namespace': namespace, 'name': name}}), 200
-
-        elif obj_type in ('deployment', 'deployments'):
-            apps_v1.delete_namespaced_deployment(name=name, namespace=namespace, body=client.V1DeleteOptions())
-            return jsonify({'ok': True, 'deleted': {'type': 'deployment', 'namespace': namespace, 'name': name}}), 200
-
-        elif obj_type in ('replicaset', 'replicasets'):
-            apps_v1.delete_namespaced_replica_set(name=name, namespace=namespace, body=client.V1DeleteOptions())
-            return jsonify({'ok': True}), 200
-
-        elif obj_type in ('daemonset', 'daemonsets'):
-            apps_v1.delete_namespaced_daemon_set(name=name, namespace=namespace, body=client.V1DeleteOptions())
-            return jsonify({'ok': True}), 200
-
-        elif obj_type in ('statefulset', 'statefulsets'):
-            apps_v1.delete_namespaced_stateful_set(name=name, namespace=namespace, body=client.V1DeleteOptions())
-            return jsonify({'ok': True}), 200
-
-        elif obj_type in ('endpoint', 'endpoints'):
-            core_v1.delete_namespaced_endpoints(name=name, namespace=namespace)
-            return jsonify({'ok': True, 'deleted': {'type': 'endpoints', 'namespace': namespace, 'name': name}}), 200
-
-        else:
-            return jsonify({'error': f'Unsupported resource type: {obj_type}'}), 400
-
+            try: update_pods_summary_cache()
+            except Exception: pass
+            return ok('pod')
+        if obj_type == 'service':
+            core_v1.delete_namespaced_service(name=name, namespace=namespace); return ok('service')
+        if obj_type in ('deployment','deployments'):
+            apps_v1.delete_namespaced_deployment(name=name, namespace=namespace, body=client.V1DeleteOptions()); return ok('deployment')
+        if obj_type in ('replicaset','replicasets'):
+            apps_v1.delete_namespaced_replica_set(name=name, namespace=namespace, body=client.V1DeleteOptions()); return ok('replicaset')
+        if obj_type in ('daemonset','daemonsets'):
+            apps_v1.delete_namespaced_daemon_set(name=name, namespace=namespace, body=client.V1DeleteOptions()); return ok('daemonset')
+        if obj_type in ('statefulset','statefulsets'):
+            apps_v1.delete_namespaced_stateful_set(name=name, namespace=namespace, body=client.V1DeleteOptions()); return ok('statefulset')
+        if obj_type in ('endpoint','endpoints'):
+            core_v1.delete_namespaced_endpoints(name=name, namespace=namespace); return ok('endpoints')
+        if obj_type in ('pvc','persistentvolumeclaim','persistentvolumeclaims'):
+            core_v1.delete_namespaced_persistent_volume_claim(name=name, namespace=namespace); return ok('pvc')
+        if obj_type in ('pv','persistentvolume','persistentvolumes'):
+            core_v1.delete_persistent_volume(name=name); return ok('pv')
+        if obj_type in ('storageclass','storageclasses','storage-class','sc'):
+            storage_v1.delete_storage_class(name=name); return ok('storageclass')
+        if obj_type in ('serviceaccount','sa'):
+            core_v1.delete_namespaced_service_account(name=name, namespace=namespace); return ok('serviceaccount')
+        if obj_type == 'role':
+            rbac_v1.delete_namespaced_role(name=name, namespace=namespace); return ok('role')
+        if obj_type == 'rolebinding':
+            rbac_v1.delete_namespaced_role_binding(name=name, namespace=namespace); return ok('rolebinding')
+        if obj_type == 'clusterrole':
+            rbac_v1.delete_cluster_role(name=name); return ok('clusterrole')
+        if obj_type == 'clusterrolebinding':
+            rbac_v1.delete_cluster_role_binding(name=name); return ok('clusterrolebinding')
+        return jsonify({'error': f'Unsupported resource type: {obj_type}'}), 400
     except client.exceptions.ApiException as api_exc:
-        # Kubernetes client errors: return message and code
-        try:
-            msg = api_exc.body or str(api_exc)
-        except Exception:
-            msg = str(api_exc)
-        return jsonify({'error': 'Kubernetes API error', 'details': msg}), getattr(api_exc, 'status', 500)
+        msg = None
+        try: msg = api_exc.body or str(api_exc)
+        except Exception: msg = str(api_exc)
+        return jsonify({'error': 'Kubernetes API error', 'details': msg}), getattr(api_exc,'status',500)
     except Exception as e:
-        # Generic error
         tb = traceback.format_exc()
         return jsonify({'error': str(e), 'trace': tb}), 500
 
@@ -2324,6 +2327,11 @@ def config_page():
 def network_page():
     return render_template('network.html')
 
+# Storage page (PVC, PV, StorageClasses)
+@app.route('/storage')
+def storage_page():
+    return render_template('storage.html')
+
 @app.route('/k8s-explorer/configmaps-summary')
 def configmaps_summary():
     try:
@@ -2806,6 +2814,25 @@ def k8s_explorer_yaml():
             elif obj_type == 'pod':
                 kube_client.core_v1 = client.CoreV1Api()
                 obj = kube_client.core_v1.read_namespaced_pod(name, namespace, _preload_content=False)
+            elif obj_type in ('serviceaccount','sa'):
+                kube_client.core_v1 = client.CoreV1Api(); obj = kube_client.core_v1.read_namespaced_service_account(name, namespace, _preload_content=False)
+            elif obj_type == 'role':
+                kube_client.rbac_v1 = client.RbacAuthorizationV1Api(); obj = kube_client.rbac_v1.read_namespaced_role(name, namespace, _preload_content=False)
+            elif obj_type == 'rolebinding':
+                kube_client.rbac_v1 = client.RbacAuthorizationV1Api(); obj = kube_client.rbac_v1.read_namespaced_role_binding(name, namespace, _preload_content=False)
+            elif obj_type == 'clusterrole':
+                kube_client.rbac_v1 = client.RbacAuthorizationV1Api(); obj = kube_client.rbac_v1.read_cluster_role(name, _preload_content=False)
+            elif obj_type == 'clusterrolebinding':
+                kube_client.rbac_v1 = client.RbacAuthorizationV1Api(); obj = kube_client.rbac_v1.read_cluster_role_binding(name, _preload_content=False)
+            elif obj_type in ('pvc','persistentvolumeclaim'):
+                kube_client.core_v1 = client.CoreV1Api()
+                obj = kube_client.core_v1.read_namespaced_persistent_volume_claim(name, namespace, _preload_content=False)
+            elif obj_type in ('pv','persistentvolume'):
+                kube_client.core_v1 = client.CoreV1Api()
+                obj = kube_client.core_v1.read_persistent_volume(name, _preload_content=False)
+            elif obj_type in ('storageclass','storageclasses','storage-class','sc'):
+                kube_client.storage_v1 = client.StorageV1Api()
+                obj = kube_client.storage_v1.read_storage_class(name, _preload_content=False)
             elif obj_type == 'node':
                 kube_client.core_v1 = client.CoreV1Api()
                 obj = kube_client.core_v1.read_node(name, _preload_content=False)
@@ -2855,6 +2882,25 @@ def k8s_explorer_yaml():
             elif obj_type == 'pod':
                 kube_client.core_v1 = client.CoreV1Api()
                 kube_client.core_v1.patch_namespaced_pod(name, namespace, body)
+            elif obj_type in ('serviceaccount','sa'):
+                kube_client.core_v1 = client.CoreV1Api(); kube_client.core_v1.patch_namespaced_service_account(name, namespace, body)
+            elif obj_type == 'role':
+                kube_client.rbac_v1 = client.RbacAuthorizationV1Api(); kube_client.rbac_v1.patch_namespaced_role(name, namespace, body)
+            elif obj_type == 'rolebinding':
+                kube_client.rbac_v1 = client.RbacAuthorizationV1Api(); kube_client.rbac_v1.patch_namespaced_role_binding(name, namespace, body)
+            elif obj_type == 'clusterrole':
+                kube_client.rbac_v1 = client.RbacAuthorizationV1Api(); kube_client.rbac_v1.patch_cluster_role(name, body)
+            elif obj_type == 'clusterrolebinding':
+                kube_client.rbac_v1 = client.RbacAuthorizationV1Api(); kube_client.rbac_v1.patch_cluster_role_binding(name, body)
+            elif obj_type in ('pvc','persistentvolumeclaim'):
+                kube_client.core_v1 = client.CoreV1Api()
+                kube_client.core_v1.patch_namespaced_persistent_volume_claim(name, namespace, body)
+            elif obj_type in ('pv','persistentvolume'):
+                kube_client.core_v1 = client.CoreV1Api()
+                kube_client.core_v1.patch_persistent_volume(name, body)
+            elif obj_type in ('storageclass','storageclasses','storage-class','sc'):
+                kube_client.storage_v1 = client.StorageV1Api()
+                kube_client.storage_v1.patch_storage_class(name, body)
             else:
                 return 'Bilinmeyen obje tipi', 400
             # YAML edit sonrası pods_summary_cache'i hemen güncelle
@@ -3096,6 +3142,319 @@ def network_policies_summary():
         return jsonify({'network_policies': result})
     except Exception as e:
         return jsonify({'network_policies': [], 'error': str(e)})
+
+
+# --- Storage summaries ---
+@app.route('/k8s-explorer/pvcs-summary')
+def pvcs_summary():
+    try:
+        namespace = request.args.get('namespace')
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        v1 = client.CoreV1Api()
+        if namespace and namespace != 'all':
+            items = v1.list_namespaced_persistent_volume_claim(namespace).items
+        else:
+            items = v1.list_persistent_volume_claim_for_all_namespaces().items
+        result = []
+        for pvc in items:
+            spec = pvc.spec
+            status = pvc.status
+            result.append({
+                'namespace': pvc.metadata.namespace,
+                'name': pvc.metadata.name,
+                'status': getattr(status, 'phase', None),
+                'volume': getattr(spec, 'volume_name', None) if spec else None,
+                'storage_class': getattr(spec, 'storage_class_name', None) or getattr(spec, 'storage_class', None),
+                'access_modes': getattr(spec, 'access_modes', None) if spec else None,
+                'capacity': getattr(getattr(status, 'capacity', None) or {}, 'get', lambda k, d=None: None)('storage', None) if status else None,
+                'creation_timestamp': pvc.metadata.creation_timestamp.isoformat() if getattr(pvc.metadata, 'creation_timestamp', None) else None
+            })
+        return jsonify({'pvcs': result})
+    except Exception as e:
+        return jsonify({'pvcs': [], 'error': str(e)})
+
+@app.route('/k8s-explorer/pvs-summary')
+def pvs_summary():
+    try:
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        v1 = client.CoreV1Api()
+        items = v1.list_persistent_volume().items
+        result = []
+        for pv in items:
+            spec = pv.spec
+            status = pv.status
+            claim_ref = getattr(spec, 'claim_ref', None)
+            claim = f"{getattr(claim_ref,'namespace',None)}/{getattr(claim_ref,'name',None)}" if claim_ref else None
+            cap = getattr(getattr(status, 'capacity', None) or {}, 'get', lambda k, d=None: None)('storage', None) if status else None
+            result.append({
+                'name': pv.metadata.name,
+                'capacity': cap,
+                'access_modes': getattr(spec, 'access_modes', None) if spec else None,
+                'reclaim_policy': getattr(spec, 'persistent_volume_reclaim_policy', None) if spec else None,
+                'storage_class': getattr(spec, 'storage_class_name', None) or getattr(spec, 'storage_class', None),
+                'status': getattr(status, 'phase', None),
+                'claim': claim,
+                'creation_timestamp': pv.metadata.creation_timestamp.isoformat() if getattr(pv.metadata, 'creation_timestamp', None) else None
+            })
+        return jsonify({'pvs': result})
+    except Exception as e:
+        return jsonify({'pvs': [], 'error': str(e)})
+
+@app.route('/k8s-explorer/storage-classes-summary')
+def storage_classes_summary():
+    try:
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        storage_v1 = client.StorageV1Api()
+        items = storage_v1.list_storage_class().items
+        result = []
+        for sc in items:
+            allow_expansion = getattr(sc.allow_volume_expansion, 'value', None) if hasattr(sc, 'allow_volume_expansion') else getattr(sc, 'allow_volume_expansion', None)
+            result.append({
+                'name': sc.metadata.name,
+                'provisioner': getattr(sc, 'provisioner', None),
+                'reclaim_policy': getattr(sc, 'reclaim_policy', None),
+                'volume_binding_mode': getattr(sc, 'volume_binding_mode', None),
+                'allow_expansion': allow_expansion,
+                'creation_timestamp': sc.metadata.creation_timestamp.isoformat() if getattr(sc.metadata, 'creation_timestamp', None) else None
+            })
+        return jsonify({'storage_classes': result})
+    except Exception as e:
+        return jsonify({'storage_classes': [], 'error': str(e)})
+
+# --- Access Control (RBAC) ---
+@app.route('/access-control')
+def access_control_page():
+    return render_template('access_control.html')
+
+@app.route('/k8s-explorer/rbac-summary')
+def rbac_summary():
+    """Return summaries for ServiceAccounts (namespaced), Roles (namespaced), RoleBindings (namespaced), ClusterRoles (cluster), ClusterRoleBindings (cluster).
+       Optional namespace param filters namespaced sets, default=default."""
+    try:
+        namespace = request.args.get('namespace') or 'default'
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy(); c.verify_ssl=False; c.assert_hostname=False; client.Configuration.set_default(c)
+        core_v1 = client.CoreV1Api()
+        rbac_v1 = client.RbacAuthorizationV1Api()
+
+        # ServiceAccounts
+        if namespace == 'all':
+            sas = core_v1.list_service_account_for_all_namespaces().items
+        else:
+            sas = core_v1.list_namespaced_service_account(namespace).items
+        sa_list = []
+        for sa in sas:
+            sa_list.append({
+                'namespace': getattr(sa.metadata,'namespace',None),
+                'name': getattr(sa.metadata,'name',None),
+                'secrets': len(getattr(sa,'secrets',[]) or []),
+                'age': sa.metadata.creation_timestamp.isoformat() if getattr(sa.metadata,'creation_timestamp',None) else None
+            })
+
+        # Roles
+        if namespace == 'all':
+            roles_items = []
+            for ns in [n.metadata.name for n in core_v1.list_namespace().items]:
+                try:
+                    roles_items += rbac_v1.list_namespaced_role(ns).items
+                except Exception:
+                    continue
+        else:
+            roles_items = rbac_v1.list_namespaced_role(namespace).items
+        roles = []
+        for r in roles_items:
+            rules = getattr(r,'rules',[]) or []
+            roles.append({
+                'namespace': getattr(r.metadata,'namespace',None),
+                'name': getattr(r.metadata,'name',None),
+                'rules_count': len(rules),
+                'age': r.metadata.creation_timestamp.isoformat() if getattr(r.metadata,'creation_timestamp',None) else None
+            })
+
+        # RoleBindings
+        if namespace == 'all':
+            rbs_items = []
+            for ns in [n.metadata.name for n in core_v1.list_namespace().items]:
+                try:
+                    rbs_items += rbac_v1.list_namespaced_role_binding(ns).items
+                except Exception:
+                    continue
+        else:
+            rbs_items = rbac_v1.list_namespaced_role_binding(namespace).items
+        role_bindings = []
+        for rb in rbs_items:
+            subs = getattr(rb,'subjects',[]) or []
+            role_ref = getattr(rb,'role_ref',None)
+            role_bindings.append({
+                'namespace': getattr(rb.metadata,'namespace',None),
+                'name': getattr(rb.metadata,'name',None),
+                'subjects': len(subs),
+                'roleRef': {'kind': getattr(role_ref,'kind',None), 'name': getattr(role_ref,'name',None)} if role_ref else None,
+                'age': rb.metadata.creation_timestamp.isoformat() if getattr(rb.metadata,'creation_timestamp',None) else None
+            })
+
+        # ClusterRoles
+        cr_items = rbac_v1.list_cluster_role().items
+        cluster_roles = []
+        for cr in cr_items:
+            cluster_roles.append({
+                'name': getattr(cr.metadata,'name',None),
+                'rules_count': len(getattr(cr,'rules',[]) or []),
+                'age': cr.metadata.creation_timestamp.isoformat() if getattr(cr.metadata,'creation_timestamp',None) else None
+            })
+
+        # ClusterRoleBindings
+        crb_items = rbac_v1.list_cluster_role_binding().items
+        cluster_role_bindings = []
+        for crb in crb_items:
+            subs = getattr(crb,'subjects',[]) or []
+            role_ref = getattr(crb,'role_ref',None)
+            cluster_role_bindings.append({
+                'name': getattr(crb.metadata,'name',None),
+                'subjects': len(subs),
+                'roleRef': {'kind': getattr(role_ref,'kind',None), 'name': getattr(role_ref,'name',None)} if role_ref else None,
+                'age': crb.metadata.creation_timestamp.isoformat() if getattr(crb.metadata,'creation_timestamp',None) else None
+            })
+        return jsonify({'service_accounts': sa_list, 'roles': roles, 'role_bindings': role_bindings, 'cluster_roles': cluster_roles, 'cluster_role_bindings': cluster_role_bindings})
+    except Exception as e:
+        return jsonify({'error': str(e), 'service_accounts': [], 'roles': [], 'role_bindings': [], 'cluster_roles': [], 'cluster_role_bindings': []}), 500
+
+@app.route('/k8s-explorer/rbac-detail')
+def rbac_detail():
+    try:
+        kind = (request.args.get('kind') or '').lower()
+        name = request.args.get('name')
+        namespace = request.args.get('namespace')
+        if not kind or not name:
+            return jsonify({'error': 'kind ve name zorunlu'}), 400
+        config.load_kube_config(); c = client.Configuration.get_default_copy(); c.verify_ssl=False; c.assert_hostname=False; client.Configuration.set_default(c)
+        core_v1 = client.CoreV1Api(); rbac_v1 = client.RbacAuthorizationV1Api()
+        obj = None
+        if kind == 'serviceaccount':
+            if not namespace: return jsonify({'error': 'namespace zorunlu'}), 400
+            obj = core_v1.read_namespaced_service_account(name, namespace)
+        elif kind == 'role':
+            if not namespace: return jsonify({'error': 'namespace zorunlu'}), 400
+            obj = rbac_v1.read_namespaced_role(name, namespace)
+        elif kind == 'rolebinding':
+            if not namespace: return jsonify({'error': 'namespace zorunlu'}), 400
+            obj = rbac_v1.read_namespaced_role_binding(name, namespace)
+        elif kind == 'clusterrole':
+            obj = rbac_v1.read_cluster_role(name)
+        elif kind == 'clusterrolebinding':
+            obj = rbac_v1.read_cluster_role_binding(name)
+        else:
+            return jsonify({'error': 'desteklenmeyen kind'}), 400
+        # convert via to_dict if exists
+        data = getattr(obj,'to_dict',lambda: obj)()
+        return jsonify({'object': data})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# --- Storage detail endpoints ---
+@app.route('/k8s-explorer/pvc-details')
+def pvc_details():
+    try:
+        name = request.args.get('name')
+        namespace = request.args.get('namespace')
+        if not name or not namespace:
+            return jsonify({'error': 'name ve namespace zorunlu'}), 400
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        v1 = client.CoreV1Api()
+        pvc = v1.read_namespaced_persistent_volume_claim(name, namespace)
+        md = pvc.metadata; spec = pvc.spec; status = pvc.status
+        return jsonify({'pvc': {
+            'name': getattr(md,'name',None),
+            'namespace': getattr(md,'namespace',None),
+            'labels': getattr(md,'labels',{}) or {},
+            'annotations': getattr(md,'annotations',{}) or {},
+            'creation_timestamp': getattr(md,'creation_timestamp',None).isoformat() if getattr(md,'creation_timestamp',None) else None,
+            'volume': getattr(spec,'volume_name',None) if spec else None,
+            'access_modes': getattr(spec,'access_modes',None) if spec else None,
+            'resources': getattr(spec,'resources',None).to_dict() if getattr(spec,'resources',None) else None,
+            'storage_class': getattr(spec,'storage_class_name',None) or getattr(spec,'storage_class',None),
+            'status': getattr(status,'phase',None) if status else None,
+            'capacity': getattr(getattr(status,'capacity',None) or {},'get',lambda k,d=None:None)('storage',None) if status else None
+        }})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/k8s-explorer/pv-details')
+def pv_details():
+    try:
+        name = request.args.get('name')
+        if not name:
+            return jsonify({'error': 'name zorunlu'}), 400
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        v1 = client.CoreV1Api()
+        pv = v1.read_persistent_volume(name)
+        md = pv.metadata; spec = pv.spec; status = pv.status
+        claim_ref = getattr(spec,'claim_ref',None)
+        claim = f"{getattr(claim_ref,'namespace',None)}/{getattr(claim_ref,'name',None)}" if claim_ref else None
+        return jsonify({'pv': {
+            'name': getattr(md,'name',None),
+            'labels': getattr(md,'labels',{}) or {},
+            'annotations': getattr(md,'annotations',{}) or {},
+            'creation_timestamp': getattr(md,'creation_timestamp',None).isoformat() if getattr(md,'creation_timestamp',None) else None,
+            'capacity': getattr(getattr(status,'capacity',None) or {},'get',lambda k,d=None:None)('storage',None) if status else None,
+            'access_modes': getattr(spec,'access_modes',None) if spec else None,
+            'reclaim_policy': getattr(spec,'persistent_volume_reclaim_policy',None) if spec else None,
+            'storage_class': getattr(spec,'storage_class_name',None) or getattr(spec,'storage_class',None),
+            'status': getattr(status,'phase',None) if status else None,
+            'claim': claim,
+            'volume_mode': getattr(spec,'volume_mode',None) if spec else None,
+            'node_affinity': getattr(getattr(spec,'node_affinity',None),'to_dict',lambda:None)()
+        }})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/k8s-explorer/storage-class-details')
+def storage_class_details():
+    try:
+        name = request.args.get('name')
+        if not name:
+            return jsonify({'error': 'name zorunlu'}), 400
+        config.load_kube_config()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        storage_v1 = client.StorageV1Api()
+        sc = storage_v1.read_storage_class(name)
+        md = sc.metadata
+        return jsonify({'storage_class': {
+            'name': getattr(md,'name',None),
+            'labels': getattr(md,'labels',{}) or {},
+            'annotations': getattr(md,'annotations',{}) or {},
+            'creation_timestamp': getattr(md,'creation_timestamp',None).isoformat() if getattr(md,'creation_timestamp',None) else None,
+            'provisioner': getattr(sc,'provisioner',None),
+            'reclaim_policy': getattr(sc,'reclaim_policy',None),
+            'volume_binding_mode': getattr(sc,'volume_binding_mode',None),
+            'allow_expansion': getattr(sc,'allow_volume_expansion',None)
+        }})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.errorhandler(Exception)

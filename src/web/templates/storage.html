@@ -1,0 +1,335 @@
+{% extends 'base.html' %}
+{% block title %}Storage - Kubernetes Security Checker{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="hero-section bg-gradient-primary text-white rounded-4 p-4 mb-4">
+        <h1 class="display-6 mb-0"><i class="bi bi-database me-2"></i>Storage</h1>
+        <p class="mb-0 opacity-75">PersistentVolumeClaims, PersistentVolumes ve StorageClasses görünümü</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm rounded-4">
+    <div class="card-header bg-transparent border-0 px-4 pt-4">
+      <ul class="nav nav-pills modern-tabs" id="storageTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="pvcs-tab" data-bs-toggle="pill" data-bs-target="#pvcs" type="button" role="tab">PVCs <span class="badge bg-primary ms-1" id="pvcsBadge">0</span></button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="pvs-tab" data-bs-toggle="pill" data-bs-target="#pvs" type="button" role="tab">PVs <span class="badge bg-secondary ms-1" id="pvsBadge">0</span></button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="storage-classes-tab" data-bs-toggle="pill" data-bs-target="#storage-classes" type="button" role="tab">Storage Classes <span class="badge bg-info ms-1" id="scBadge">0</span></button>
+        </li>
+      </ul>
+    </div>
+    <div class="card-body p-4">
+      <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
+        <div class="input-group" style="width:260px;">
+          <span class="input-group-text bg-light border-end-0"><i class="bi bi-filter"></i></span>
+          <select id="storageNamespaceFilter" class="form-select border-start-0">
+            <option value="default">default</option>
+            <option value="all">all namespaces</option>
+          </select>
+        </div>
+        <div class="input-group" style="width:260px;">
+          <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
+          <input id="storageSearch" type="text" class="form-control border-start-0" placeholder="Search name..." />
+        </div>
+        <button class="btn btn-sm btn-outline-primary" onclick="reloadStorage()"><i class="bi bi-arrow-clockwise"></i></button>
+      </div>
+
+      <div class="tab-content" id="storageTabsContent">
+        <div class="tab-pane fade show active" id="pvcs" role="tabpanel">
+          <div class="row g-3" id="pvcsGrid"></div>
+        </div>
+        <div class="tab-pane fade" id="pvs" role="tabpanel">
+          <div class="row g-3" id="pvsGrid"></div>
+        </div>
+        <div class="tab-pane fade" id="storage-classes" role="tabpanel">
+          <div class="row g-3" id="scGrid"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .storage-card { border:none; border-radius:1rem; box-shadow:0 2px 10px rgba(0,0,0,.08); transition:.25s; }
+  .storage-card:hover { transform:translateY(-4px); box-shadow:0 8px 25px rgba(0,0,0,.15); }
+  .storage-card .card-header { background:linear-gradient(135deg,#e3f2fd,#bbdefb); border:none; }
+  .sc-card .card-header { background:linear-gradient(135deg,#e8f5e9,#c8e6c9); }
+  .pv-card .card-header { background:linear-gradient(135deg,#fff3e0,#ffe0b2); }
+  .metric { display:flex; justify-content:space-between; font-size:.8rem; padding:.35rem 0; border-bottom:1px solid #f1f3f5; }
+  .metric:last-child{border-bottom:none}
+  .metric span:first-child { color:#6c757d; font-weight:500; }
+</style>
+
+<script>
+  let storageData = { pvcs: [], pvs: [], sc: [] };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadNamespacesForStorage();
+    reloadStorage();
+    document.getElementById('storageNamespaceFilter').addEventListener('change', filterAllStorage);
+    document.getElementById('storageSearch').addEventListener('input', filterAllStorage);
+  });
+
+  function loadNamespacesForStorage() {
+    fetch('/k8s-explorer/namespaces')
+      .then(r=>r.json())
+      .then(j=>{
+        const namespaces = j.namespaces||[];
+        const sel = document.getElementById('storageNamespaceFilter');
+        const hasDefault = namespaces.includes('default');
+        const opts = [];
+        opts.push(`<option value="default" ${hasDefault?'selected':''}>default</option>`);
+        opts.push('<option value="all">all namespaces</option>');
+        namespaces.filter(n=>n!=='default').sort().forEach(ns=>opts.push(`<option value="${ns}">${ns}</option>`));
+        sel.innerHTML = opts.join('');
+      });
+  }
+
+  function reloadStorage() {
+    Promise.all([
+      fetch('/k8s-explorer/pvcs-summary').then(r=>r.json()),
+      fetch('/k8s-explorer/pvs-summary').then(r=>r.json()),
+      fetch('/k8s-explorer/storage-classes-summary').then(r=>r.json())
+    ]).then(([pvcsRes, pvsRes, scRes]) => {
+      storageData.pvcs = pvcsRes.pvcs||[];
+      storageData.pvs = pvsRes.pvs||[];
+      storageData.sc = scRes.storage_classes||[];
+      updateBadges();
+      filterAllStorage();
+    }).catch(e=> showToast('Storage verileri yüklenemedi: '+e.message,'error'));
+  }
+
+  function updateBadges(){
+    document.getElementById('pvcsBadge').textContent = storageData.pvcs.length;
+    document.getElementById('pvsBadge').textContent = storageData.pvs.length;
+    document.getElementById('scBadge').textContent = storageData.sc.length;
+  }
+
+  function filterAllStorage(){
+    const ns = document.getElementById('storageNamespaceFilter').value;
+    const term = (document.getElementById('storageSearch').value||'').toLowerCase();
+    const pvcFiltered = storageData.pvcs.filter(i => (ns==='all'||i.namespace===ns) && (!term || i.name.toLowerCase().includes(term)) );
+    const pvFiltered = storageData.pvs.filter(i => (!term || i.name.toLowerCase().includes(term)) ); // PV cluster scope
+    const scFiltered = storageData.sc.filter(i => (!term || i.name.toLowerCase().includes(term)) );
+    renderPVCs(pvcFiltered);
+    renderPVs(pvFiltered);
+    renderSCs(scFiltered);
+  }
+
+  function card(colClass, headerClass, title, subtitle, metrics, actionsHtml=''){
+    return `<div class="col-xl-4 col-lg-6 col-md-12"><div class="card storage-card ${headerClass} h-100">`+
+      `<div class="card-header d-flex justify-content-between align-items-start"><div><h6 class="mb-0 fw-bold">${title}</h6>${subtitle?`<small class='opacity-75'>${subtitle}</small>`:''}</div>`+
+      `<div class='ms-2 d-flex gap-1 flex-wrap'>${actionsHtml}</div></div>`+
+      `<div class="card-body">${metrics.map(m=>`<div class='metric'><span>${m[0]}</span><span class='font-monospace'>${m[1]??'-'}</span></div>`).join('')}</div>`+
+    `</div></div>`;
+  }
+
+  function renderPVCs(list){
+    const el = document.getElementById('pvcsGrid');
+    if (!list.length){ el.innerHTML = emptyState('PVC'); return; }
+    el.innerHTML = list.map(p=>{
+      const actions = actionButtons('pvc', p.namespace, p.name);
+      return card('', '', p.name, p.namespace, [
+      ['Status', p.status],
+      ['Volume', p.volume],
+      ['Class', p.storage_class],
+      ['Access', (p.access_modes||[]).join(',')],
+      ['Capacity', p.capacity],
+      ['Age', timeAgo(p.creation_timestamp)]
+    ], actions);
+    }).join('');
+  }
+
+  function renderPVs(list){
+    const el = document.getElementById('pvsGrid');
+    if (!list.length){ el.innerHTML = emptyState('PV'); return; }
+    el.innerHTML = list.map(p=>{
+      const actions = actionButtons('pv', null, p.name);
+      return card('', 'pv-card', p.name, '', [
+      ['Status', p.status],
+      ['Capacity', p.capacity],
+      ['Access', (p.access_modes||[]).join(',')],
+      ['Reclaim', p.reclaim_policy],
+      ['Class', p.storage_class],
+      ['Claim', p.claim],
+      ['Age', timeAgo(p.creation_timestamp)]
+    ], actions);
+    }).join('');
+  }
+
+  function renderSCs(list){
+    const el = document.getElementById('scGrid');
+    if (!list.length){ el.innerHTML = emptyState('StorageClass'); return; }
+    el.innerHTML = list.map(s=>{
+      const actions = actionButtons('storageclass', null, s.name);
+      return card('', 'sc-card', s.name, '', [
+      ['Provisioner', s.provisioner],
+      ['Reclaim', s.reclaim_policy],
+      ['Binding', s.volume_binding_mode],
+      ['Expansion', s.allow_expansion],
+      ['Age', timeAgo(s.creation_timestamp)]
+    ], actions);
+    }).join('');
+  }
+
+  function emptyState(label){
+    return `<div class='col-12 text-center py-5'><i class="bi bi-inboxes text-muted" style='font-size:3rem;'></i><p class='text-muted mb-0'>No ${label} found</p></div>`;
+  }
+
+  function timeAgo(ts){
+    if(!ts) return '-';
+    const now = new Date();
+    const t = new Date(ts);
+    const diff = Math.floor((now - t)/1000);
+    if (diff < 60) return diff+'s ago';
+    if (diff < 3600) return Math.floor(diff/60)+'m ago';
+    if (diff < 86400) return Math.floor(diff/3600)+'h ago';
+    return Math.floor(diff/86400)+'d ago';
+  }
+
+  function showToast(message, type='success') {
+    const bg = type === 'error' ? 'bg-danger' : (type === 'warning' ? 'bg-warning text-dark' : 'bg-success');
+    const toast = `<div class="toast align-items-center text-white ${bg} border-0" role="alert"><div class="d-flex"><div class="toast-body">${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`;
+    let container = document.querySelector('.toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.className = 'toast-container position-fixed top-0 end-0 p-3';
+      document.body.appendChild(container);
+    }
+    container.insertAdjacentHTML('beforeend', toast);
+    new bootstrap.Toast(container.lastElementChild, { delay: 3500 }).show();
+  }
+
+  // ACTIONS
+  function actionButtons(kind, namespace, name){
+    const nsAttr = namespace?`data-namespace="${namespace}"`:'';
+    return `
+      <button class='btn btn-sm btn-outline-secondary' title='Detail' onclick="openDetail('${kind}','${namespace||''}','${name}')"><i class='bi bi-info-circle'></i></button>
+      <button class='btn btn-sm btn-outline-primary' title='YAML' onclick="openYamlEdit('${kind}','${namespace||''}','${name}')"><i class='bi bi-code-slash'></i></button>
+      <button class='btn btn-sm btn-outline-danger' title='Delete' onclick="confirmDelete('${kind}','${namespace||''}','${name}')"><i class='bi bi-trash'></i></button>
+    `;
+  }
+
+  function openDetail(kind, namespace, name){
+    let url;
+    if(kind==='pvc') url = `/k8s-explorer/pvc-details?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`;
+    else if(kind==='pv') url = `/k8s-explorer/pv-details?name=${encodeURIComponent(name)}`;
+    else if(kind==='storageclass') url = `/k8s-explorer/storage-class-details?name=${encodeURIComponent(name)}`;
+    else return;
+    fetch(url).then(r=>r.json()).then(j=>{
+      if(j.error){ showToast('Detail alınamadı: '+j.error,'error'); return; }
+      const data = j.pvc||j.pv||j.storage_class;
+      const pre = `<pre class='border rounded p-2 small bg-light text-dark' style='max-height:400px;overflow:auto;'>${escapeHtml(JSON.stringify(data,null,2))}</pre>`;
+      document.getElementById('detailModalLabel').textContent = `${kind.toUpperCase()} ${name}`;
+      document.getElementById('detailModalBody').innerHTML = pre;
+      new bootstrap.Modal(document.getElementById('detailModal')).show();
+    }).catch(e=>showToast('Detail hata: '+e.message,'error'));
+  }
+
+  function openYamlEdit(kind, namespace, name){
+    const typeMap={pvc:'pvc',pv:'pv',storageclass:'storageclass'};
+    const t=typeMap[kind];
+    const params = new URLSearchParams({type:t,name});
+    if(namespace) params.append('namespace',namespace);
+    fetch('/k8s-explorer/yaml?'+params.toString())
+      .then(r=>{ if(!r.ok) throw new Error('YAML alınamadı'); return r.text();})
+      .then(txt=>{
+        document.getElementById('yamlEditTitle').textContent = `${kind.toUpperCase()} ${name} YAML`; 
+        document.getElementById('yamlEditTextarea').value = txt;
+        document.getElementById('yamlEditSaveBtn').onclick = () => saveYaml(kind, namespace, name);
+        new bootstrap.Modal(document.getElementById('yamlEditModal')).show();
+      }).catch(e=>showToast(e.message,'error'));
+  }
+
+  function saveYaml(kind, namespace, name){
+    const typeMap={pvc:'pvc',pv:'pv',storageclass:'storageclass'};
+    const body={ type:typeMap[kind], name:name, yaml: document.getElementById('yamlEditTextarea').value };
+    if(namespace) body.namespace = namespace;
+    fetch('/k8s-explorer/yaml',{method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
+      .then(r=>{ if(!r.ok) return r.text().then(t=>{throw new Error(t)}); return r.text();})
+      .then(()=>{ showToast('YAML güncellendi'); reloadStorage(); bootstrap.Modal.getInstance(document.getElementById('yamlEditModal')).hide(); })
+      .catch(e=>showToast('Kaydetme hatası: '+e.message,'error'));
+  }
+
+  function confirmDelete(kind, namespace, name){
+    document.getElementById('confirmDeleteText').textContent = `${kind.toUpperCase()} ${name} silinsin mi?`;
+    const modalEl = document.getElementById('confirmDeleteModal');
+    document.getElementById('confirmDeleteBtn').onclick = ()=>doDelete(kind, namespace, name);
+    new bootstrap.Modal(modalEl).show();
+  }
+
+  function doDelete(kind, namespace, name){
+    const typeMap={pvc:'pvc',pv:'pv',storageclass:'storageclass'};
+    const payload={ type:typeMap[kind], name:name };
+    if(namespace) payload.namespace = namespace;
+    fetch('/k8s-explorer/delete',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)})
+      .then(r=>r.json())
+      .then(j=>{
+        if(j.error){ showToast('Silme hatası: '+j.error,'error'); return; }
+        showToast('Silindi'); reloadStorage(); bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal')).hide();
+      }).catch(e=>showToast('Silme hatası: '+e.message,'error'));
+  }
+
+  function escapeHtml(str){
+    return (str||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+  }
+</script>
+<!-- Detail Modal -->
+<div class="modal fade" id="detailModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="detailModalLabel">Detail</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="detailModalBody">Yükleniyor...</div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+      </div>
+    </div>
+  </div>
+ </div>
+
+ <!-- YAML Edit Modal -->
+ <div class="modal fade" id="yamlEditModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="yamlEditTitle">YAML Edit</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <textarea id="yamlEditTextarea" class="form-control font-monospace" style="min-height:500px;"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+        <button type="button" id="yamlEditSaveBtn" class="btn btn-primary">Kaydet</button>
+      </div>
+    </div>
+  </div>
+ </div>
+
+ <!-- Confirm Delete Modal -->
+ <div class="modal fade" id="confirmDeleteModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Onay</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body"><p id="confirmDeleteText" class="mb-0"></p></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+        <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Sil</button>
+      </div>
+    </div>
+  </div>
+ </div>
+{% endblock %}

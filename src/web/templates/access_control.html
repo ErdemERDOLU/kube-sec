@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block title %}Access Control - Kubernetes Security Checker{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="row mb-4"><div class="col-12">
+    <div class="hero-section bg-gradient-primary text-white rounded-4 p-4 mb-4">
+      <h1 class="display-6 mb-0"><i class="bi bi-shield-lock me-2"></i>Access Control</h1>
+      <p class="mb-0 opacity-75">ServiceAccounts, Roles, RoleBindings, ClusterRoles, ClusterRoleBindings</p>
+    </div></div></div>
+
+  <div class="card border-0 shadow-sm rounded-4">
+    <div class="card-header bg-transparent border-0 px-4 pt-4">
+      <ul class="nav nav-pills modern-tabs" id="rbacTabs" role="tablist">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="pill" data-bs-target="#sas">Service Accounts <span class="badge bg-primary" id="saBadge">0</span></button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#roles">Roles <span class="badge bg-secondary" id="rolesBadge">0</span></button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#rbs">Role Bindings <span class="badge bg-info" id="rbsBadge">0</span></button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#crs">Cluster Roles <span class="badge bg-dark" id="crsBadge">0</span></button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="pill" data-bs-target="#crbs">Cluster Role Bindings <span class="badge bg-dark" id="crbsBadge">0</span></button></li>
+      </ul>
+    </div>
+    <div class="card-body p-4">
+      <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
+        <div class="input-group" style="width:260px;">
+          <span class="input-group-text bg-light border-end-0"><i class="bi bi-filter"></i></span>
+          <select id="rbacNamespace" class="form-select border-start-0">
+            <option value="default" selected>default</option>
+            <option value="all">all namespaces</option>
+          </select>
+        </div>
+        <div class="input-group" style="width:260px;">
+          <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
+          <input id="rbacSearch" type="text" class="form-control border-start-0" placeholder="Search name..." />
+        </div>
+        <button class="btn btn-sm btn-outline-primary" onclick="reloadRbac()"><i class="bi bi-arrow-clockwise"></i></button>
+      </div>
+
+      <div class="tab-content" id="rbacTabsContent">
+        <div class="tab-pane fade show active" id="sas"><div class="row g-3" id="saGrid"></div></div>
+        <div class="tab-pane fade" id="roles"><div class="row g-3" id="rolesGrid"></div></div>
+        <div class="tab-pane fade" id="rbs"><div class="row g-3" id="rbsGrid"></div></div>
+        <div class="tab-pane fade" id="crs"><div class="row g-3" id="crsGrid"></div></div>
+        <div class="tab-pane fade" id="crbs"><div class="row g-3" id="crbsGrid"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .rbac-card{border:none;border-radius:1rem;box-shadow:0 2px 10px rgba(0,0,0,.08);transition:.25s}
+  .rbac-card:hover{transform:translateY(-4px);box-shadow:0 8px 25px rgba(0,0,0,.15)}
+  .rbac-card .card-header{background:linear-gradient(135deg,#e3f2fd,#bbdefb);border:none}
+  .metric{display:flex;justify-content:space-between;font-size:.8rem;padding:.35rem 0;border-bottom:1px solid #f1f3f5}
+  .metric:last-child{border-bottom:none}
+  .metric span:first-child{color:#6c757d;font-weight:500}
+</style>
+
+<script>
+  let rbacData = { service_accounts:[], roles:[], role_bindings:[], cluster_roles:[], cluster_role_bindings:[] };
+  document.addEventListener('DOMContentLoaded', ()=>{ loadNamespacesRbac(); reloadRbac(); document.getElementById('rbacNamespace').addEventListener('change', reloadRbac); document.getElementById('rbacSearch').addEventListener('input', filterRbac); });
+
+  function loadNamespacesRbac(){ fetch('/k8s-explorer/namespaces').then(r=>r.json()).then(j=>{ const sel=document.getElementById('rbacNamespace'); const ns=j.namespaces||[]; const opts=[`<option value=\"default\" ${ns.includes('default')?'selected':''}>default</option>`,`<option value=\"all\">all namespaces</option>`]; ns.filter(n=>n!=='default').sort().forEach(n=>opts.push(`<option value=\"${n}\">${n}</option>`)); sel.innerHTML=opts.join(''); }); }
+
+  function reloadRbac(){ const ns=document.getElementById('rbacNamespace').value; fetch('/k8s-explorer/rbac-summary?namespace='+encodeURIComponent(ns)).then(r=>r.json()).then(j=>{ if(j.error){ showToast('RBAC yüklenemedi: '+j.error,'error'); return;} rbacData=j; updateBadges(); filterRbac(); }).catch(e=>showToast('RBAC hata: '+e.message,'error')); }
+  function updateBadges(){ document.getElementById('saBadge').textContent=rbacData.service_accounts.length; document.getElementById('rolesBadge').textContent=rbacData.roles.length; document.getElementById('rbsBadge').textContent=rbacData.role_bindings.length; document.getElementById('crsBadge').textContent=rbacData.cluster_roles.length; document.getElementById('crbsBadge').textContent=rbacData.cluster_role_bindings.length; }
+  function filterRbac(){ const term=(document.getElementById('rbacSearch').value||'').toLowerCase(); renderGrid('saGrid', rbacData.service_accounts.filter(i=>!term||i.name.toLowerCase().includes(term)), 'serviceaccount'); renderGrid('rolesGrid', rbacData.roles.filter(i=>!term||i.name.toLowerCase().includes(term)), 'role'); renderGrid('rbsGrid', rbacData.role_bindings.filter(i=>!term||i.name.toLowerCase().includes(term)), 'rolebinding'); renderGrid('crsGrid', rbacData.cluster_roles.filter(i=>!term||i.name.toLowerCase().includes(term)), 'clusterrole'); renderGrid('crbsGrid', rbacData.cluster_role_bindings.filter(i=>!term||i.name.toLowerCase().includes(term)), 'clusterrolebinding'); }
+
+  function card(title, subtitle, metrics, actions){ return `<div class='col-xl-4 col-lg-6 col-md-12'><div class='card rbac-card h-100'><div class='card-header d-flex justify-content-between align-items-start'><div><h6 class='mb-0 fw-bold'>${title}</h6>${subtitle?`<small class='opacity-75'>${subtitle}</small>`:''}</div><div class='d-flex gap-1 flex-wrap'>${actions}</div></div><div class='card-body'>${metrics.map(m=>`<div class='metric'><span>${m[0]}</span><span class='font-monospace'>${m[1]??'-'}</span></div>`).join('')}</div></div></div>`; }
+  function renderGrid(elId, list, kind){ const el=document.getElementById(elId); if(!list.length){ el.innerHTML = emptyState(kind); return;} el.innerHTML = list.map(i=>{ const actions = actionButtons(kind, i.namespace, i.name); let metrics=[]; if(kind==='serviceaccount'){ metrics=[['Secrets', i.secrets], ['Age', timeAgo(i.age)]]; } else if(kind==='role'){ metrics=[['Rules', i.rules_count], ['Age', timeAgo(i.age)]]; } else if(kind==='rolebinding'){ metrics=[['Subjects', i.subjects], ['RoleRef', (i.roleRef&&i.roleRef.name)||'-'], ['Age', timeAgo(i.age)]]; } else if(kind==='clusterrole'){ metrics=[['Rules', i.rules_count], ['Age', timeAgo(i.age)]]; } else if(kind==='clusterrolebinding'){ metrics=[['Subjects', i.subjects], ['RoleRef', (i.roleRef&&i.roleRef.name)||'-'], ['Age', timeAgo(i.age)]]; } return card(i.name, i.namespace||'', metrics, actions); }).join(''); }
+
+  function actionButtons(kind, namespace, name){ return `<button class='btn btn-sm btn-outline-secondary' onclick=\"openDetail('${kind}','${namespace||''}','${name}')\" title='Detail'><i class='bi bi-info-circle'></i></button>`+
+    `<button class='btn btn-sm btn-outline-primary' onclick=\"openYaml('${kind}','${namespace||''}','${name}')\" title='YAML'><i class='bi bi-code-slash'></i></button>`+
+    `<button class='btn btn-sm btn-outline-danger' onclick=\"confirmDelete('${kind}','${namespace||''}','${name}')\" title='Delete'><i class='bi bi-trash'></i></button>`; }
+
+  function openDetail(kind, namespace, name){ const qs=new URLSearchParams({kind,name}); if(namespace) qs.append('namespace',namespace); fetch('/k8s-explorer/rbac-detail?'+qs.toString()).then(r=>r.json()).then(j=>{ if(j.error){ showToast('Detail hata: '+j.error,'error'); return;} const pre = `<pre class='border rounded p-2 small bg-light text-dark' style='max-height:500px;overflow:auto;'>${escapeHtml(JSON.stringify(j.object,null,2))}</pre>`; document.getElementById('detailModalLabel').textContent = kind.toUpperCase()+" "+name; document.getElementById('detailModalBody').innerHTML = pre; new bootstrap.Modal(document.getElementById('detailModal')).show(); }).catch(e=>showToast('Detail hata: '+e.message,'error')); }
+
+  function openYaml(kind, namespace, name){ const map={serviceaccount:'serviceaccount',sa:'serviceaccount',role:'role',rolebinding:'rolebinding',clusterrole:'clusterrole',clusterrolebinding:'clusterrolebinding'}; const type=map[kind]; if(!type) return; const qs=new URLSearchParams({type,name}); if(namespace) qs.append('namespace',namespace); fetch('/k8s-explorer/yaml?'+qs.toString()).then(r=>{ if(!r.ok) throw new Error('YAML alınamadı'); return r.text(); }).then(txt=>{ document.getElementById('yamlEditTitle').textContent = kind.toUpperCase()+" "+name+" YAML"; document.getElementById('yamlEditTextarea').value=txt; document.getElementById('yamlEditSaveBtn').onclick=()=>saveYaml(kind, namespace, name); new bootstrap.Modal(document.getElementById('yamlEditModal')).show(); }).catch(e=>showToast(e.message,'error')); }
+  function saveYaml(kind, namespace, name){ const map={serviceaccount:'serviceaccount',role:'role',rolebinding:'rolebinding',clusterrole:'clusterrole',clusterrolebinding:'clusterrolebinding'}; const body={type:map[kind], name:name, yaml: document.getElementById('yamlEditTextarea').value}; if(namespace) body.namespace=namespace; fetch('/k8s-explorer/yaml',{method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)}).then(r=>{ if(!r.ok) return r.text().then(t=>{throw new Error(t)}); return r.text(); }).then(()=>{ showToast('YAML güncellendi'); reloadRbac(); bootstrap.Modal.getInstance(document.getElementById('yamlEditModal')).hide(); }).catch(e=>showToast('Kaydetme hatası: '+e.message,'error')); }
+
+  function confirmDelete(kind, namespace, name){ document.getElementById('confirmDeleteText').textContent = `${kind.toUpperCase()} ${name} silinsin mi?`; document.getElementById('confirmDeleteBtn').onclick=()=>doDelete(kind, namespace, name); new bootstrap.Modal(document.getElementById('confirmDeleteModal')).show(); }
+  function doDelete(kind, namespace, name){ const map={serviceaccount:'serviceaccount',role:'role',rolebinding:'rolebinding',clusterrole:'clusterrole',clusterrolebinding:'clusterrolebinding'}; const body={type:map[kind], name:name}; if(namespace) body.namespace=namespace; fetch('/k8s-explorer/delete',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)}).then(r=>r.json()).then(j=>{ if(j.error){ showToast('Silme hata: '+j.error,'error'); return;} showToast('Silindi'); reloadRbac(); bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal')).hide(); }).catch(e=>showToast('Silme hata: '+e.message,'error')); }
+
+  function emptyState(label){ return `<div class='col-12 text-center py-5'><i class="bi bi-inboxes text-muted" style='font-size:3rem;'></i><p class='text-muted mb-0'>No ${label} found</p></div>`; }
+  function timeAgo(ts){ if(!ts) return '-'; const now=new Date(); const t=new Date(ts); const diff=Math.floor((now-t)/1000); if(diff<60) return diff+'s ago'; if(diff<3600) return Math.floor(diff/60)+'m ago'; if(diff<86400) return Math.floor(diff/3600)+'h ago'; return Math.floor(diff/86400)+'d ago'; }
+  function escapeHtml(str){ return (str||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
+  function showToast(message, type='success'){ const bg = type==='error'?'bg-danger':(type==='warning'?'bg-warning text-dark':'bg-success'); const toast=`<div class='toast align-items-center text-white ${bg} border-0' role='alert'><div class='d-flex'><div class='toast-body'>${message}</div><button type='button' class='btn-close btn-close-white me-2 m-auto' data-bs-dismiss='toast'></button></div></div>`; let c=document.querySelector('.toast-container'); if(!c){ c=document.createElement('div'); c.className='toast-container position-fixed top-0 end-0 p-3'; document.body.appendChild(c);} c.insertAdjacentHTML('beforeend', toast); new bootstrap.Toast(c.lastElementChild,{delay:3500}).show(); }
+</script>
+
+<!-- Reuse modals (detail, yaml, confirm) -->
+<div class="modal fade" id="detailModal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="detailModalLabel">Detail</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="detailModalBody">Yükleniyor...</div><div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button></div></div></div></div>
+<div class="modal fade" id="yamlEditModal" tabindex="-1"><div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="yamlEditTitle">YAML Edit</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><textarea id="yamlEditTextarea" class="form-control font-monospace" style="min-height:500px;"></textarea></div><div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button><button class="btn btn-primary" id="yamlEditSaveBtn">Kaydet</button></div></div></div></div>
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Onay</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><p id="confirmDeleteText" class="mb-0"></p></div><div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">İptal</button><button class="btn btn-danger" id="confirmDeleteBtn">Sil</button></div></div></div></div>
+{% endblock %}

@@ -28,7 +28,8 @@ from flasgger import Swagger
 CORS_ORIGINS = ["http://localhost:8080", "http://127.0.0.1:8080"]
 
 app = Flask(__name__)
-CORS(app, origins=CORS_ORIGINS)
+app.secret_key = os.environ.get('APP_SECRET_KEY','dev-secret')
+CORS(app, origins=CORS_ORIGINS, supports_credentials=True)
 swagger = Swagger(app, config={
     "headers": [],
     "specs": [
@@ -84,6 +85,7 @@ I18N = {
     'nav.network': {'tr': 'Network', 'en': 'Network'},
     'nav.storage': {'tr': 'Storage', 'en': 'Storage'},
     'nav.access': {'tr': 'Access Control', 'en': 'Access Control'},
+    'nav.configuration': {'tr': 'Configuration', 'en': 'Configuration'},
     'theme.toggle': {'tr': 'Tema Değiştir', 'en': 'Toggle Theme'},
     'footer.created': {'tr': 'Oluşturan', 'en': 'Created by'},
     'footer.app': {'tr': 'Kubernetes Security Checker', 'en': 'Kubernetes Security Checker'},
@@ -184,6 +186,162 @@ def inject_i18n():
     'i18n_json': I18N
     }
 
+# ---- Kubeconfig Manager (in-memory + optional directory) ----
+KUBECONFIG_STORE = {}
+KUBECONFIG_ACTIVE_KEY = 'active_kubeconfig'
+KUBECONFIG_UPLOAD_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'kubeconfigs')
+os.makedirs(KUBECONFIG_UPLOAD_DIR, exist_ok=True)
+
+# Global (thread-safe) aktif kubeconfig adı; arka plan thread'leri session'a erişemezse bunu kullanır
+KUBECONFIG_ACTIVE_GLOBAL = None  # Seçilen kubeconfig adı
+KUBECONFIG_LAST_PATH = None      # Son başarılı yüklenen kubeconfig dosya yolu
+from threading import Lock as _Lock
+_KUBECONFIG_LOCK = _Lock()
+
+def list_kubeconfigs():
+    result = []
+    # in-memory
+    for name, path in KUBECONFIG_STORE.items():
+        result.append({'name': name, 'path': path, 'source': 'memory'})
+    # directory (files ending with .yaml or .yml or no ext)
+    try:
+        for fn in os.listdir(KUBECONFIG_UPLOAD_DIR):
+            fp = os.path.join(KUBECONFIG_UPLOAD_DIR, fn)
+            if os.path.isfile(fp):
+                result.append({'name': fn, 'path': fp, 'source': 'disk'})
+    except Exception:
+        pass
+    # deduplicate by name (memory overrides)
+    dedup = {}
+    for r in result:
+        dedup[r['name']] = r
+    return list(dedup.values())
+
+def get_active_kubeconfig_path():
+    """Aktif kubeconfig dosya yolunu döndür.
+    Öncelik: (varsa) request session -> global değişken -> env KUBECONFIG -> None.
+    Arka plan thread'lerinde session erişimi RuntimeError verdiği için güvenli try/except kullanılır.
+    """
+    global KUBECONFIG_ACTIVE_GLOBAL, KUBECONFIG_LAST_PATH
+    active_name = None
+    try:
+        # request context varsa session'dan al
+        active_name = session.get(KUBECONFIG_ACTIVE_KEY)
+        if active_name is not None:
+            # aynı zamanda global'i güncel tut (yarış koşulu önemli değil; kilit ile koruyalım)
+            with _KUBECONFIG_LOCK:
+                KUBECONFIG_ACTIVE_GLOBAL = active_name
+    except Exception:
+        # request context yok; global'i kullan
+        active_name = KUBECONFIG_ACTIVE_GLOBAL
+    # Eğer hâlâ yoksa ve sistemde yalnızca tek kubeconfig dosyası varsa onu otomatik seç
+    if not active_name:
+        lst_single = list_kubeconfigs()
+        if len(lst_single) == 1:
+            active_name = lst_single[0]['name']
+            with _KUBECONFIG_LOCK:
+                KUBECONFIG_ACTIVE_GLOBAL = active_name
+    if active_name:
+        lst = list_kubeconfigs()
+        for item in lst:
+            if item['name'] == active_name:
+                return item['path']
+    # Son başarılı çalışmış konfig yolu varsa ve dosya mevcutsa onu dön (fallback)
+    if KUBECONFIG_LAST_PATH and os.path.exists(KUBECONFIG_LAST_PATH):
+        return KUBECONFIG_LAST_PATH
+    env_path = os.environ.get('KUBECONFIG')
+    if env_path and os.path.exists(env_path):
+        return env_path
+    return None
+
+def load_kube_config_active():
+    path = get_active_kubeconfig_path()
+    if path:
+        config.load_kube_config(config_file=path)
+        # Başarılı yolu kaydet
+        global KUBECONFIG_LAST_PATH
+        with _KUBECONFIG_LOCK:
+            KUBECONFIG_LAST_PATH = path
+    else:
+        # Fallback: session'da aktif yoksa normal kubeconfig yükle
+        config.load_kube_config()
+    try:
+        # Debug amaçlı (isteğe bağlı: prod'da kaldırılabilir)
+        print(f"[load_kube_config_active] aktif kubeconfig: {path or 'DEFAULT'}", file=sys.stderr)
+    except Exception:
+        pass
+
+@app.route('/kubeconfigs', methods=['GET'])
+def kubeconfigs_list():
+    active = session.get(KUBECONFIG_ACTIVE_KEY)
+    return jsonify({'items': list_kubeconfigs(), 'active': active})
+
+@app.route('/kubeconfigs', methods=['POST'])
+def kubeconfigs_add():
+    try:
+        data = request.get_json(force=True) or {}
+        name = data.get('name')
+        content = data.get('content')  # raw kubeconfig YAML
+        if not name or not content:
+            return jsonify({'error': 'name ve content zorunlu'}), 400
+        safe_name = ''.join([c for c in name if c.isalnum() or c in ('-','_','.')]) or f'cfg_{int(time.time())}'
+        path = os.path.join(KUBECONFIG_UPLOAD_DIR, safe_name)
+        with open(path,'w') as f:
+            f.write(content)
+        return jsonify({'ok': True, 'name': safe_name})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/kubeconfigs/activate', methods=['POST'])
+def kubeconfigs_activate():
+    try:
+        data = request.get_json(force=True) or {}
+        name = data.get('name')
+        if not name:
+            return jsonify({'error': 'name zorunlu'}), 400
+        lst = list_kubeconfigs()
+        if not any(i['name']==name for i in lst):
+            return jsonify({'error': 'bulunamadı'}), 404
+        session[KUBECONFIG_ACTIVE_KEY] = name
+        # global değişkeni de güncelle
+        global KUBECONFIG_ACTIVE_GLOBAL, KUBECONFIG_LAST_PATH
+        with _KUBECONFIG_LOCK:
+            KUBECONFIG_ACTIVE_GLOBAL = name
+        # Aktifleştirme sonrası cache'leri yeni kubeconfig ile tazele (hata yutsa da sorun yok)
+        try:
+            update_pods_summary_cache()
+        except Exception:
+            pass
+        try:
+            update_workload_stats_cache()
+        except Exception:
+            pass
+        return jsonify({'ok': True, 'active': name})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/kubeconfigs', methods=['DELETE'])
+def kubeconfigs_delete():
+    try:
+        data = request.get_json(force=True) or {}
+        name = data.get('name')
+        if not name:
+            return jsonify({'error': 'name zorunlu'}), 400
+        path = os.path.join(KUBECONFIG_UPLOAD_DIR, name)
+        if os.path.exists(path):
+            os.remove(path)
+            if session.get(KUBECONFIG_ACTIVE_KEY) == name:
+                session.pop(KUBECONFIG_ACTIVE_KEY, None)
+                # global'i de temizle
+                global KUBECONFIG_ACTIVE_GLOBAL
+                with _KUBECONFIG_LOCK:
+                    if KUBECONFIG_ACTIVE_GLOBAL == name:
+                        KUBECONFIG_ACTIVE_GLOBAL = None
+            return jsonify({'ok': True})
+        return jsonify({'error': 'bulunamadı'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/set-locale')
 def set_locale():
     lang = request.args.get('lang', 'tr')
@@ -195,19 +353,23 @@ def set_locale():
     resp.set_cookie('lang', lang, max_age=60*60*24*180, httponly=False, samesite='Lax')
     return resp
 
+@app.route('/configuration')
+def configuration_page():
+    return render_template('configuration.html')
+
 
 # HPA summary endpoint
 @app.route('/k8s-explorer/hpa-summary')
 def hpa_summary():
     try:
         namespace = request.args.get('namespace')
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
         client.Configuration.set_default(c)
         autoscaling_v1 = client.AutoscalingV1Api()
-        if namespace:
+        if namespace and namespace != 'all':
             hpas = autoscaling_v1.list_namespaced_horizontal_pod_autoscaler(namespace).items
         else:
             hpas = autoscaling_v1.list_horizontal_pod_autoscaler_for_all_namespaces().items
@@ -217,8 +379,8 @@ def hpa_summary():
             spec = hpa.spec
             status = hpa.status
             result.append({
-                'namespace': md.namespace,
-                'name': md.name,
+                'namespace': getattr(md, 'namespace', None),
+                'name': getattr(md, 'name', None),
                 'min_replicas': getattr(spec, 'min_replicas', None),
                 'max_replicas': getattr(spec, 'max_replicas', None),
                 'current_replicas': getattr(status, 'current_replicas', None),
@@ -240,7 +402,7 @@ def get_hpa():
         namespace = request.args.get('namespace')
         if not name or not namespace:
             return jsonify({'error': 'name and namespace are required'}), 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -251,8 +413,8 @@ def get_hpa():
         spec = hpa.spec
         status = hpa.status
         return jsonify({'hpa': {
-            'namespace': md.namespace,
-            'name': md.name,
+            'namespace': getattr(md, 'namespace', None),
+            'name': getattr(md, 'name', None),
             'min_replicas': getattr(spec, 'min_replicas', None),
             'max_replicas': getattr(spec, 'max_replicas', None),
             'current_replicas': getattr(status, 'current_replicas', None),
@@ -278,14 +440,12 @@ def update_hpa():
             return jsonify({'error': 'name and namespace are required'}), 400
         if min_r is None and max_r is None:
             return jsonify({'error': 'nothing to update'}), 400
-
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
         client.Configuration.set_default(c)
         autoscaling_v1 = client.AutoscalingV1Api()
-
         patch_spec = {}
         if min_r is not None:
             try:
@@ -297,9 +457,8 @@ def update_hpa():
                 patch_spec['maxReplicas'] = int(max_r)
             except Exception:
                 return jsonify({'error': 'max_replicas must be an integer'}), 400
-
         patch_body = {'spec': patch_spec}
-        resp = autoscaling_v1.patch_namespaced_horizontal_pod_autoscaler(name=name, namespace=namespace, body=patch_body)
+        autoscaling_v1.patch_namespaced_horizontal_pod_autoscaler(name=name, namespace=namespace, body=patch_body)
         return jsonify({'status': 'ok', 'name': name, 'namespace': namespace})
     except ApiException as e:
         try:
@@ -318,7 +477,7 @@ def delete_hpa():
         namespace = data.get('namespace')
         if not name or not namespace:
             return jsonify({'error': 'name and namespace are required'}), 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -339,13 +498,13 @@ def delete_hpa():
 def pdb_summary():
     try:
         namespace = request.args.get('namespace')
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
         client.Configuration.set_default(c)
         policy_v1 = client.PolicyV1Api()
-        if namespace and namespace != 'all':
+        if namespace and namespace not in ('all', None):
             pdbs = policy_v1.list_namespaced_pod_disruption_budget(namespace).items
         else:
             pdbs = policy_v1.list_pod_disruption_budget_for_all_namespaces().items
@@ -356,7 +515,6 @@ def pdb_summary():
             status = pdb.status or {}
             min_avail = getattr(spec, 'min_available', None)
             max_unavail = getattr(spec, 'max_unavailable', None)
-            # IntOrString -> render as string
             def int_or_str(val):
                 try:
                     return str(val)
@@ -383,23 +541,21 @@ def pdb_summary():
 def leases_summary():
     try:
         namespace = request.args.get('namespace')
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
         client.Configuration.set_default(c)
         coord_v1 = client.CoordinationV1Api()
-        if namespace and namespace != 'all':
+        if namespace and namespace not in ('all', None):
             leases = coord_v1.list_namespaced_lease(namespace).items
         else:
             leases = coord_v1.list_lease_for_all_namespaces().items
-
         def dt_to_iso(x):
             try:
                 return x.isoformat() if getattr(x, 'isoformat', None) else (str(x) if x else None)
             except Exception:
                 return None
-
         result = []
         for le in leases:
             md = le.metadata
@@ -423,7 +579,7 @@ def leases_summary():
 def mutating_webhooks_summary():
     try:
         namespace = request.args.get('namespace')
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -434,7 +590,6 @@ def mutating_webhooks_summary():
         for cfg in items:
             md = cfg.metadata
             webhooks = getattr(cfg, 'webhooks', []) or []
-            # Collect referenced services and basic policies
             services = []
             rules_count = 0
             failure_policies = set()
@@ -452,12 +607,9 @@ def mutating_webhooks_summary():
                 rules_count += len(rules)
                 if getattr(wh, 'failure_policy', None):
                     failure_policies.add(wh.failure_policy)
-
-            # Optional filtering by service namespace
-            if namespace and namespace != 'all':
+            if namespace and namespace not in ('all', None):
                 if not any(s.get('namespace') == namespace for s in services):
                     continue
-
             result.append({
                 'name': getattr(md, 'name', None),
                 'webhooks_count': len(webhooks),
@@ -475,7 +627,7 @@ def mutating_webhooks_summary():
 def validating_webhooks_summary():
     try:
         namespace = request.args.get('namespace')
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -503,11 +655,9 @@ def validating_webhooks_summary():
                 rules_count += len(rules)
                 if getattr(wh, 'failure_policy', None):
                     failure_policies.add(wh.failure_policy)
-
-            if namespace and namespace != 'all':
+            if namespace and namespace not in ('all', None):
                 if not any(s.get('namespace') == namespace for s in services):
                     continue
-
             result.append({
                 'name': getattr(md, 'name', None),
                 'webhooks_count': len(webhooks),
@@ -524,9 +674,8 @@ def validating_webhooks_summary():
 @app.route('/k8s-explorer/priority-classes-summary')
 def priority_classes_summary():
     try:
-        # Optional namespace param is accepted for UI consistency but ignored (PriorityClass is cluster-scoped)
-        _ = request.args.get('namespace')
-        config.load_kube_config()
+        _ = request.args.get('namespace')  # ignored
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -552,14 +701,12 @@ def priority_classes_summary():
 @app.route('/k8s-explorer/runtime-classes-summary')
 def runtime_classes_summary():
     try:
-        # Optional namespace param accepted for UI parity; ignored (RuntimeClass is cluster-scoped)
-        _ = request.args.get('namespace')
-        config.load_kube_config()
+        _ = request.args.get('namespace')  # ignored
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
         client.Configuration.set_default(c)
-        # Use CustomObjectsApi for broad compatibility
         co = client.CustomObjectsApi()
         objs = co.list_cluster_custom_object(group="node.k8s.io", version="v1", plural="runtimeclasses")
         items = objs.get('items', [])
@@ -569,7 +716,6 @@ def runtime_classes_summary():
             spec = rc.get('spec', {})
             scheduling = spec.get('scheduling') or {}
             overhead = spec.get('overhead') or {}
-            # common fields
             result.append({
                 'name': md.get('name'),
                 'handler': spec.get('handler'),
@@ -591,7 +737,7 @@ def get_runtime_class():
         name = request.args.get('name')
         if not name:
             return jsonify({'error': 'name is required'}), 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -700,7 +846,7 @@ def update_runtime_class():
 
         patch_body = { 'spec': patch_spec }
 
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -724,7 +870,7 @@ def delete_runtime_class():
         name = data.get('name')
         if not name:
             return jsonify({'error': 'name is required'}), 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -747,7 +893,7 @@ def get_priority_class():
         name = request.args.get('name')
         if not name:
             return jsonify({'error': 'name is required'}), 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -781,7 +927,7 @@ def update_priority_class():
         preemption_policy = data.get('preemption_policy')
         description = data.get('description')
 
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -831,7 +977,7 @@ def delete_priority_class():
         name = data.get('name')
         if not name:
             return jsonify({'error': 'name is required'}), 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -855,7 +1001,7 @@ def get_pdb():
         namespace = request.args.get('namespace')
         if not name or not namespace:
             return jsonify({'error': 'name and namespace are required'}), 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -899,7 +1045,7 @@ def update_pdb():
         if (min_av is None or min_av == '') and (max_un is None or max_un == ''):
             return jsonify({'error': 'nothing to update'}), 400
 
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -956,7 +1102,7 @@ def delete_pdb():
         namespace = data.get('namespace')
         if not name or not namespace:
             return jsonify({'error': 'name and namespace are required'}), 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -976,7 +1122,7 @@ def delete_pdb():
 @app.route('/k8s-explorer/prometheus-url')
 def prometheus_url():
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -1034,7 +1180,7 @@ def prometheus_url():
 def statefulsets_summary():
     try:
         namespace = request.args.get('namespace')
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -1068,7 +1214,7 @@ def statefulset_properties():
     if not namespace or not name:
         return jsonify({'error': 'namespace ve name zorunlu'}), 400
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -1147,7 +1293,7 @@ def restart_statefulset():
         name = data.get('name')
         if not namespace or not name:
             return jsonify({'error': 'namespace ve name zorunlu'}), 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -1181,7 +1327,7 @@ def statefulset_logs():
         mode = request.args.get('mode')
         if not namespace or not name:
             return jsonify({'error': 'namespace ve name zorunlu'}), 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -1234,7 +1380,7 @@ def scale_statefulset():
         replicas = data.get('replicas')
         if not namespace or not name or replicas is None:
             return jsonify({'error': 'namespace, name ve replicas zorunlu'}), 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -1251,7 +1397,7 @@ def scale_statefulset():
 @app.route('/k8s-explorer/daemonsets-summary')
 def daemonsets_summary():
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -1284,7 +1430,7 @@ def daemonset_properties():
     if not namespace or not name:
         return jsonify({'error': 'namespace ve name zorunlu'}), 400
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -1364,7 +1510,7 @@ def restart_daemonset():
         name = data.get('name')
         if not namespace or not name:
             return jsonify({'error': 'namespace ve name zorunlu'}), 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -1397,7 +1543,7 @@ def daemonset_logs():
         mode = request.args.get('mode')
         if not namespace or not name:
             return jsonify({'error': 'namespace ve name zorunlu'}), 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -1446,7 +1592,7 @@ def scale_deployment():
         replicas = data.get('replicas')
         if not namespace or not name or replicas is None:
             return jsonify({'error': 'namespace, name ve replicas zorunlu'}), 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -1477,7 +1623,7 @@ def restart_pod():
         if not namespace or not name:
             return jsonify({'error': 'namespace ve name zorunlu'}), 400
         
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -1504,7 +1650,7 @@ def restart_deployment():
         if not namespace or not name:
             return jsonify({'error': 'namespace ve name zorunlu'}), 400
         
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -1547,7 +1693,7 @@ def pod_properties():
         return jsonify({'error': 'namespace ve name zorunlu'}), 400
     
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -1651,7 +1797,7 @@ def k8s_explorer_delete():
         if obj_type in namespaced_kinds and not namespace:
             return jsonify({'error': 'namespaced kaynak için namespace zorunlu'}), 400
 
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy(); c.verify_ssl=False; c.assert_hostname=False; client.Configuration.set_default(c)
         core_v1 = client.CoreV1Api(); apps_v1 = client.AppsV1Api(); storage_v1 = client.StorageV1Api(); rbac_v1 = client.RbacAuthorizationV1Api()
 
@@ -1719,7 +1865,7 @@ import threading
 def update_workload_stats_cache():
     global workload_stats_cache, workload_stats_cache_time
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -1867,25 +2013,39 @@ def k8s_explorer_workload_stats():
 
 @app.route('/k8s-explorer/health')
 def k8s_explorer_health():
-    """Lightweight health check: try to list a small resource to verify cluster connectivity and return current kubeconfig context."""
+    """Lightweight health check returning: connectivity ok flag, active kube context name, error (if any).
+
+    We now derive the context name from the *active* kubeconfig path selected via session / global fallback
+    instead of whatever the default KUBECONFIG env might point to. This matches the cluster actually used
+    by backend requests (load_kube_config_active()).
+    """
     try:
-        # Try to read kubeconfig contexts (local file) to get the current context name
+        current_context_name = None
+        # Ensure active kubeconfig is loaded (this sets default client configuration)
+        load_kube_config_active()
+        # After loading, try to list contexts from the same file path to get current context name
         try:
-            contexts, current_context = config.list_kube_config_contexts()
-            # current_context is a dict like {'name': 'ctx-name', 'context': {...}}
-            current_context_name = current_context.get('name') if isinstance(current_context, dict) else (current_context or None)
+            active_path = get_active_kubeconfig_path()
+            if active_path and os.path.exists(active_path):
+                try:
+                    contexts, current_context = config.list_kube_config_contexts(config_file=active_path)
+                except TypeError:
+                    # Older client versions use different parameter name (config_filename)
+                    contexts, current_context = config.list_kube_config_contexts(config_filename=active_path)  # type: ignore
+                if isinstance(current_context, dict):
+                    current_context_name = current_context.get('name') or current_context.get('context', {}).get('cluster')
+                elif isinstance(current_context, str):
+                    current_context_name = current_context
         except Exception:
-            current_context = None
             current_context_name = None
-        # Try a lightweight API call to verify connectivity
+
+        # Lightweight API call to verify connectivity
         try:
-            config.load_kube_config()
             c = client.Configuration.get_default_copy()
             c.verify_ssl = False
             c.assert_hostname = False
             client.Configuration.set_default(c)
             core_v1 = client.CoreV1Api()
-            # short call: list namespaces with limit to test connectivity
             try:
                 core_v1.list_namespace(_request_timeout=5)
                 ok = True
@@ -1896,7 +2056,6 @@ def k8s_explorer_health():
         except Exception as e:
             ok = False
             error = str(e)
-        # Return the health result
         return jsonify({'ok': ok, 'context': current_context_name, 'error': error})
     except Exception as e:
         return jsonify({'ok': False, 'context': None, 'error': str(e)}), 500
@@ -1910,7 +2069,7 @@ PODS_SUMMARY_CACHE_TTL = 180  # 3 dakika
 def update_pods_summary_cache():
     global pods_summary_cache, pods_summary_cache_time
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -1973,7 +2132,7 @@ def pods_summary():
 @app.route('/k8s-explorer/deployments-summary')
 def deployments_summary():
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2007,7 +2166,7 @@ def deployments_summary():
 def replicasets_summary():
     """ReplicaSets summary list (namespace, name, ready, desired, age)."""
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2036,7 +2195,7 @@ def replicasets_summary():
 def jobs_summary():
     """Jobs summary list (namespace, name, succeeded, failed, completions, age)."""
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2066,7 +2225,7 @@ def jobs_summary():
 def cronjobs_summary():
     """CronJobs summary list (namespace, name, schedule, suspended, last_schedule_time, active, age)."""
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2123,7 +2282,7 @@ def cronjobs_summary():
 def api_service_pods(namespace, name):
     """Return pods belonging to a Service by using its selector."""
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2171,7 +2330,7 @@ def delete_replicasets():
         items = data.get('items') if isinstance(data, dict) else None
         if not items or not isinstance(items, list):
             return jsonify({'error': 'items listesi zorunlu'}), 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2204,7 +2363,7 @@ def deployment_properties():
     if not namespace or not name:
         return jsonify({'error': 'namespace ve name zorunlu'}), 400
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2285,7 +2444,7 @@ def configmap_secrets():
 @app.route('/configmap-secrets-data')
 def configmap_secrets_data():
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2335,7 +2494,7 @@ def storage_page():
 @app.route('/k8s-explorer/configmaps-summary')
 def configmaps_summary():
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2369,7 +2528,7 @@ def get_configmap():
     if not name or not namespace:
         return jsonify({'error': 'name and namespace required'}), 400
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2391,7 +2550,7 @@ def update_configmap():
         data = payload.get('data')
         if not name or not namespace or data is None:
             return jsonify({'error': 'name, namespace and data are required'}), 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2435,7 +2594,7 @@ def update_configmap():
 def secrets_summary():
     try:
         namespace = request.args.get('namespace')
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2469,7 +2628,7 @@ def get_secret():
     if not name or not namespace:
         return jsonify({'error': 'name and namespace required'}), 400
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2499,7 +2658,7 @@ def update_secret():
         data = payload.get('data')
         if not name or not namespace or data is None:
             return jsonify({'error': 'name, namespace and data are required'}), 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2540,7 +2699,7 @@ def delete_secret():
         namespace = payload.get('namespace')
         if not name or not namespace:
             return jsonify({'error': 'name and namespace required'}), 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2564,7 +2723,7 @@ def delete_secret():
 @app.route('/k8s-explorer/resource-quotas-summary')
 def resource_quotas_summary():
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2590,7 +2749,7 @@ def resource_quotas_summary():
 @app.route('/k8s-explorer/limit-ranges-summary')
 def limit_ranges_summary():
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2621,7 +2780,7 @@ def k8s_explorer_node_uncordon():
         node_name = data.get('node')
         if not node_name:
             return 'Node adı zorunlu', 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2644,7 +2803,7 @@ def k8s_explorer_node_cordon():
         node_name = data.get('node')
         if not node_name:
             return 'Node adı zorunlu', 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2667,7 +2826,7 @@ def k8s_explorer_node_drain():
         node_name = data.get('node')
         if not node_name:
             return 'Node adı zorunlu', 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2705,7 +2864,7 @@ def nodes_page():
 @app.route('/k8s-explorer/nodes')
 def k8s_explorer_nodes():
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2737,7 +2896,7 @@ def k8s_explorer_namespace_children():
     if not namespace:
         return jsonify({'error': 'namespace zorunlu'}), 400
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2766,7 +2925,7 @@ def k8s_explorer_logs():
     if obj_type != 'pod' or not namespace or not name:
         return 'type=pod, namespace ve name zorunlu', 400
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2787,7 +2946,7 @@ def k8s_explorer_yaml():
             name = request.args.get('name')
             if not obj_type or not name:
                 return 'type ve name zorunlu', 400
-            config.load_kube_config()
+            load_kube_config_active()
             c = client.Configuration.get_default_copy()
             c.verify_ssl = False
             c.assert_hostname = False
@@ -2854,7 +3013,7 @@ def k8s_explorer_yaml():
             yaml_str = data.get('yaml')
             if not obj_type or not name or not yaml_str:
                 return 'type, name, yaml zorunlu', 400
-            config.load_kube_config()
+            load_kube_config_active()
             c = client.Configuration.get_default_copy()
             c.verify_ssl = False
             c.assert_hostname = False
@@ -2913,7 +3072,7 @@ def k8s_explorer_yaml():
 @app.route('/k8s-explorer/namespaces')
 def k8s_explorer_namespaces():
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2930,7 +3089,7 @@ def k8s_explorer_namespaces():
 def services_summary():
     try:
         namespace = request.args.get('namespace')
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -2986,7 +3145,7 @@ def services_summary():
 def endpoints_summary():
     try:
         namespace = request.args.get('namespace')
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -3025,7 +3184,7 @@ def endpoints_summary():
 def ingresses_summary():
     try:
         namespace = request.args.get('namespace')
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -3064,7 +3223,7 @@ def ingresses_summary():
 @app.route('/k8s-explorer/ingress-classes-summary')
 def ingress_classes_summary():
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -3113,7 +3272,7 @@ def ingress_classes_summary():
 def network_policies_summary():
     try:
         namespace = request.args.get('namespace')
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -3149,7 +3308,7 @@ def network_policies_summary():
 def pvcs_summary():
     try:
         namespace = request.args.get('namespace')
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -3180,7 +3339,7 @@ def pvcs_summary():
 @app.route('/k8s-explorer/pvs-summary')
 def pvs_summary():
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -3211,7 +3370,7 @@ def pvs_summary():
 @app.route('/k8s-explorer/storage-classes-summary')
 def storage_classes_summary():
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -3244,7 +3403,7 @@ def rbac_summary():
        Optional namespace param filters namespaced sets, default=default."""
     try:
         namespace = request.args.get('namespace') or 'default'
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy(); c.verify_ssl=False; c.assert_hostname=False; client.Configuration.set_default(c)
         core_v1 = client.CoreV1Api()
         rbac_v1 = client.RbacAuthorizationV1Api()
@@ -3339,7 +3498,7 @@ def rbac_detail():
         namespace = request.args.get('namespace')
         if not kind or not name:
             return jsonify({'error': 'kind ve name zorunlu'}), 400
-        config.load_kube_config(); c = client.Configuration.get_default_copy(); c.verify_ssl=False; c.assert_hostname=False; client.Configuration.set_default(c)
+        load_kube_config_active(); c = client.Configuration.get_default_copy(); c.verify_ssl=False; c.assert_hostname=False; client.Configuration.set_default(c)
         core_v1 = client.CoreV1Api(); rbac_v1 = client.RbacAuthorizationV1Api()
         obj = None
         if kind == 'serviceaccount':
@@ -3372,7 +3531,7 @@ def pvc_details():
         namespace = request.args.get('namespace')
         if not name or not namespace:
             return jsonify({'error': 'name ve namespace zorunlu'}), 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -3402,7 +3561,7 @@ def pv_details():
         name = request.args.get('name')
         if not name:
             return jsonify({'error': 'name zorunlu'}), 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -3435,7 +3594,7 @@ def storage_class_details():
         name = request.args.get('name')
         if not name:
             return jsonify({'error': 'name zorunlu'}), 400
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -3647,7 +3806,7 @@ def harbor_trivy_api():
 @app.route('/k8s-explorer/ingresses')
 def k8s_explorer_ingresses():
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -3665,7 +3824,7 @@ def k8s_explorer_ingress_detail():
     namespace = request.args.get('namespace')
     name = request.args.get('name')
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -3700,7 +3859,7 @@ def k8s_explorer_service_detail():
     namespace = request.args.get('namespace')
     name = request.args.get('name')
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -3739,7 +3898,7 @@ def k8s_explorer_service_details():
     if not namespace or not name:
         return jsonify({'error': 'namespace ve name zorunlu'}), 400
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -3788,7 +3947,7 @@ def k8s_explorer_deployment_detail():
     namespace = request.args.get('namespace')
     name = request.args.get('name')
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -3830,7 +3989,7 @@ def rbac_risky_roles():
                       type: object
     """
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -3904,7 +4063,7 @@ def privileged_containers():
                 type: object
     """
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -4004,7 +4163,7 @@ def mesh_data():
                 type: object
     """
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -4083,7 +4242,7 @@ def mesh_data():
 @app.route('/vulnerabilities')
 def vulnerabilities():
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
@@ -4144,7 +4303,7 @@ def exec_events():
                 type: object
     """
     try:
-        config.load_kube_config()
+        load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False

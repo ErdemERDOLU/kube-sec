@@ -141,21 +141,7 @@
             border-radius: 0.5rem;
         }
         
-        /* Dark mode toggle */
-        .theme-toggle {
-            background: none;
-            border: none;
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 1.2rem;
-            padding: 0.5rem;
-            border-radius: 0.5rem;
-            transition: all 0.3s ease;
-        }
-        
-        .theme-toggle:hover {
-            color: #fff;
-            background-color: rgba(255, 255, 255, 0.1);
-        }
+    /* (theme toggle removed) */
         
         /* Loading animation */
         .loading-spinner {
@@ -270,6 +256,11 @@
                             <i class="bi bi-shield-lock me-1"></i>{{ t('nav.access') }}
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/configuration">
+                            <i class="bi bi-sliders me-1"></i>{{ t('nav.configuration') }}
+                        </a>
+                    </li>
                     
                     <!-- Added Config tab next to Workloads -->
                     <li class="nav-item">
@@ -279,19 +270,21 @@
                     </li>
                 </ul>
                 
-                <!-- Theme toggle -->
-                <button class="theme-toggle me-2" onclick="toggleTheme()" title="{{ t('theme.toggle') }}">
-                    <i class="bi bi-moon-fill" id="theme-icon"></i>
-                </button>
+                <!-- Active Kubernetes Context Badge -->
+                <span id="activeContextBadge" class="badge rounded-pill bg-info text-dark me-3" style="font-size:0.75rem; display:none;">
+                    <span id="activeContextName">(yok)</span>
+                </span>
+
+                <!-- (theme toggle removed) -->
 
                 <!-- Language switcher -->
                 <div class="dropdown">
                   <button class="btn btn-sm btn-light dropdown-toggle" type="button" id="langDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="bi bi-translate me-1"></i>{{ current_locale == 'en' and 'English' or 'Türkçe' }}
+                    <i class="bi bi-translate me-1"></i>{{ current_locale == 'en' and 'En' or 'tr' }}
                   </button>
                   <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="langDropdown">
-                    <li><a class="dropdown-item" href="/set-locale?lang=tr&next={{ request.path }}">Türkçe</a></li>
-                    <li><a class="dropdown-item" href="/set-locale?lang=en&next={{ request.path }}">English</a></li>
+                    <li><a class="dropdown-item" href="/set-locale?lang=tr&next={{ request.path }}">tr</a></li>
+                    <li><a class="dropdown-item" href="/set-locale?lang=en&next={{ request.path }}">en</a></li>
                   </ul>
                 </div>
             </div>
@@ -321,35 +314,8 @@
         window.i18n = JSON.parse(decodeURIComponent("{{ (i18n_json | tojson | urlencode) | safe }}"));
     </script>
     
-    <!-- Theme Toggle Script -->
+    <!-- Removed theme toggle script; only helper utilities remain -->
     <script>
-        // Theme management
-        function toggleTheme() {
-            const html = document.documentElement;
-            const themeIcon = document.getElementById('theme-icon');
-            const currentTheme = html.getAttribute('data-bs-theme');
-            
-            if (currentTheme === 'dark') {
-                html.setAttribute('data-bs-theme', 'light');
-                themeIcon.className = 'bi bi-moon-fill';
-                localStorage.setItem('theme', 'light');
-            } else {
-                html.setAttribute('data-bs-theme', 'dark');
-                themeIcon.className = 'bi bi-sun-fill';
-                localStorage.setItem('theme', 'dark');
-            }
-        }
-        
-        // Load saved theme
-        document.addEventListener('DOMContentLoaded', function() {
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            const html = document.documentElement;
-            const themeIcon = document.getElementById('theme-icon');
-            
-            html.setAttribute('data-bs-theme', savedTheme);
-            themeIcon.className = savedTheme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
-        });
-        
         // Loading state helper
     function showLoading(element, text) {
             const t = text || "{{ t('loading') }}";
@@ -413,7 +379,7 @@
                     let context = null;
                     let error = null;
                     try {
-                        const res = await fetch('/k8s-explorer/health', { signal: controller.signal });
+                        const res = await fetch('/k8s-explorer/health', { signal: controller.signal, credentials: 'include' });
                         clearTimeout(id);
                         if (!res.ok) {
                             error = `HTTP ${res.status}`;
@@ -429,6 +395,21 @@
                         ok = false;
                         error = e && e.name === 'AbortError' ? 'İstek zaman aşımına uğradı' : String(e);
                     }
+
+                    // Update context badge
+                    try {
+                        const badge = document.getElementById('activeContextBadge');
+                        const nameEl = document.getElementById('activeContextName');
+                        if (badge && nameEl) {
+                            if (context) {
+                                nameEl.textContent = context;
+                                badge.style.display = 'inline-block';
+                            } else {
+                                nameEl.textContent = '(yok)';
+                                badge.style.display = 'inline-block';
+                            }
+                        }
+                    } catch (e) { /* noop */ }
 
                     const now = Date.now();
                     if (ok) {

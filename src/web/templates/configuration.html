@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% block title %}Configuration{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <h3>Kubeconfig Yönetimi</h3>
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>Yüklü Kubeconfig Dosyaları</span>
+          <button id="refreshBtn" class="btn btn-sm btn-outline-secondary">Yenile</button>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-sm mb-0 align-middle" id="cfgTable">
+            <thead class="table-light">
+              <tr>
+                <th>Ad</th>
+                <th>Kaynak</th>
+                <th>Durum</th>
+                <th style="width:140px">İşlemler</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-header">Yeni Kubeconfig Ekle</div>
+        <div class="card-body">
+          <form id="uploadForm" class="mb-3">
+            <div class="mb-2">
+              <label class="form-label">İsim</label>
+              <input class="form-control form-control-sm" name="name" required />
+            </div>
+            <div class="mb-2">
+              <label class="form-label">İçerik (YAML)</label>
+              <textarea class="form-control" rows="10" name="content" required placeholder="apiVersion: v1\nclusters:\n- cluster: ..."></textarea>
+            </div>
+            <button class="btn btn-primary btn-sm" type="submit">Yükle</button>
+          </form>
+          <div class="text-muted small">Yüklenen dosyalar sunucunun uploads/kubeconfigs klasörüne kaydedilir. İsim benzersiz olmalıdır.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:1080">
+  <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="toast-header">
+      <strong class="me-auto">Bilgi</strong>
+      <small>şimdi</small>
+      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+    <div class="toast-body" id="toastBody"></div>
+  </div>
+</div>
+
+<script>
+const toastEl = document.getElementById('liveToast');
+const toastBody = document.getElementById('toastBody');
+function showToast(msg){
+  toastBody.textContent = msg;
+  new bootstrap.Toast(toastEl).show();
+}
+
+async function fetchConfigs(){
+  const res = await fetch('/kubeconfigs',{credentials:'include'});
+  const data = await res.json();
+  renderTable(data.items, data.active);
+}
+
+function renderTable(items, active){
+  const tbody = document.querySelector('#cfgTable tbody');
+  tbody.innerHTML='';
+  items.forEach(it=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${it.name}</td>
+      <td>${it.source}</td>
+      <td>${active===it.name?'<span class="badge bg-success">Aktif</span>':''}</td>
+      <td>
+        <div class="btn-group btn-group-sm">
+          <button class="btn btn-outline-primary" data-act="activate">Aktifleştir</button>
+          <button class="btn btn-outline-danger" data-act="delete">Sil</button>
+        </div>
+      </td>`;
+    tr.querySelector('[data-act=activate]').onclick=()=>activateCfg(it.name);
+    tr.querySelector('[data-act=delete]').onclick=()=>deleteCfg(it.name);
+    tbody.appendChild(tr);
+  });
+}
+
+async function activateCfg(name){
+  const r = await fetch('/kubeconfigs/activate',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name})});
+  const d = await r.json();
+  if(d.ok){showToast('Aktifleştirildi'); fetchConfigs();} else {showToast(d.error||'Hata');}
+}
+async function deleteCfg(name){
+  if(!confirm('Silinsin mi?')) return;
+  const r = await fetch('/kubeconfigs',{method:'DELETE',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name})});
+  const d = await r.json();
+  if(d.ok){showToast('Silindi'); fetchConfigs();} else {showToast(d.error||'Hata');}
+}
+
+document.getElementById('uploadForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const payload = Object.fromEntries(fd.entries());
+  const r = await fetch('/kubeconfigs',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(payload)});
+  const d = await r.json();
+  if(d.ok){showToast('Yüklendi'); e.target.reset(); fetchConfigs(); } else {showToast(d.error||'Hata');}
+});
+
+document.getElementById('refreshBtn').onclick=fetchConfigs;
+fetchConfigs();
+</script>
+{% endblock %}

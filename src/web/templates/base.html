@@ -34,6 +34,8 @@
             font-size: 1.5rem;
             color: #fff !important;
         }
+    .navbar-brand img.app-logo {height:32px; width:auto; margin-right:10px; display:inline-block; filter:drop-shadow(0 0 2px rgba(0,0,0,.3));}
+    @media (max-width: 768px){.navbar-brand img.app-logo{height:26px;margin-right:6px;}}
         
         .navbar {
             background: linear-gradient(135deg, var(--primary-color) 0%, #1d4ed8 100%) !important;
@@ -175,9 +177,9 @@
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
-            <a class="navbar-brand d-flex align-items-center" href="/">
-                <i class="bi bi-shield-check me-2"></i>
-                {{ t('brand') }}
+            <a class="navbar-brand d-flex align-items-center" href="/" title="Kube-Sec">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Kube-Sec Logo" class="app-logo" onerror="this.style.display='none'">
+                <span class="d-inline-block">{{ t('brand') }}</span>
             </a>
             
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 

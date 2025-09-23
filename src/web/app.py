@@ -1,33 +1,33 @@
-from flask import Flask, render_template, jsonify, request, redirect, make_response
+from flask import Flask, render_template, jsonify, request, redirect, make_response, session, send_from_directory
 from flask_cors import CORS
 from scanner.k8s_scanner import K8sScanner
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
-from flask import Flask, render_template, jsonify, request
-from flask_cors import CORS
-from scanner.k8s_scanner import K8sScanner
-from kubernetes import client, config
 from datetime import datetime
 from flasgger import Swagger
 import threading, time, sys, traceback, os, subprocess, json, yaml, urllib.parse, requests
-import yaml
-import time
 import traceback
 import urllib.parse
 import sys
-from flask import session, send_from_directory
-import requests
-from flask import Flask, render_template, jsonify, request
-from flask_cors import CORS
-from scanner.k8s_scanner import K8sScanner
-from kubernetes import client, config
 import os
 import json
 from datetime import datetime
 from flasgger import Swagger
+from scanner.k8s_scanner import K8sScanner
+
 CORS_ORIGINS = ["http://localhost:8080", "http://127.0.0.1:8080"]
 
-app = Flask(__name__)
+# PyInstaller bundle içinde template/static yolları düzelt
+if getattr(sys, 'frozen', False):  # bundle
+    BASE_DIR = getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(__file__)))  # type: ignore[attr-defined]
+    TEMPLATE_DIR = os.path.join(BASE_DIR, 'web', 'templates')
+    STATIC_DIR = os.path.join(BASE_DIR, 'web', 'static')
+else:
+    SRC_WEB_DIR = os.path.abspath(os.path.dirname(__file__))
+    TEMPLATE_DIR = os.path.join(SRC_WEB_DIR, 'templates')
+    STATIC_DIR = os.path.join(SRC_WEB_DIR, 'static')
+
+app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
 app.secret_key = os.environ.get('APP_SECRET_KEY','dev-secret')
 CORS(app, origins=CORS_ORIGINS, supports_credentials=True)
 swagger = Swagger(app, config={

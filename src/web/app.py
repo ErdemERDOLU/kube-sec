@@ -20,8 +20,20 @@ CORS_ORIGINS = ["http://localhost:8080", "http://127.0.0.1:8080"]
 # PyInstaller bundle içinde template/static yolları düzelt
 if getattr(sys, 'frozen', False):  # bundle
     BASE_DIR = getattr(sys, '_MEIPASS', os.path.abspath(os.path.dirname(__file__)))  # type: ignore[attr-defined]
-    TEMPLATE_DIR = os.path.join(BASE_DIR, 'web', 'templates')
-    STATIC_DIR = os.path.join(BASE_DIR, 'web', 'static')
+    # PyInstaller may place bundled data under different relative paths depending on how --add-data was given.
+    # Check a few likely candidate locations and pick the first that exists.
+    cand_templates = [
+        os.path.join(BASE_DIR, 'web', 'templates'),
+        os.path.join(BASE_DIR, 'templates'),
+        os.path.join(BASE_DIR, 'src', 'web', 'templates'),
+    ]
+    cand_static = [
+        os.path.join(BASE_DIR, 'web', 'static'),
+        os.path.join(BASE_DIR, 'static'),
+        os.path.join(BASE_DIR, 'src', 'web', 'static'),
+    ]
+    TEMPLATE_DIR = next((p for p in cand_templates if os.path.isdir(p)), cand_templates[0])
+    STATIC_DIR = next((p for p in cand_static if os.path.isdir(p)), cand_static[0])
 else:
     SRC_WEB_DIR = os.path.abspath(os.path.dirname(__file__))
     TEMPLATE_DIR = os.path.join(SRC_WEB_DIR, 'templates')
@@ -185,6 +197,32 @@ def inject_i18n():
     'current_locale': lang,
     'i18n_json': I18N
     }
+
+
+# Lightweight debug helper to inspect where Flask is resolving templates/static when frozen.
+@app.route('/_debug/list-templates')
+def _debug_list_templates():
+    try:
+        tpl = app.template_folder
+        static = app.static_folder
+        tpl_exists = os.path.isdir(tpl)
+        static_exists = os.path.isdir(static)
+        tpl_files = []
+        static_files = []
+        if tpl_exists:
+            for root, dirs, files in os.walk(tpl):
+                for f in files[:50]:
+                    tpl_files.append(os.path.relpath(os.path.join(root, f), tpl))
+                break
+        if static_exists:
+            for root, dirs, files in os.walk(static):
+                for f in files[:50]:
+                    static_files.append(os.path.relpath(os.path.join(root, f), static))
+                break
+        return jsonify({'template_folder': tpl, 'template_exists': tpl_exists, 'template_sample': tpl_files,
+                        'static_folder': static, 'static_exists': static_exists, 'static_sample': static_files})
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
 # ---- Kubeconfig Manager (in-memory + optional directory) ----
 KUBECONFIG_STORE = {}

@@ -14,28 +14,65 @@
     --purple-gradient: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
     --indigo-gradient: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
     --emerald-gradient: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+    /* Added new gradient variables for enhanced visual appeal */
+    --glass-gradient: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    --shadow-soft: 0 4px 25px rgba(5, 150, 105, 0.08);
+    --shadow-hover: 0 12px 40px rgba(5, 150, 105, 0.15);
+    --shadow-strong: 0 8px 32px rgba(5, 150, 105, 0.2);
   }
 
   .config-card {
     border: none;
     border-radius: 1.25rem;
-    box-shadow: 0 4px 25px rgba(5, 150, 105, 0.08);
+    box-shadow: var(--shadow-soft);
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     overflow: hidden;
     background: #ffffff;
     border: 1px solid rgba(5, 150, 105, 0.1);
+    /* Enhanced card styling with better shadows and transitions */
+    position: relative;
+  }
+
+  .config-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--primary-gradient);
+    opacity: 0;
+    transition: opacity 0.3s ease;
   }
 
   .config-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 40px rgba(5, 150, 105, 0.15);
+    box-shadow: var(--shadow-hover);
     border-color: rgba(5, 150, 105, 0.2);
+  }
+
+  .config-card:hover::before {
+    opacity: 1;
   }
 
   .chart-container {
     padding: 1.5rem;
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     border-top: 1px solid rgba(5, 150, 105, 0.1);
+    /* Enhanced chart container with subtle pattern */
+    position: relative;
+  }
+
+  .chart-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: radial-gradient(circle at 1px 1px, rgba(5,150,105,0.05) 1px, transparent 0);
+    background-size: 20px 20px;
+    pointer-events: none;
   }
 
   .loading-spinner {
@@ -53,6 +90,7 @@
     100% { transform: rotate(360deg); }
   }
 
+  /* Enhanced navigation pills with better visual feedback */
   .nav-pills .nav-link {
     border-radius: 1rem;
     font-weight: 600;
@@ -64,6 +102,19 @@
     border: 2px solid transparent;
     font-size: 0.875rem;
     letter-spacing: 0.025em;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .nav-pills .nav-link::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: var(--glass-gradient);
+    transition: left 0.3s ease;
   }
 
   .nav-pills .nav-link:hover {
@@ -73,17 +124,37 @@
     border-color: rgba(5, 150, 105, 0.2);
   }
 
+  .nav-pills .nav-link:hover::before {
+    left: 0;
+  }
+
   .nav-pills .nav-link.active {
     background: var(--primary-gradient);
     color: white;
-    box-shadow: 0 8px 25px rgba(5, 150, 105, 0.3);
+    box-shadow: var(--shadow-strong);
     border-color: #047857;
   }
 
+  .nav-pills .nav-link.active::before {
+    left: 0;
+  }
+
+  /* Enhanced table styling with better visual hierarchy */
   .table-responsive {
     border-radius: 1rem;
     overflow: hidden;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    position: relative;
+  }
+
+  .table-responsive::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--primary-gradient);
   }
 
   .table th {
@@ -95,6 +166,17 @@
     font-size: 0.875rem;
     letter-spacing: 0.05em;
     text-transform: uppercase;
+    position: relative;
+  }
+
+  .table th::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--primary-gradient);
   }
 
   .table td {
@@ -102,14 +184,20 @@
     border-color: #e2e8f0;
     vertical-align: middle;
     font-weight: 500;
+    position: relative;
+  }
+
+  .table tbody tr {
+    transition: all 0.2s ease;
   }
 
   .table tbody tr:hover {
     background-color: rgba(5, 150, 105, 0.02);
     transform: scale(1.001);
-    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(5, 150, 105, 0.1);
   }
 
+  /* Enhanced badge styling with better visual impact */
   .badge {
     font-weight: 600;
     padding: 0.625rem 1rem;
@@ -117,8 +205,26 @@
     font-size: 0.75rem;
     letter-spacing: 0.025em;
     text-transform: uppercase;
+    position: relative;
+    overflow: hidden;
   }
 
+  .badge::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s ease;
+  }
+
+  .badge:hover::before {
+    left: 100%;
+  }
+
+  /* Enhanced button styling with better interactions */
   .btn {
     border-radius: 0.75rem;
     font-weight: 600;
@@ -126,11 +232,31 @@
     padding: 0.75rem 1.5rem;
     font-size: 0.875rem;
     letter-spacing: 0.025em;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.3s ease, height 0.3s ease;
   }
 
   .btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  }
+
+  .btn:hover::before {
+    width: 300px;
+    height: 300px;
   }
 
   .btn-outline-primary {
@@ -144,19 +270,34 @@
     color: white;
   }
 
+  /* Enhanced page header with better typography and spacing */
   .page-header h1 {
     font-weight: 800;
     color: #1e293b;
     font-size: 2.25rem;
     letter-spacing: -0.025em;
+    position: relative;
+  }
+
+  .page-header h1::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 0;
+    width: 60px;
+    height: 4px;
+    background: var(--primary-gradient);
+    border-radius: 2px;
   }
 
   .page-header p {
     font-size: 1.125rem;
     color: #64748b;
     font-weight: 500;
+    margin-top: 1rem;
   }
 
+  /* Enhanced card headers with glass morphism effect */
   .config-card .card-header {
     padding: 1.5rem;
     border: none;
@@ -171,10 +312,21 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    background: var(--glass-gradient);
     pointer-events: none;
   }
 
+  .config-card .card-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  }
+
+  /* Enhanced status indicators with better visual feedback */
   .status-indicator {
     display: inline-flex;
     align-items: center;
@@ -183,6 +335,23 @@
     border-radius: 0.75rem;
     font-weight: 600;
     font-size: 0.875rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .status-indicator::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.8s ease;
+  }
+
+  .status-indicator:hover::before {
+    left: 100%;
   }
 
   .status-active {
@@ -206,30 +375,83 @@
   .secrets-filter { display: inline-flex; align-items: center; gap: 0.5rem; }
   .form-select-inline { display: inline-block; width: 220px; max-width: 100%; }
 
-/* Added toast notification styles */
-.toast-container {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 9999;
-}
+  /* Enhanced toast notification styles */
+  .toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+  }
 
-.toast {
-  min-width: 300px;
-  margin-bottom: 10px;
-}
+  .toast {
+    min-width: 300px;
+    margin-bottom: 10px;
+    border-radius: 1rem;
+    border: none;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+  }
 
-.toast.success {
-  background-color: #d4edda;
-  border-color: #c3e6cb;
-  color: #155724;
-}
+  .toast.success {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.9) 0%, rgba(5, 150, 105, 0.9) 100%);
+    color: white;
+  }
 
-.toast.error {
-  background-color: #f8d7da;
-  border-color: #f5c6cb;
-  color: #721c24;
-}
+  .toast.error {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(220, 38, 38, 0.9) 100%);
+    color: white;
+  }
+
+  /* Added loading states with better animations */
+  .loading-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .loading-state .loading-spinner {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-width: 4px;
+  }
+
+  .loading-text {
+    color: #64748b;
+    font-weight: 500;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Enhanced empty states */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+  }
+
+  .empty-state-icon {
+    font-size: 4rem;
+    color: #cbd5e1;
+    margin-bottom: 1.5rem;
+  }
+
+  .empty-state-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 1rem;
+  }
+
+  .empty-state-description {
+    color: #64748b;
+    font-size: 1.125rem;
+  }
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-5 page-header">
@@ -312,7 +534,7 @@
 
   <div class="tab-pane fade show active" id="configmaps" role="tabpanel">
     <div class="row g-4">
-  <div class="col-lg-12">
+      <div class="col-lg-8">
         <div class="config-card">
           <div class="card-header text-white" style="background: var(--primary-gradient);">
             <h5 class="mb-0 fw-bold">
@@ -333,9 +555,10 @@
                     </div>
                   </div>
                   <div id="configmaps-table-container">
-                    <div class="d-flex align-items-center justify-content-center py-5">
-                      <div class="loading-spinner me-2"></div>
-                      <span class="text-muted">ConfigMap listesi yükleniyor...</span>
+                     Enhanced loading state with better visual feedback 
+                    <div class="loading-state">
+                      <div class="loading-spinner"></div>
+                      <span class="loading-text">ConfigMap listesi yükleniyor...</span>
                     </div>
                   </div>
                 </div>
@@ -358,7 +581,7 @@
 
   <div class="tab-pane fade" id="secrets" role="tabpanel">
     <div class="row g-4">
-  <div class="col-lg-12">
+      <div class="col-lg-8">
         <div class="config-card">
           <div class="card-header text-white" style="background: var(--danger-gradient);">
             <h5 class="mb-0 fw-bold">
@@ -381,14 +604,28 @@
               </div>
             </div>
             <div id="secrets-table-container">
-              <div class="d-flex align-items-center justify-content-center py-5">
-                <div class="loading-spinner me-2"></div>
-                <span class="text-muted">Secret listesi yükleniyor...</span>
+               Enhanced loading state for secrets 
+              <div class="loading-state">
+                <div class="loading-spinner"></div>
+                <span class="loading-text">Secret listesi yükleniyor...</span>
               </div>
             </div>
           </div>
         </div>
   </div>
+      <div class="col-lg-4">
+         Added secrets chart container 
+        <div class="config-card">
+          <div class="card-header text-white" style="background: var(--danger-gradient);">
+            <h6 class="mb-0 fw-bold">Secret Durumları</h6>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-secrets-tab" style="width: 100%; height: 280px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2683,20 +2920,19 @@ window.showSecret = function(name, namespace) {
       modalElement.addEventListener('click', function(e) {
         if (e.target.closest('.toggle-secret-value')) {
           const btn = e.target.closest('tr').querySelector('.secret-value-container');
-          const hiddenSpan = container.querySelector('.secret-value-hidden');
-          const shownPre = container.querySelector('.secret-value-shown');
-          const icon = btn.querySelector('i');
+          const hiddenSpan = btn.querySelector('.secret-value-hidden');
+          const shownPre = btn.querySelector('.secret-value-shown');
           
           if (hiddenSpan.classList.contains('d-none')) {
             // Currently showing, hide it
             hiddenSpan.classList.remove('d-none');
             shownPre.classList.add('d-none');
-            btn.innerHTML = '<i class="bi bi-eye"></i> Show';
+            e.target.closest('button').innerHTML = '<i class="bi bi-eye"></i> Show';
           } else {
             // Currently hidden, show it
             hiddenSpan.classList.add('d-none');
             shownPre.classList.remove('d-none');
-            btn.innerHTML = '<i class="bi bi-eye-slash"></i> Hide';
+            e.target.closest('button').innerHTML = '<i class="bi bi-eye-slash"></i> Hide';
           }
         }
       });

@@ -3,22 +3,39 @@
 ## Versiyon yönetimi + geliştirme yardımcı hedefler
 ## =============================
 
+## Varsayılan olarak lokal venv'i (./.venv) kullan; yoksa sistem python3'a düş
+VENV ?= .venv
+VENV_PY := $(VENV)/bin/python
+ifeq ("$(wildcard $(VENV_PY))","")
 PYTHON ?= python3
+else
+PYTHON ?= $(VENV_PY)
+endif
 VERSION_FILE ?= VERSION
 APP_NAME ?= Kube-Sec
 
-.PHONY: install upgrade run clean version-show set-version bump-patch bump-minor bump-major version-sync build-macos tag push-tag \
-	build-macos-arm build-macos-intel build-macos-universal sign notarize dmg release-macos
+.PHONY: venv install install-dev upgrade run run-dev clean version-show set-version bump-patch bump-minor bump-major version-sync build-macos tag push-tag \
+    build-macos-arm build-macos-intel build-macos-universal sign notarize dmg release-macos
+
+venv:
+	python3 -m venv $(VENV)
+	$(VENV_PY) -m pip install --upgrade pip
 
 install:
 	$(PYTHON) -m pip install --upgrade pip
 	$(PYTHON) -m pip install -r requirements.txt
+
+install-dev: install
+	# Gerekirse ek geliştirici bağımlılıklarını buraya ekleyin
 
 upgrade:
 	$(PYTHON) -m pip install --upgrade -r requirements.txt
 
 run:
 	$(PYTHON) src/main.py
+
+run-dev:
+	FLASK_ENV=development $(PYTHON) src/main.py
 
 clean:
 	find . -type f -name '*.pyc' -delete
@@ -104,4 +121,3 @@ tag:
 push-tag:
 	@v=$$(cat $(VERSION_FILE)); \
 	git push origin v$$v
-

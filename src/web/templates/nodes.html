@@ -1,135 +1,586 @@
+{% extends "base.html" %}
+{% block title %}Node'lar{% endblock %}
+{% block page_title %}Kubernetes Node'ları{% endblock %}
+{% block content %}
+
+<!-- Page Header -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card border-0" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);">
+      <div class="card-body text-white p-4">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+          <div>
+            <h2 class="card-title mb-2 fw-bold text-white">
+              <i class="bi bi-hdd-stack me-3"></i>Kubernetes Node Yönetimi
+            </h2>
+            <p class="card-text mb-0 text-white opacity-90">
+              Cluster'ınızdaki tüm node'ları görüntüleyin ve yönetin
+            </p>
+          </div>
+          <div>
+            <button class="btn btn-light btn-lg" onclick="renderNodes()" id="refreshBtn">
+              <i class="bi bi-arrow-clockwise me-2"></i>Yenile
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Nodes Statistics Cards -->
+<div class="row mb-4" id="nodeStats" style="display: none;">
+  <div class="col-12">
+    <div class="d-flex flex-wrap gap-3 justify-content-between">
+      <div class="flex-fill" style="min-width: 200px;">
+        <div class="card border-0 h-100 shadow-sm">
+          <div class="card-body text-center p-3">
+            <div class="text-success mb-2">
+              <i class="bi bi-check-circle-fill" style="font-size: 2rem;"></i>
+            </div>
+            <h4 class="card-title text-success mb-1" id="readyNodes">0</h4>
+            <p class="card-text text-muted small mb-0">Hazır Node'lar</p>
+          </div>
+        </div>
+      </div>
+      <div class="flex-fill" style="min-width: 200px;">
+        <div class="card border-0 h-100 shadow-sm">
+          <div class="card-body text-center p-3">
+            <div class="text-danger mb-2">
+              <i class="bi bi-x-circle-fill" style="font-size: 2rem;"></i>
+            </div>
+            <h4 class="card-title text-danger mb-1" id="notReadyNodes">0</h4>
+            <p class="card-text text-muted small mb-0">Hazır Olmayan</p>
+          </div>
+        </div>
+      </div>
+      <div class="flex-fill" style="min-width: 200px;">
+        <div class="card border-0 h-100 shadow-sm">
+          <div class="card-body text-center p-3">
+            <div class="text-warning mb-2">
+              <i class="bi bi-pause-circle-fill" style="font-size: 2rem;"></i>
+            </div>
+            <h4 class="card-title text-warning mb-1" id="cordonedNodes">0</h4>
+            <p class="card-text text-muted small mb-0">Cordoned Node'lar</p>
+          </div>
+        </div>
+      </div>
+      <div class="flex-fill" style="min-width: 200px;">
+        <div class="card border-0 h-100 shadow-sm">
+          <div class="card-body text-center p-3">
+            <div class="text-primary mb-2">
+              <i class="bi bi-hdd-stack-fill" style="font-size: 2rem;"></i>
+            </div>
+            <h4 class="card-title text-primary mb-1" id="totalNodes">0</h4>
+            <p class="card-text text-muted small mb-0">Toplam Node</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Nodes Table Container -->
+<div class="row">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-bottom py-3">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+          <h5 class="card-title mb-0">
+            <i class="bi bi-list-ul me-2 text-primary"></i>Node Listesi
+          </h5>
+          <div class="input-group" style="max-width: 300px;">
+            <span class="input-group-text bg-light border-end-0">
+              <i class="bi bi-search"></i>
+            </span>
+            <input type="text" class="form-control border-start-0" placeholder="Node ara..." id="nodeSearch">
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div id="nodes-root" class="position-relative">
+          <!-- Content will be loaded here -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- YAML Modal -->
+<div class="modal fade" id="yamlEditModal" tabindex="-1" aria-labelledby="yamlEditModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="yamlEditModalLabel">
+          <i class="bi bi-code-slash me-2"></i>YAML Görüntüle
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0">
+        <textarea id="yaml-edit-content" readonly class="form-control border-0" style="height:400px;font-family:'Fira Code',monospace;font-size:13px;background:#1e1e1e;color:#d4d4d4;resize:none;"></textarea>
+        <div id="yaml-edit-error" class="alert alert-danger m-3 d-none"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle me-1"></i>Kapat
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Drain Log Modal -->
 <div class="modal fade" id="drainLogModal" tabindex="-1" aria-labelledby="drainLogModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="drainLogModalLabel">Drain Logları</h5>
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title" id="drainLogModalLabel">
+          <i class="bi bi-terminal me-2"></i>Drain Logları
+        </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
-      <div class="modal-body">
-        <pre id="drain-log-content" style="height: 300px; overflow-y: auto; background: #222; color: #eee; padding: 10px;"></pre>
+      <div class="modal-body p-0">
+        <pre id="drain-log-content" class="p-3 m-0" style="height: 350px; overflow-y: auto; background: #1e1e1e; color: #00ff00; font-family: 'Fira Code', monospace; font-size: 13px; line-height: 1.4;"></pre>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle me-1"></i>Kapat
+        </button>
       </div>
     </div>
   </div>
 </div>
-{% extends "base.html" %}
-{% block title %}Node's{% endblock %}
-{% block content %}
-<!-- YAML Readonly Modal -->
-<div class="modal fade" id="yamlEditModal" tabindex="-1" aria-labelledby="yamlEditModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="yamlEditModalLabel">YAML Görüntüle</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <textarea id="yaml-edit-content" readonly style="width:100%;height:400px;font-family:monospace;font-size:14px;background:#f8f9fa;"></textarea>
-        <div id="yaml-edit-error" class="text-danger mt-2"></div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-      </div>
-    </div>
-  </div>
-</div>
-<h2>Kubernetes Node'ları</h2>
-<div id="nodes-root"></div>
+
+<style>
+/* Fixed and organized CSS styles for proper layout */
+.node-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.node-status-ready {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.node-status-notready {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.node-status-cordoned {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.node-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.node-actions .btn {
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 0.4rem 0.8rem;
+  transition: all 0.2s ease;
+  border: none;
+  white-space: nowrap;
+  min-width: auto;
+}
+
+.node-actions .btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-drain {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+}
+
+.btn-drain:hover {
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: white;
+}
+
+.btn-cordon {
+  background: linear-gradient(135deg, #6b7280, #4b5563);
+  color: white;
+}
+
+.btn-cordon:hover {
+  background: linear-gradient(135deg, #4b5563, #374151);
+  color: white;
+}
+
+.btn-uncordon {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+  color: white;
+}
+
+.btn-uncordon:hover {
+  background: linear-gradient(135deg, #0891b2, #0e7490);
+  color: white;
+}
+
+.btn-edit {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+}
+
+.btn-edit:hover {
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  color: white;
+}
+
+.nodes-table {
+  width: 100%;
+  margin-bottom: 0;
+  table-layout: fixed;
+}
+
+.nodes-table th {
+  background: linear-gradient(135deg, #1f2937, #111827);
+  color: white;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.85rem;
+  padding: 1rem 1.5rem;
+  border: none;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.nodes-table th:nth-child(1) { width: 40%; }
+.nodes-table th:nth-child(2) { width: 25%; }
+.nodes-table th:nth-child(3) { width: 35%; }
+
+.nodes-table td {
+  padding: 1rem 1.5rem;
+  border-color: #f1f5f9;
+  vertical-align: middle;
+  word-wrap: break-word;
+}
+
+.nodes-table tbody tr {
+  transition: all 0.2s ease;
+}
+
+.nodes-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+.node-name {
+  font-weight: 700;
+  color: #1e293b;
+  font-size: 0.95rem;
+  word-break: break-word;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.loading-spinner-large {
+  width: 3rem;
+  height: 3rem;
+  border: 4px solid #e2e8f0;
+  border-top: 4px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #64748b;
+}
+
+.empty-state i {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* Improved responsive design for mobile */
+@media (max-width: 768px) {
+  .node-actions {
+    flex-direction: column;
+    gap: 0.3rem;
+    width: 100%;
+  }
+  
+  .node-actions .btn {
+    width: 100%;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+  }
+  
+  .nodes-table th,
+  .nodes-table td {
+    padding: 0.8rem;
+    font-size: 0.85rem;
+  }
+  
+  .nodes-table {
+    table-layout: auto;
+  }
+  
+  .node-status-badge {
+    font-size: 0.7rem;
+    padding: 0.3rem 0.6rem;
+  }
+}
+
+@media (max-width: 576px) {
+  .nodes-table th:nth-child(1) { width: 35%; }
+  .nodes-table th:nth-child(2) { width: 30%; }
+  .nodes-table th:nth-child(3) { width: 35%; }
+}
+</style>
+
 <script>
+let nodesData = [];
+
 async function fetchNodes() {
   const resp = await fetch('/k8s-explorer/nodes');
   return await resp.json();
 }
 
-async function renderNodes() {
+function updateNodeStats(nodes) {
+  const stats = {
+    total: nodes.length,
+    ready: 0,
+    notReady: 0,
+    cordoned: 0
+  };
+
+  nodes.forEach(node => {
+    if (node.unschedulable) {
+      stats.cordoned++;
+    } else if (node.status === 'Ready') {
+      stats.ready++;
+    } else {
+      stats.notReady++;
+    }
+  });
+
+  document.getElementById('totalNodes').textContent = stats.total;
+  document.getElementById('readyNodes').textContent = stats.ready;
+  document.getElementById('notReadyNodes').textContent = stats.notReady;
+  document.getElementById('cordonedNodes').textContent = stats.cordoned;
+  
+  document.getElementById('nodeStats').style.display = 'block';
+}
+
+function getStatusBadge(node) {
+  let statusClass, statusText, statusIcon;
+  
+  if (node.unschedulable) {
+    statusClass = 'node-status-cordoned';
+    statusText = 'Cordoned';
+    statusIcon = 'bi-pause-circle-fill';
+  } else if (node.status === 'Ready') {
+    statusClass = 'node-status-ready';
+    statusText = 'Ready';
+    statusIcon = 'bi-check-circle-fill';
+  } else {
+    statusClass = 'node-status-notready';
+    statusText = 'Not Ready';
+    statusIcon = 'bi-x-circle-fill';
+  }
+  
+  return `<span class="node-status-badge ${statusClass}">
+    <i class="${statusIcon} me-1"></i>${statusText}
+  </span>`;
+}
+
+function createActionButtons(node) {
+  const actions = document.createElement('div');
+  actions.className = 'node-actions';
+  
+  // Drain button (only if not cordoned)
+  if (!node.unschedulable) {
+    const drainBtn = document.createElement('button');
+    drainBtn.className = 'btn btn-drain';
+    drainBtn.innerHTML = '<i class="bi bi-funnel me-1"></i>Drain';
+    drainBtn.onclick = () => nodeAction(node.name, 'drain');
+    actions.appendChild(drainBtn);
+  }
+  
+  // Cordon/Uncordon button
+  if (node.unschedulable) {
+    const uncordonBtn = document.createElement('button');
+    uncordonBtn.className = 'btn btn-uncordon';
+    uncordonBtn.innerHTML = '<i class="bi bi-play-circle me-1"></i>Uncordon';
+    uncordonBtn.onclick = () => nodeAction(node.name, 'uncordon');
+    actions.appendChild(uncordonBtn);
+  } else {
+    const cordonBtn = document.createElement('button');
+    cordonBtn.className = 'btn btn-cordon';
+    cordonBtn.innerHTML = '<i class="bi bi-pause-circle me-1"></i>Cordon';
+    cordonBtn.onclick = () => nodeAction(node.name, 'cordon');
+    actions.appendChild(cordonBtn);
+  }
+  
+  // Edit button
+  const editBtn = document.createElement('button');
+  editBtn.className = 'btn btn-edit';
+  editBtn.innerHTML = '<i class="bi bi-code-slash me-1"></i>YAML';
+  editBtn.onclick = () => nodeAction(node.name, 'edit');
+  actions.appendChild(editBtn);
+  
+  return actions;
+}
+
+function filterNodes() {
+  const searchTerm = document.getElementById('nodeSearch').value.toLowerCase();
+  const filteredNodes = nodesData.filter(node => 
+    node.name.toLowerCase().includes(searchTerm)
+  );
+  renderNodesTable(filteredNodes);
+}
+
+function renderNodesTable(nodes) {
   const root = document.getElementById('nodes-root');
-  root.innerHTML = '<b>Node listesi yükleniyor...</b>';
-  const data = await fetchNodes();
-  root.innerHTML = '';
-  if (!data.nodes || data.nodes.length === 0) {
-    root.innerHTML = '<div class="text-danger">Node bulunamadı.</div>';
+  
+  if (!nodes || nodes.length === 0) {
+    root.innerHTML = `
+      <div class="empty-state">
+        <i class="bi bi-hdd-stack text-muted"></i>
+        <h4>Node bulunamadı</h4>
+        <p class="text-muted">Cluster'da hiç node bulunamadı veya arama kriterlerinize uygun node yok.</p>
+      </div>
+    `;
     return;
   }
+  
   const table = document.createElement('table');
-  table.className = 'table table-bordered table-sm';
+  table.className = 'table table-hover nodes-table';
+  
   const thead = document.createElement('thead');
-  thead.innerHTML = '<tr><th>Node Adı</th><th>Durum</th><th>İşlemler</th></tr>';
+  thead.innerHTML = `
+    <tr>
+      <th><i class="bi bi-server me-2"></i>Node Adı</th>
+      <th><i class="bi bi-activity me-2"></i>Durum</th>
+      <th><i class="bi bi-gear me-2"></i>İşlemler</th>
+    </tr>
+  `;
   table.appendChild(thead);
+  
   const tbody = document.createElement('tbody');
-  data.nodes.forEach(node => {
+  nodes.forEach((node, index) => {
     const tr = document.createElement('tr');
-    // Durum: unschedulable ise Cordoned, değilse Ready/NotReady
-    let statusText = node.status;
-    if (node.unschedulable) statusText = 'Cordoned';
-    tr.innerHTML = `<td>${node.name}</td><td class="node-status">${statusText}</td>`;
-    const td = document.createElement('td');
-    // Drain butonu sadece node unschedulable değilse gösterilsin (yani cordoned/drained ise gösterilmesin)
-    if (!node.unschedulable) {
-      const drainBtn = document.createElement('button');
-      drainBtn.className = 'btn btn-sm btn-warning me-1';
-      drainBtn.textContent = 'Drain';
-      drainBtn.onclick = () => nodeAction(node.name, 'drain');
-      td.appendChild(drainBtn);
-    }
-    if (node.unschedulable) {
-      // Uncordon butonu
-      const uncordonBtn = document.createElement('button');
-      uncordonBtn.className = 'btn btn-sm btn-info me-1';
-      uncordonBtn.textContent = 'Uncordon';
-      uncordonBtn.onclick = () => nodeAction(node.name, 'uncordon');
-      td.appendChild(uncordonBtn);
-    } else {
-      // Cordon butonu
-      const cordonBtn = document.createElement('button');
-      cordonBtn.className = 'btn btn-sm btn-secondary me-1';
-      cordonBtn.textContent = 'Cordon';
-      cordonBtn.onclick = () => nodeAction(node.name, 'cordon');
-      td.appendChild(cordonBtn);
-    }
-    // Edit
-    const editBtn = document.createElement('button');
-    editBtn.className = 'btn btn-sm btn-primary me-1';
-    editBtn.textContent = 'Edit';
-    editBtn.onclick = () => nodeAction(node.name, 'edit');
-    td.appendChild(editBtn);
-    tr.appendChild(td);
+    tr.className = 'fade-in';
+    tr.style.animationDelay = `${index * 0.1}s`;
+    
+    tr.innerHTML = `
+      <td>
+        <div class="node-name">${node.name}</div>
+      </td>
+      <td>${getStatusBadge(node)}</td>
+      <td></td>
+    `;
+    
+    // Add action buttons to the last cell
+    const actionCell = tr.querySelector('td:last-child');
+    actionCell.appendChild(createActionButtons(node));
+    
     tbody.appendChild(tr);
   });
+  
   table.appendChild(tbody);
+  root.innerHTML = '';
   root.appendChild(table);
 }
 
+async function renderNodes() {
+  const root = document.getElementById('nodes-root');
+  const refreshBtn = document.getElementById('refreshBtn');
+  
+  // Show loading state
+  root.innerHTML = `
+    <div class="loading-container">
+      <div class="loading-spinner-large"></div>
+      <h5 class="text-muted">Node listesi yükleniyor...</h5>
+      <p class="text-muted small">Kubernetes cluster'ından node bilgileri alınıyor</p>
+    </div>
+  `;
+  
+  // Disable refresh button
+  refreshBtn.disabled = true;
+  refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-2 loading-spinner"></i>Yükleniyor...';
+  
+  try {
+    const data = await fetchNodes();
+    nodesData = data.nodes || [];
+    
+    updateNodeStats(nodesData);
+    renderNodesTable(nodesData);
+    
+  } catch (error) {
+    root.innerHTML = `
+      <div class="empty-state">
+        <i class="bi bi-exclamation-triangle text-danger"></i>
+        <h4 class="text-danger">Hata Oluştu</h4>
+        <p class="text-muted">Node listesi yüklenirken bir hata oluştu: ${error.message}</p>
+        <button class="btn btn-primary mt-3" onclick="renderNodes()">
+          <i class="bi bi-arrow-clockwise me-2"></i>Tekrar Dene
+        </button>
+      </div>
+    `;
+  } finally {
+    // Re-enable refresh button
+    refreshBtn.disabled = false;
+    refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Yenile';
+  }
+}
 
 async function nodeAction(nodeName, action) {
   if (action === 'edit') {
     showYamlModal('node', '', nodeName);
     return;
   }
-// YAML sadece görüntüleme amaçlı modal fonksiyonu
-function showYamlModal(objType, namespace, name) {
-  const modal = new bootstrap.Modal(document.getElementById('yamlEditModal'));
-  document.getElementById('yaml-edit-content').value = '';
-  document.getElementById('yaml-edit-error').textContent = '';
-  // Node için GET ile YAML'ı çek
-  let url = `/k8s-explorer/yaml?type=${encodeURIComponent(objType)}&name=${encodeURIComponent(name)}`;
-  if (namespace) url += `&namespace=${encodeURIComponent(namespace)}`;
-  fetch(url)
-    .then(resp => {
-      if (!resp.ok) throw new Error('YAML alınamadı');
-      return resp.text();
-    })
-    .then(yaml => {
-      document.getElementById('yaml-edit-content').value = yaml;
-      modal.show();
-    })
-    .catch(e => {
-      document.getElementById('yaml-edit-error').textContent = 'YAML alınamadı: ' + e;
-      modal.show();
-    });
-}
 
   let endpoint = '';
   let method = 'POST';
@@ -137,53 +588,101 @@ function showYamlModal(objType, namespace, name) {
   else if (action === 'cordon') endpoint = '/k8s-explorer/node-cordon';
   else if (action === 'uncordon') endpoint = '/k8s-explorer/node-uncordon';
   else if (action === 'delete') { endpoint = '/k8s-explorer/node-delete'; method = 'DELETE'; }
+  
   if (!endpoint) return;
+  
   if (!confirm(`${nodeName} için '${action}' işlemi yapılsın mı?`)) return;
 
   if (action === 'drain') {
-    // Modalı aç ve logları göster
     const modal = new bootstrap.Modal(document.getElementById('drainLogModal'));
     document.getElementById('drain-log-content').textContent = 'Drain işlemi başlatılıyor...\n';
     modal.show();
+    
     try {
-      const resp = await fetch(endpoint, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ node: nodeName }) });
+      const resp = await fetch(endpoint, { 
+        method, 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ node: nodeName }) 
+      });
       const data = await resp.json();
+      
       let logStr = '';
       if (data.logs && Array.isArray(data.logs)) {
         logStr = data.logs.join('\n');
       } else {
         logStr = JSON.stringify(data);
       }
+      
       document.getElementById('drain-log-content').textContent = logStr;
-      // Tabloyu yenile
       await renderNodes();
     } catch (e) {
       document.getElementById('drain-log-content').textContent = 'Drain işlemi sırasında hata: ' + e;
     }
     return;
   }
-  if (action === 'uncordon') {
-    try {
-      const resp = await fetch(endpoint, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ node: nodeName })
-      });
-      const result = await resp.text();
+  
+  // Other actions
+  try {
+    const resp = await fetch(endpoint, { 
+      method, 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify({ node: nodeName }) 
+    });
+    const result = await resp.text();
+    
+    if (window.showUserToast) {
+      window.showUserToast(`${nodeName} için ${action} işlemi başarıyla tamamlandı`, true);
+    } else {
       alert(result);
-      await renderNodes();
-    } catch (e) {
-      alert('Uncordon işlemi sırasında hata: ' + e);
     }
-    return;
+    
+    await renderNodes();
+  } catch (e) {
+    if (window.showUserToast) {
+      window.showUserToast(`${action} işlemi sırasında hata: ` + e, false);
+    } else {
+      alert(`${action} işlemi sırasında hata: ` + e);
+    }
   }
-  // Diğer işlemler (cordon, delete)
-  const resp = await fetch(endpoint, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ node: nodeName }) });
-  const result = await resp.text();
-  alert(result);
-  await renderNodes();
 }
 
-window.addEventListener('DOMContentLoaded', renderNodes);
+function showYamlModal(objType, namespace, name) {
+  const modal = new bootstrap.Modal(document.getElementById('yamlEditModal'));
+  const contentEl = document.getElementById('yaml-edit-content');
+  const errorEl = document.getElementById('yaml-edit-error');
+  
+  contentEl.value = '';
+  errorEl.classList.add('d-none');
+  errorEl.textContent = '';
+  
+  let url = `/k8s-explorer/yaml?type=${encodeURIComponent(objType)}&name=${encodeURIComponent(name)}`;
+  if (namespace) url += `&namespace=${encodeURIComponent(namespace)}`;
+  
+  fetch(url)
+    .then(resp => {
+      if (!resp.ok) throw new Error('YAML alınamadı');
+      return resp.text();
+    })
+    .then(yaml => {
+      contentEl.value = yaml;
+      modal.show();
+    })
+    .catch(e => {
+      errorEl.textContent = 'YAML alınamadı: ' + e;
+      errorEl.classList.remove('d-none');
+      modal.show();
+    });
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('nodeSearch');
+  if (searchInput) {
+    searchInput.addEventListener('input', filterNodes);
+  }
+  
+  renderNodes();
+});
 </script>
+
 {% endblock %}

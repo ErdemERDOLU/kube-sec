@@ -1,3 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Workloads{% endblock %}
+{% block content %}
 <!-- Pod Properties Modal -->
 <div class="modal fade" id="podPropertiesModal" tabindex="-1" aria-labelledby="podPropertiesModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-xl">
@@ -43,6 +46,36 @@
   </div>
 </div>
 
+<!-- Scale StatefulSet Modal -->
+<div class="modal fade" id="scaleStatefulSetModal" tabindex="-1" aria-labelledby="scaleStatefulSetModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-warning text-white">
+        <h5 class="modal-title" id="scaleStatefulSetModalLabel">
+          <i class="bi bi-arrows-expand me-2"></i>StatefulSet Scale
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <strong id="scaleStatefulSetName" class="text-primary"></strong>
+        </div>
+        <div class="mb-3">
+          <label for="scaleStatefulSetReplicasInput" class="form-label fw-semibold">Replica Sayısı:</label>
+          <input type="number" min="0" class="form-control border-0 shadow-sm" id="scaleStatefulSetReplicasInput" style="width:120px;">
+        </div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-primary rounded-pill" id="scaleStatefulSetSaveBtn">
+          <i class="bi bi-check-circle me-1"></i>Kaydet
+        </button>
+        <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle me-1"></i>Kapat
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 <!-- Pod Logs Modal -->
 <div class="modal fade" id="podLogsModal" tabindex="-1" aria-labelledby="podLogsModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-xl">
@@ -52,6 +85,17 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2" id="podLogsToolbar">
+          <div class="input-group" style="max-width: 360px;">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="search" class="form-control" id="podLogsSearchInput" placeholder="Log içinde ara..." />
+          </div>
+          <div class="ms-auto d-flex align-items-center gap-2">
+            <small class="text-muted" id="podLogsSearchInfo"></small>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="podLogsClearSearchBtn"><i class="bi bi-x-circle me-1"></i>Temizle</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="podLogsExportBtn"><i class="bi bi-download me-1"></i>Export</button>
+          </div>
+        </div>
         <pre id="podLogsModalBody" style="font-family:'Fira Code', 'Monaco', monospace; font-size:0.9em; white-space:pre-wrap; max-height:70vh; overflow:auto; background:#000; color:#e6e6e6; padding:12px; border-radius:6px;"></pre>
       </div>
       <div class="modal-footer">
@@ -81,6 +125,34 @@
         </button>
         <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">
           <i class="bi bi-x-circle me-1"></i>Kapat
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Global Toast Container -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;" id="toastContainer"></div>
+
+<!-- Confirm Action Modal (Reusable) -->
+<div class="modal fade" id="confirmActionModal" tabindex="-1" aria-labelledby="confirmActionModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title" id="confirmActionModalLabel">
+          <i class="bi bi-exclamation-triangle me-2"></i>Onay
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="confirmActionMessage" class="fw-semibold"></div>
+      </div>
+      <div class="modal-footer bg-light">
+        <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">
+          <i class="bi bi-x-circle me-1"></i>Vazgeç
+        </button>
+        <button type="button" class="btn btn-warning rounded-pill" id="confirmActionConfirmBtn">
+          <i class="bi bi-check-circle me-1"></i>Onayla
         </button>
       </div>
     </div>
@@ -139,9 +211,6 @@
     </div>
   </div>
 </div>
-{% extends "base.html" %}
-{% block title %}Workloads{% endblock %}
-{% block content %}
 
 <style>
 /* Adding modern CSS styling for beautiful interface */
@@ -334,6 +403,40 @@
   box-shadow: 0 10px 25px rgba(0,0,0,0.15);
 }
 
+/* Make deployments table fit similarly */
+#deployments-table {
+  table-layout: fixed;
+}
+#deployments-table th, #deployments-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#deployments-table td.name-cell { max-width: 260px; }
+#deployments-table td.ns-cell { max-width: 160px; }
+#deployments-table td.actions-cell { white-space: normal; overflow: visible; text-overflow: clip; }
+#deployments-table th:nth-child(1){ width: 140px; }
+#deployments-table th:nth-child(2){ width: 260px; }
+#deployments-table th:nth-child(3){ width: 120px; }
+#deployments-table th:nth-child(4){ width: 120px; }
+#deployments-table th:nth-child(5){ width: 120px; }
+
+/* Make daemonsets table fit similarly */
+#daemonsets-table { table-layout: fixed; }
+#daemonsets-table th, #daemonsets-table td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#daemonsets-table td.name-cell { max-width: 260px; }
+#daemonsets-table td.ns-cell { max-width: 160px; }
+#daemonsets-table td.actions-cell { white-space: normal; overflow: visible; text-overflow: clip; }
+#daemonsets-table th:nth-child(1){ width: 140px; }
+#daemonsets-table th:nth-child(2){ width: 260px; }
+#daemonsets-table th:nth-child(3){ width: 120px; }
+#daemonsets-table th:nth-child(4){ width: 120px; }
+#daemonsets-table th:nth-child(5){ width: 120px; }
+#daemonsets-table th:nth-child(6){ width: 120px; }
+#daemonsets-table th:nth-child(7){ width: auto; }
+#deployments-table th:nth-child(6){ width: 120px; }
+#deployments-table th:nth-child(7){ width: auto; }
+
 .metric-number {
   font-size: 2.5rem;
   font-weight: 700;
@@ -347,6 +450,66 @@
   font-weight: 600;
   opacity: 0.7;
 }
+.sortable::after {
+  content: ' \25B4\25BE'; /* up/down triangles */
+  font-size: 0.75em;
+  opacity: 0.4;
+}
+/* Make pods table fit: prevent wrap and ellipsize long names */
+#pods-table {
+  table-layout: fixed;
+}
+#pods-table th, #pods-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#pods-table td.actions-cell {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+#pods-table th:nth-child(1){ width: 140px; }
+#pods-table th:nth-child(2){ width: 260px; }
+#pods-table th:nth-child(3){ width: 120px; }
+#pods-table th:nth-child(4){ width: 90px; }
+#pods-table th:nth-child(5){ width: 100px; }
+#pods-table th:nth-child(6){ width: 120px; }
+#pods-table th:nth-child(7){ width: 110px; }
+#pods-table th:nth-child(8){ width: 120px; }
+#pods-table th:nth-child(9){ width: auto; }
+#pods-table td.name-cell {
+  max-width: 260px;
+}
+#pods-table td.ns-cell {
+  max-width: 160px;
+}
+
+/* Make statefulsets table fit similarly */
+#statefulsets-table { table-layout: fixed; }
+#statefulsets-table th, #statefulsets-table td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#statefulsets-table td.name-cell { max-width: 260px; }
+#statefulsets-table td.ns-cell { max-width: 160px; }
+#statefulsets-table td.actions-cell { white-space: normal; overflow: visible; text-overflow: clip; }
+#statefulsets-table th:nth-child(1){ width: 140px; }
+#statefulsets-table th:nth-child(2){ width: 260px; }
+#statefulsets-table th:nth-child(3){ width: 120px; }
+#statefulsets-table th:nth-child(4){ width: 120px; }
+#statefulsets-table th:nth-child(5){ width: 120px; }
+#statefulsets-table th:nth-child(6){ width: auto; }
+
+/* Make replicasets table fit similarly */
+#replicasets-table { table-layout: fixed; }
+#replicasets-table th, #replicasets-table td { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#replicasets-table td.name-cell { max-width: 260px; }
+#replicasets-table td.ns-cell { max-width: 160px; }
+#replicasets-table td.actions-cell { white-space: normal; overflow: visible; text-overflow: clip; }
+#replicasets-table th:nth-child(1){ width: 140px; }
+#replicasets-table th:nth-child(2){ width: 260px; }
+#replicasets-table th:nth-child(3){ width: 120px; }
+#replicasets-table th:nth-child(4){ width: 120px; }
+#replicasets-table th:nth-child(5){ width: 120px; }
+#replicasets-table th:nth-child(6){ width: auto; }
 </style>
 
 <!-- Hero Header Section -->
@@ -561,7 +724,21 @@
   <!-- Pods Tab -->
   <div class="tab-pane fade" id="pods" role="tabpanel">
     <div class="row g-4">
-      <div class="col-lg-8">
+      <!-- Pod Durumları en üstte -->
+      <div class="col-12">
+        <div class="workload-card">
+          <div class="card-header text-white" style="background: var(--success-gradient);">
+            <h6 class="mb-0 fw-bold">Pod Durumları</h6>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-pods-tab" style="width: 100%; height: 280px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Pods Listesi altta, tam genişlikte -->
+      <div class="col-12">
         <div class="workload-card">
           <div class="card-header text-white" style="background: var(--success-gradient);">
             <h5 class="mb-0 fw-bold">
@@ -578,25 +755,27 @@
           </div>
         </div>
       </div>
-      <div class="col-lg-4">
-        <div class="workload-card">
-          <div class="card-header text-white" style="background: var(--success-gradient);">
-            <h6 class="mb-0 fw-bold">Pod Durumları</h6>
-          </div>
-          <div class="card-body p-0">
-            <div class="chart-container">
-              <div id="pie-pods-tab" style="width: 100%; height: 280px;"></div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 
   <!-- Deployments Tab -->
   <div class="tab-pane fade" id="deployments" role="tabpanel">
     <div class="row g-4">
-      <div class="col-lg-8">
+      <!-- Deployment Durumları en üstte -->
+      <div class="col-12">
+        <div class="workload-card">
+          <div class="card-header text-white" style="background: var(--primary-gradient);">
+            <h6 class="mb-0 fw-bold">Deployment Durumları</h6>
+          </div>
+          <div class="card-body p-0">
+            <div class="chart-container">
+              <div id="pie-deployments-tab" style="width: 100%; height: 280px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Deployments Listesi altta, tam genişlikte -->
+      <div class="col-12">
         <div class="workload-card">
           <div class="card-header text-white" style="background: var(--primary-gradient);">
             <h5 class="mb-0 fw-bold">
@@ -613,51 +792,34 @@
           </div>
         </div>
       </div>
-      <div class="col-lg-4">
-        <div class="workload-card">
-          <div class="card-header text-white" style="background: var(--primary-gradient);">
-            <h6 class="mb-0 fw-bold">Deployment Durumları</h6>
-          </div>
-          <div class="card-body p-0">
-            <div class="chart-container">
-              <div id="pie-deployments-tab" style="width: 100%; height: 280px;"></div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 
   <!-- DaemonSets Tab -->
   <div class="tab-pane fade" id="daemonsets" role="tabpanel">
     <div class="row g-4">
-      <div class="col-lg-4">
+      <!-- DaemonSet Durumları en üstte -->
+      <div class="col-12">
         <div class="workload-card">
           <div class="card-header text-white" style="background: var(--info-gradient);">
-            <div class="d-flex align-items-center">
-              <i class="bi bi-cpu me-2"></i>
-              <span class="fw-bold">DaemonSet Durumu</span>
-            </div>
+            <h6 class="mb-0 fw-bold">DaemonSet Durumu</h6>
           </div>
           <div class="card-body p-0">
             <div class="chart-container">
-              <div id="pie-daemonsets-tab" style="width: 100%; height: 300px;"></div>
+              <div id="pie-daemonsets-tab" style="width: 100%; height: 280px;"></div>
             </div>
           </div>
         </div>
       </div>
-      <div class="col-lg-8">
+      <!-- DaemonSet Listesi altta, tam genişlikte -->
+      <div class="col-12">
         <div class="workload-card">
-          <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center">
-              <i class="bi bi-list-ul me-2 text-info"></i>
-              <span class="fw-bold">DaemonSet Listesi</span>
-            </div>
-            <button class="btn btn-outline-primary btn-sm" onclick="fetchAndRenderDaemonSetsTable()">
-              <i class="bi bi-arrow-clockwise me-1"></i>Yenile
-            </button>
+          <div class="card-header text-white" style="background: var(--info-gradient);">
+            <h5 class="mb-0 fw-bold">
+              <i class="bi bi-cpu me-2"></i>DaemonSet Listesi
+            </h5>
           </div>
-          <div class="card-body">
+          <div class="card-body p-0">
             <div id="daemonsets-table-container">
               <div class="d-flex align-items-center justify-content-center py-5">
                 <div class="loading-spinner me-2"></div>
@@ -673,38 +835,36 @@
   <!-- StatefulSets Tab -->
   <div class="tab-pane fade" id="statefulsets" role="tabpanel">
     <div class="row g-4">
-      <div class="col-lg-4">
+      <!-- StatefulSet Durumları en üstte -->
+      <div class="col-12">
         <div class="workload-card">
           <div class="card-header text-white" style="background: var(--warning-gradient);">
-            <div class="d-flex align-items-center">
-              <i class="bi bi-database me-2"></i>
-              <span class="fw-bold">StatefulSet Durumu</span>
-            </div>
+            <h6 class="mb-0 fw-bold">StatefulSet Durumu</h6>
           </div>
           <div class="card-body p-0">
             <div class="chart-container">
-              <div id="pie-statefulsets-tab" style="width: 100%; height: 300px;"></div>
+              <div id="pie-statefulsets-tab" style="width: 100%; height: 280px;"></div>
             </div>
           </div>
         </div>
       </div>
-      <div class="col-lg-8">
+      <!-- StatefulSet Listesi altta, tam genişlikte -->
+      <div class="col-12">
         <div class="workload-card">
-          <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center">
-              <i class="bi bi-list-ul me-2 text-warning"></i>
-              <span class="fw-bold">StatefulSet Listesi</span>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-              <select id="statefulsetNamespaceFilter" class="form-select form-select-sm" style="width:200px;">
-                <option value="">Tüm Namespace'ler</option>
-              </select>
-              <button class="btn btn-outline-primary btn-sm" onclick="fetchAndRenderStatefulSetsTable()">
-                <i class="bi bi-arrow-clockwise me-1"></i>Yenile
-              </button>
+          <div class="card-header text-white" style="background: var(--warning-gradient);">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="mb-0 fw-bold"><i class="bi bi-database me-2"></i>StatefulSet Listesi</h5>
+              <div class="d-flex align-items-center gap-2">
+                <select id="statefulsetNamespaceFilter" class="form-select form-select-sm" style="width:200px;">
+                  <option value="">Tüm Namespace'ler</option>
+                </select>
+                <button class="btn btn-outline-light btn-sm" onclick="fetchAndRenderStatefulSetsTable()">
+                  <i class="bi bi-arrow-clockwise me-1"></i>Yenile
+                </button>
+              </div>
             </div>
           </div>
-          <div class="card-body">
+          <div class="card-body p-0">
             <div id="statefulsets-table-container">
               <div class="d-flex align-items-center justify-content-center py-5">
                 <div class="loading-spinner me-2"></div>
@@ -720,38 +880,36 @@
   <!-- ReplicaSets Tab -->
   <div class="tab-pane fade" id="replicasets" role="tabpanel">
     <div class="row g-4">
-      <div class="col-lg-4">
+      <!-- ReplicaSet Durumları en üstte -->
+      <div class="col-12">
         <div class="workload-card">
           <div class="card-header text-white" style="background: var(--danger-gradient);">
-            <div class="d-flex align-items-center">
-              <i class="bi bi-collection me-2"></i>
-              <span class="fw-bold">ReplicaSet Durumu</span>
-            </div>
+            <h6 class="mb-0 fw-bold">ReplicaSet Durumu</h6>
           </div>
           <div class="card-body p-0">
             <div class="chart-container">
-              <div id="pie-replicasets-tab" style="width: 100%; height: 300px;"></div>
+              <div id="pie-replicasets-tab" style="width: 100%; height: 280px;"></div>
             </div>
           </div>
         </div>
       </div>
-      <div class="col-lg-8">
+      <!-- ReplicaSet Listesi altta, tam genişlikte -->
+      <div class="col-12">
         <div class="workload-card">
-          <div class="card-header bg-light d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center">
-              <i class="bi bi-list-ul me-2 text-danger"></i>
-              <span class="fw-bold">ReplicaSet Listesi</span>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-              <select id="replicasetsNamespaceFilter" class="form-select form-select-sm" style="width:150px;">
-                <option value="">Tüm Namespace'ler</option>
-              </select>
-              <button class="btn btn-outline-primary btn-sm" onclick="fetchAndRenderReplicaSetsTable()">
-                <i class="bi bi-arrow-clockwise me-1"></i>Yenile
-              </button>
+          <div class="card-header text-white" style="background: var(--danger-gradient);">
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="mb-0 fw-bold"><i class="bi bi-collection me-2"></i>ReplicaSet Listesi</h5>
+              <div class="d-flex align-items-center gap-2">
+                <select id="replicasetsNamespaceFilter" class="form-select form-select-sm" style="width:150px;">
+                  <option value="">Tüm Namespace'ler</option>
+                </select>
+                <button class="btn btn-outline-light btn-sm" onclick="fetchAndRenderReplicaSetsTable()">
+                  <i class="bi bi-arrow-clockwise me-1"></i>Yenile
+                </button>
+              </div>
             </div>
           </div>
-          <div class="card-body">
+          <div class="card-body p-0">
             <div id="replicasets-table-container">
               <div class="d-flex align-items-center justify-content-center py-5">
                 <div class="loading-spinner me-2"></div>
@@ -893,35 +1051,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Load overview data for all workload types
 async function loadOverviewData() {
-  try {
-    // Load all workload data in parallel
-    const [podsData, deploymentsData, daemonsetsData, statefulsetsData, replicasetsData, jobsData, cronjobsData] = await Promise.all([
-      fetch('/k8s-explorer/pods-summary').then(r => r.json()),
-      fetch('/k8s-explorer/deployments-summary').then(r => r.json()),
-      fetch('/k8s-explorer/daemonsets-summary').then(r => r.json()),
-      fetch('/k8s-explorer/statefulsets-summary').then(r => r.json()),
-      fetch('/k8s-explorer/replicasets-summary').then(r => r.json()),
-      fetch('/k8s-explorer/jobs-summary').then(r => r.json()),
-      fetch('/k8s-explorer/cronjobs-summary').then(r => r.json())
-    ]);
+  const results = await Promise.allSettled([
+    fetchJsonWithTimeout('/k8s-explorer/pods-summary'),
+    fetchJsonWithTimeout('/k8s-explorer/deployments-summary'),
+    fetchJsonWithTimeout('/k8s-explorer/daemonsets-summary'),
+    fetchJsonWithTimeout('/k8s-explorer/statefulsets-summary'),
+    fetchJsonWithTimeout('/k8s-explorer/replicasets-summary'),
+    fetchJsonWithTimeout('/k8s-explorer/jobs-summary'),
+    fetchJsonWithTimeout('/k8s-explorer/cronjobs-summary')
+  ]);
+  const podsData = results[0].status === 'fulfilled' ? results[0].value : { pods: [] };
+  const deploymentsData = results[1].status === 'fulfilled' ? results[1].value : { deployments: [] };
+  const daemonsetsData = results[2].status === 'fulfilled' ? results[2].value : { daemonsets: [] };
+  const statefulsetsData = results[3].status === 'fulfilled' ? results[3].value : { statefulsets: [] };
+  const replicasetsData = results[4].status === 'fulfilled' ? results[4].value : { replicasets: [] };
+  const jobsData = results[5].status === 'fulfilled' ? results[5].value : { jobs: [] };
+  const cronjobsData = results[6].status === 'fulfilled' ? results[6].value : { cronjobs: [] };
 
-    // Store data globally
-    allWorkloadsData.pods = podsData.pods || [];
-    allWorkloadsData.deployments = deploymentsData.deployments || [];
-    allWorkloadsData.daemonsets = daemonsetsData.daemonsets || [];
-    allWorkloadsData.statefulsets = statefulsetsData.statefulsets || [];
-    allWorkloadsData.replicasets = replicasetsData.replicasets || [];
-    allWorkloadsData.jobs = jobsData.jobs || [];
-    allWorkloadsData.cronjobs = cronjobsData.cronjobs || [];
+  allWorkloadsData.pods = podsData.pods || [];
+  allWorkloadsData.deployments = deploymentsData.deployments || [];
+  allWorkloadsData.daemonsets = daemonsetsData.daemonsets || [];
+  allWorkloadsData.statefulsets = statefulsetsData.statefulsets || [];
+  allWorkloadsData.replicasets = replicasetsData.replicasets || [];
+  allWorkloadsData.jobs = jobsData.jobs || [];
+  allWorkloadsData.cronjobs = cronjobsData.cronjobs || [];
 
-    // Update overview charts
-    updateOverviewCharts();
-    updateMetrics();
-    // Load events into the bottom table
-    fetchAndRenderEventsTable();
-  } catch (error) {
-    console.error('Error loading overview data:', error);
-  }
+  updateOverviewCharts();
+  updateMetrics();
+  fetchAndRenderEventsTable();
 }
 
 async function fetchAndRenderEventsTable() {
@@ -929,8 +1086,7 @@ async function fetchAndRenderEventsTable() {
   if (!container) return;
   container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-4"><div class="loading-spinner me-2"></div><span class="text-muted">Events yükleniyor...</span></div>';
   try {
-    const res = await fetch('/exec-events');
-    const data = await res.json();
+  const data = await fetchJsonWithTimeout('/exec-events', {}, 10000);
     const events = data.events || [];
     if (events.length === 0) {
       container.innerHTML = '<div class="empty-state"><i class="bi bi-bell"></i><h6>Event yok</h6><p class="text-muted">Gösterilecek event bulunmuyor.</p></div>';
@@ -1000,8 +1156,7 @@ async function fetchAndRenderPodsTable() {
   container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Pod listesi yükleniyor...</span></div>';
   
   try {
-    const response = await fetch('/k8s-explorer/pods-summary');
-    const data = await response.json();
+  const data = await fetchJsonWithTimeout('/k8s-explorer/pods-summary', {}, 10000);
     const pods = data.pods || [];
     
     if (pods.length === 0) {
@@ -1010,7 +1165,17 @@ async function fetchAndRenderPodsTable() {
       return;
     }
     
-    let html = '<div class="table-responsive"><table class="table table-modern table-hover"><thead><tr><th>Namespace</th><th>Name</th><th>Status</th><th>Ready</th><th>Restarts</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
+  let html = '<div class="table-responsive"><table class="table table-modern table-hover" id="pods-table"><thead><tr>'+
+         '<th class="sortable" data-sort-key="namespace">Namespace</th>'+
+         '<th class="sortable" data-sort-key="name">Name</th>'+
+         '<th>Status</th>'+
+         '<th class="sortable" data-sort-key="ready">Ready</th>'+
+         '<th class="sortable" data-sort-key="restarts">Restarts</th>'+
+         '<th class="sortable" data-sort-key="age">Age</th>'+
+         '<th class="sortable" data-sort-key="cpu">CPU</th>'+
+         '<th class="sortable" data-sort-key="mem">Memory</th>'+
+         '<th>İşlemler</th>'+
+         '</tr></thead><tbody>';
     
     pods.forEach(pod => {
       const age = calculateAge(pod.creation_timestamp);
@@ -1019,14 +1184,16 @@ async function fetchAndRenderPodsTable() {
                          pod.status === 'Failed' ? 'status-failed' : 'status-succeeded';
       
       html += `
-        <tr>
-          <td><span class="badge bg-secondary">${pod.namespace}</span></td>
-          <td><strong>${pod.name}</strong></td>
+        <tr data-namespace="${pod.namespace}" data-name="${pod.name}" data-cpu="" data-mem="" data-ready="${(pod.ready||'').split('/')[0]||0}" data-restarts="${pod.restarts||0}" data-age-seconds="${pod.creation_timestamp ? Math.floor((Date.now() - new Date(pod.creation_timestamp).getTime())/1000) : 0}">
+          <td class="ns-cell"><span class="badge bg-secondary">${pod.namespace}</span></td>
+          <td class="name-cell"><strong>${pod.name}</strong></td>
           <td><span class="status-badge ${statusClass}">${pod.status}</span></td>
           <td>${pod.ready}</td>
           <td>${pod.restarts}</td>
           <td>${age}</td>
-          <td>
+          <td class="cpu-cell"><span class="text-muted">-</span></td>
+          <td class="mem-cell"><span class="text-muted">-</span></td>
+          <td class="actions-cell">
             <button class="btn btn-action btn-outline-info btn-sm" onclick="showPodProperties('${pod.name}','${pod.namespace}')">
               <i class="bi bi-info-circle me-1"></i>Properties
             </button>
@@ -1043,10 +1210,104 @@ async function fetchAndRenderPodsTable() {
     
     html += '</tbody></table></div>';
     container.innerHTML = html;
+    // Attach sorting handlers
+    setupPodsTableSorting();
+    // Fetch metrics for rows (limited concurrency)
+    fetchMetricsForPods(pods);
     updatePodsPieChart(pods, 'pie-pods-tab');
   } catch (error) {
     container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>Pod listesi yüklenirken hata oluştu: ' + error.message + '</div>';
   }
+}
+
+// Sorting state for pods table
+let podsSortState = { key: null, dir: 'desc' };
+
+function setupPodsTableSorting() {
+  const table = document.getElementById('pods-table');
+  if (!table) return;
+  table.querySelectorAll('th.sortable').forEach(th => {
+    th.style.cursor = 'pointer';
+    th.addEventListener('click', () => {
+      const key = th.getAttribute('data-sort-key');
+      if (podsSortState.key === key) {
+        podsSortState.dir = podsSortState.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        podsSortState.key = key;
+        podsSortState.dir = (key === 'cpu' || key === 'mem' || key === 'restarts' || key === 'ready') ? 'desc' : 'asc';
+      }
+      sortPodsTableRows();
+    });
+  });
+}
+
+function sortPodsTableRows() {
+  const table = document.getElementById('pods-table');
+  if (!table) return;
+  const tbody = table.querySelector('tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const key = podsSortState.key; const dir = podsSortState.dir;
+  if (!key) return;
+  const mul = dir === 'asc' ? 1 : -1;
+  const getVal = (tr) => {
+    switch(key) {
+      case 'namespace': return (tr.getAttribute('data-namespace')||'').toLowerCase();
+      case 'name': return (tr.getAttribute('data-name')||'').toLowerCase();
+      case 'cpu': return parseFloat(tr.getAttribute('data-cpu')||'-1');
+      case 'mem': return parseFloat(tr.getAttribute('data-mem')||'-1');
+      case 'ready': return parseInt(tr.getAttribute('data-ready')||'0');
+      case 'restarts': return parseInt(tr.getAttribute('data-restarts')||'0');
+      case 'age': return parseInt(tr.getAttribute('data-age-seconds')||'0');
+      default: return 0;
+    }
+  };
+  rows.sort((a,b) => {
+    const va = getVal(a), vb = getVal(b);
+    if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * mul;
+    return (''+va).localeCompare(''+vb) * mul;
+  });
+  rows.forEach(r => tbody.appendChild(r));
+}
+
+async function fetchMetricsForPods(pods) {
+  const table = document.getElementById('pods-table');
+  if (!table) return;
+  const limit = 5; // concurrency
+  let idx = 0;
+  async function worker() {
+    while (idx < pods.length) {
+      const i = idx++;
+      const p = pods[i];
+      try {
+        const m = await fetchJsonWithTimeout(`/k8s-explorer/pod-metrics?namespace=${encodeURIComponent(p.namespace)}&name=${encodeURIComponent(p.name)}`, {}, 8000);
+        const row = table.querySelector(`tr[data-namespace="${CSS.escape(p.namespace)}"][data-name="${CSS.escape(p.name)}"]`);
+        if (!row) continue;
+        const cpu = Math.max(0, parseInt(m.cpu_mcores||0));
+        const memB = Math.max(0, parseInt(m.memory_bytes||0));
+        const memMB = (memB/1024/1024);
+        const cpuCell = row.querySelector('.cpu-cell');
+        const memCell = row.querySelector('.mem-cell');
+        if (cpuCell) cpuCell.innerHTML = `<span>${cpu}m</span>`;
+        if (memCell) memCell.innerHTML = `<span>${memMB.toFixed(1)} MB</span>`;
+        row.setAttribute('data-cpu', String(cpu));
+        row.setAttribute('data-mem', String(memB));
+        // If currently sorted by cpu/mem, keep table ordered as updates arrive
+        if (podsSortState.key === 'cpu' || podsSortState.key === 'mem') sortPodsTableRows();
+      } catch (e) {
+        const row = table.querySelector(`tr[data-namespace="${CSS.escape(p.namespace)}"][data-name="${CSS.escape(p.name)}"]`);
+        if (row) {
+          const cpuCell = row.querySelector('.cpu-cell');
+          const memCell = row.querySelector('.mem-cell');
+          if (cpuCell) cpuCell.innerHTML = '<span class="text-muted">-</span>';
+          if (memCell) memCell.innerHTML = '<span class="text-muted">-</span>';
+          row.setAttribute('data-cpu', '-1');
+          row.setAttribute('data-mem', '-1');
+        }
+      }
+    }
+  }
+  const workers = Array.from({length: Math.min(limit, pods.length)}, () => worker());
+  await Promise.all(workers);
 }
 
 async function fetchAndRenderDeploymentsTable() {
@@ -1054,8 +1315,7 @@ async function fetchAndRenderDeploymentsTable() {
   container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Deployment listesi yükleniyor...</span></div>';
   
   try {
-    const response = await fetch('/k8s-explorer/deployments-summary');
-    const data = await response.json();
+  const data = await fetchJsonWithTimeout('/k8s-explorer/deployments-summary', {}, 10000);
     const deployments = data.deployments || [];
     
     if (deployments.length === 0) {
@@ -1064,7 +1324,7 @@ async function fetchAndRenderDeploymentsTable() {
       return;
     }
     
-    let html = '<div class="table-responsive"><table class="table table-modern table-hover"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Up-to-date</th><th>Available</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
+  let html = '<div class="table-responsive"><table class="table table-modern table-hover" id="deployments-table"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Up-to-date</th><th>Available</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
     
     deployments.forEach(dep => {
       const age = calculateAge(dep.creation_timestamp);
@@ -1074,13 +1334,13 @@ async function fetchAndRenderDeploymentsTable() {
       
       html += `
         <tr>
-          <td><span class="badge bg-secondary">${dep.namespace}</span></td>
-          <td><strong>${dep.name}</strong></td>
+          <td class="ns-cell"><span class="badge bg-secondary">${dep.namespace}</span></td>
+          <td class="name-cell"><strong>${dep.name}</strong></td>
           <td><span class="status-badge ${readyStatus}">${ready_replicas}/${replicas}</span></td>
           <td>${dep.updated_replicas}</td>
           <td>${dep.available_replicas}</td>
           <td>${age}</td>
-          <td>
+          <td class="actions-cell">
             <button class="btn btn-action btn-outline-primary btn-sm" onclick="showScaleDeploymentModal('${dep.name}','${dep.namespace}',${dep.replicas})">
               <i class="bi bi-arrows-expand me-1"></i>Scale
             </button>
@@ -1106,8 +1366,7 @@ async function fetchAndRenderDaemonSetsTable() {
   container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">DaemonSet listesi yükleniyor...</span></div>';
   
   try {
-    const response = await fetch('/k8s-explorer/daemonsets-summary');
-    const data = await response.json();
+  const data = await fetchJsonWithTimeout('/k8s-explorer/daemonsets-summary', {}, 10000);
     const daemonsets = data.daemonsets || [];
     
     if (daemonsets.length === 0) {
@@ -1116,7 +1375,7 @@ async function fetchAndRenderDaemonSetsTable() {
       return;
     }
     
-    let html = '<div class="table-responsive"><table class="table table-modern table-hover"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Current</th><th>Desired</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
+  let html = '<div class="table-responsive"><table class="table table-modern table-hover" id="daemonsets-table"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Current</th><th>Desired</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
     
     daemonsets.forEach(ds => {
       const age = calculateAge(ds.creation_timestamp);
@@ -1124,13 +1383,13 @@ async function fetchAndRenderDaemonSetsTable() {
       
       html += `
         <tr>
-          <td><span class="badge bg-secondary">${ds.namespace}</span></td>
-          <td><strong>${ds.name}</strong></td>
+          <td class="ns-cell"><span class="badge bg-secondary">${ds.namespace}</span></td>
+          <td class="name-cell"><strong>${ds.name}</strong></td>
           <td><span class="status-badge ${readyStatus}">${ds.ready}</span></td>
           <td>${ds.current}</td>
           <td>${ds.desired}</td>
           <td>${age}</td>
-          <td>
+          <td class="actions-cell">
             <button class="btn btn-action btn-outline-info btn-sm" onclick="showDaemonSetProperties('${ds.name}','${ds.namespace}')">
               <i class="bi bi-info-circle me-1"></i>Properties
             </button>
@@ -1161,8 +1420,7 @@ async function fetchAndRenderStatefulSetsTable() {
     let url = '/k8s-explorer/statefulsets-summary';
     if (selectedNs) url += `?namespace=${encodeURIComponent(selectedNs)}`;
     
-    const response = await fetch(url);
-    const data = await response.json();
+  const data = await fetchJsonWithTimeout(url, {}, 10000);
     const statefulsets = data.statefulsets || [];
     
     // Populate namespace filter
@@ -1180,7 +1438,7 @@ async function fetchAndRenderStatefulSetsTable() {
       return;
     }
     
-    let html = '<div class="table-responsive"><table class="table table-modern table-hover"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Replicas</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
+  let html = '<div class="table-responsive"><table class="table table-modern table-hover" id="statefulsets-table"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Replicas</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
     
     statefulsets.forEach(ss => {
       const age = calculateAge(ss.creation_timestamp);
@@ -1189,12 +1447,12 @@ async function fetchAndRenderStatefulSetsTable() {
       
       html += `
         <tr>
-          <td><span class="badge bg-secondary">${ss.namespace}</span></td>
-          <td><strong>${ss.name}</strong></td>
+          <td class="ns-cell"><span class="badge bg-secondary">${ss.namespace}</span></td>
+          <td class="name-cell"><strong>${ss.name}</strong></td>
           <td><span class="status-badge ${readyStatus}">${ss.ready}</span></td>
           <td>${ss.replicas}</td>
           <td>${age}</td>
-          <td>
+          <td class="actions-cell">
             <button class="btn btn-action btn-outline-info btn-sm" onclick="showStatefulSetProperties('${ss.name}','${ss.namespace}')">
               <i class="bi bi-info-circle me-1"></i>Properties
             </button>
@@ -1223,8 +1481,7 @@ async function fetchAndRenderReplicaSetsTable() {
   container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">ReplicaSet listesi yükleniyor...</span></div>';
   
   try {
-    const response = await fetch('/k8s-explorer/replicasets-summary');
-    const data = await response.json();
+  const data = await fetchJsonWithTimeout('/k8s-explorer/replicasets-summary', {}, 10000);
     const replicasets = data.replicasets || [];
     
     // Populate namespace filter
@@ -1255,7 +1512,7 @@ function renderReplicaSetsTable(replicasets) {
     return;
   }
   
-  let html = '<div class="table-responsive"><table class="table table-modern table-hover"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Desired</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
+  let html = '<div class="table-responsive"><table class="table table-modern table-hover" id="replicasets-table"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Desired</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
   
   replicasets.forEach(rs => {
     const age = calculateAge(rs.creation_timestamp);
@@ -1263,12 +1520,12 @@ function renderReplicaSetsTable(replicasets) {
     
     html += `
       <tr>
-        <td><span class="badge bg-secondary">${rs.namespace}</span></td>
-        <td><strong>${rs.name}</strong></td>
+        <td class="ns-cell"><span class="badge bg-secondary">${rs.namespace}</span></td>
+        <td class="name-cell"><strong>${rs.name}</strong></td>
         <td><span class="status-badge ${readyStatus}">${rs.ready}</span></td>
         <td>${rs.desired}</td>
         <td>${age}</td>
-        <td>
+  <td class="actions-cell">
           <button class="btn btn-action btn-outline-danger btn-sm" onclick="deleteReplicaSet('${rs.name}','${rs.namespace}')">
             <i class="bi bi-trash me-1"></i>Delete
           </button>
@@ -1287,8 +1544,7 @@ async function fetchAndRenderJobsTable() {
   container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Job listesi yükleniyor...</span></div>';
   
   try {
-    const response = await fetch('/k8s-explorer/jobs-summary');
-    const data = await response.json();
+  const data = await fetchJsonWithTimeout('/k8s-explorer/jobs-summary', {}, 10000);
     const jobs = data.jobs || [];
     
     // Populate namespace filter
@@ -1352,8 +1608,7 @@ async function fetchAndRenderCronJobsTable() {
   container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">CronJob listesi yükleniyor...</span></div>';
   
   try {
-    const response = await fetch('/k8s-explorer/cronjobs-summary');
-    const data = await response.json();
+  const data = await fetchJsonWithTimeout('/k8s-explorer/cronjobs-summary', {}, 10000);
     const cronjobs = data.cronjobs || [];
     
     // Populate namespace filter
@@ -1531,6 +1786,26 @@ function calculateAge(timestamp) {
   else return diffMin + 'm';
 }
 
+// Timeout'lı güvenli JSON fetch
+async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 10000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    const text = await res.text();
+    let data = {};
+    try { data = text ? JSON.parse(text) : {}; } catch(e) {
+      throw new Error(`HTTP ${res.status}: ${text?.slice(0,200) || ''}`);
+    }
+    if (!res.ok) {
+      throw new Error(data?.error || `HTTP ${res.status}`);
+    }
+    return data;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // Action functions (placeholders - implement based on existing patterns)
 // Action functions (implemented)
 function showDaemonSetProperties(name, namespace) {
@@ -1562,35 +1837,44 @@ function showDaemonSetProperties(name, namespace) {
 }
 
 function restartDaemonSet(name, namespace) {
-  if (!confirm(`${namespace}/${name} DaemonSet'ini yeniden başlatmak istediğinizden emin misiniz?`)) return;
-  fetch('/k8s-explorer/restart-daemonset', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, namespace })
-  }).then(async (r) => {
-    if (r.ok) {
-      alert('DaemonSet restart talebi gönderildi.');
-      // Refresh daemonsets, pods and overview so UI reflects restarted pods immediately
-      if (typeof fetchAndRenderDaemonSetsTable === 'function') fetchAndRenderDaemonSetsTable();
-      if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
-      if (typeof loadOverviewData === 'function') loadOverviewData();
-    } else {
-      const txt = await r.text();
-      alert('Restart başarısız: ' + txt);
+  openConfirmActionModal(`${namespace}/${name} DaemonSet'ini yeniden başlatmak istiyor musunuz?`, async () => {
+    try {
+      const r = await fetch('/k8s-explorer/restart-daemonset', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, namespace })
+      });
+      if (r.ok) {
+        showToast('İşleminiz başarılı şekilde yapıldı', 'success');
+        if (typeof fetchAndRenderDaemonSetsTable === 'function') fetchAndRenderDaemonSetsTable();
+        if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
+        if (typeof loadOverviewData === 'function') loadOverviewData();
+      } else {
+        const txt = await r.text();
+        showToast('Restart başarısız: ' + txt, 'danger');
+      }
+    } catch (e) {
+      showToast('Restart isteği başarısız: ' + e, 'danger');
     }
-  }).catch(e => alert('Restart isteği başarısız: ' + e));
+  });
 }
 
 function showPodLogs(name, namespace) {
   const modalEl = document.getElementById('podLogsModal');
   const body = document.getElementById('podLogsModalBody');
   const label = document.getElementById('podLogsModalLabel');
+  const searchInput = document.getElementById('podLogsSearchInput');
+  const exportBtn = document.getElementById('podLogsExportBtn');
+  const clearBtn = document.getElementById('podLogsClearSearchBtn');
+  const infoEl = document.getElementById('podLogsSearchInfo');
   if (!modalEl || !body || !label) {
     alert('Logs modal bulunamadı.');
     return;
   }
   label.textContent = `Pod Logs: ${namespace}/${name}`;
   body.textContent = 'Yükleniyor...';
+  body.setAttribute('data-original', '');
+  if (searchInput) searchInput.value = '';
+  if (infoEl) infoEl.textContent = '';
   if (!document.body.contains(modalEl)) document.body.appendChild(modalEl);
   const bs = bootstrap.Modal.getOrCreateInstance(modalEl);
   bs.show();
@@ -1602,10 +1886,63 @@ function showPodLogs(name, namespace) {
         return;
       }
       const txt = await r.text();
-      body.textContent = txt || '(Boş log)';
+      const content = txt || '(Boş log)';
+      body.textContent = content;
+      body.setAttribute('data-original', content);
+      // Wire up export
+      if (exportBtn) {
+        exportBtn.onclick = () => exportLogsToFile(`${namespace}-${name}.log`, body.getAttribute('data-original') || body.textContent || '');
+      }
+      // Wire up clear and search
+      if (clearBtn) clearBtn.onclick = () => { if (searchInput) { searchInput.value=''; filterLogs(body, '', infoEl); } };
+      if (searchInput) {
+        searchInput.oninput = (e) => {
+          filterLogs(body, e.target.value || '', infoEl);
+        };
+      }
     }).catch(e => {
       body.textContent = 'Log alınırken hata oluştu: ' + e;
     });
+}
+
+function exportLogsToFile(filename, text) {
+  try {
+    const blob = new Blob([text], {type: 'text/plain;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    alert('Export başarısız: ' + e);
+  }
+}
+
+function filterLogs(bodyEl, query, infoEl) {
+  const original = bodyEl.getAttribute('data-original') || bodyEl.textContent || '';
+  if (!query) {
+    bodyEl.textContent = original;
+    if (infoEl) infoEl.textContent = '';
+    return;
+  }
+  try {
+    // Basit satır bazlı filtreleme (case-insensitive)
+    const q = query.toLowerCase();
+    const lines = original.split('\n');
+    const filtered = [];
+    let matches = 0;
+    for (const ln of lines) {
+      if (ln.toLowerCase().includes(q)) { filtered.push(ln); matches++; }
+    }
+    bodyEl.textContent = filtered.join('\n');
+    if (infoEl) infoEl.textContent = `${matches} eşleşme`;
+  } catch (e) {
+    bodyEl.textContent = original;
+    if (infoEl) infoEl.textContent = '';
+  }
 }
 
 function showStatefulSetProperties(name, namespace) {
@@ -1635,67 +1972,140 @@ function showStatefulSetProperties(name, namespace) {
 }
 
 function restartStatefulSet(name, namespace) {
-  if (!confirm(`${namespace}/${name} StatefulSet'ini yeniden başlatmak istediğinizden emin misiniz?`)) return;
-  fetch('/k8s-explorer/restart-statefulset', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, namespace })
-  }).then(async (r) => {
-    if (r.ok) {
-      alert('StatefulSet restart talebi gönderildi.');
-      if (typeof fetchAndRenderStatefulSetsTable === 'function') fetchAndRenderStatefulSetsTable();
-      if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
-      if (typeof loadOverviewData === 'function') loadOverviewData();
-    } else {
-      const txt = await r.text();
-      alert('Restart başarısız: ' + txt);
+  openConfirmActionModal(`${namespace}/${name} StatefulSet'ini yeniden başlatmak istiyor musunuz?`, async () => {
+    try {
+      const r = await fetch('/k8s-explorer/restart-statefulset', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, namespace })
+      });
+      if (r.ok) {
+        showToast('İşleminiz başarılı şekilde yapıldı', 'success');
+        if (typeof fetchAndRenderStatefulSetsTable === 'function') fetchAndRenderStatefulSetsTable();
+        if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
+        if (typeof loadOverviewData === 'function') loadOverviewData();
+      } else {
+        const txt = await r.text();
+        showToast('Restart başarısız: ' + txt, 'danger');
+      }
+    } catch (e) {
+      showToast('Restart isteği başarısız: ' + e, 'danger');
     }
-  }).catch(e => alert('Restart isteği başarısız: ' + e));
+  });
 }
 
 // Deployment: scale and restart
 function showScaleDeploymentModal(name, namespace, replicas) {
-  const input = prompt(`${namespace}/${name} için yeni replica sayısını girin:`, replicas);
-  if (input === null) return; // cancelled
-  const newReplicas = parseInt(input);
-  if (isNaN(newReplicas) || newReplicas < 0) { alert('Geçerli bir sayı girin'); return; }
-  // Call backend scale API
-  fetch('/k8s-explorer/scale-deployment', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, namespace, replicas: newReplicas })
-  }).then(async r => {
-    if (r.ok) {
-      alert('Deployment replica sayısı güncellendi.');
-      // Refresh deployments table, pods table and overview charts so UI reflects new state
-      if (typeof fetchAndRenderDeploymentsTable === 'function') fetchAndRenderDeploymentsTable();
-      if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
-      if (typeof loadOverviewData === 'function') loadOverviewData();
-    } else {
-      const txt = await r.text();
-      alert('Scale başarısız: ' + txt);
+  const modalEl = document.getElementById('scaleDeploymentModal');
+  const labelEl = document.getElementById('scaleDeploymentModalLabel');
+  const nameEl = document.getElementById('scaleDeploymentName');
+  const inputEl = document.getElementById('scaleReplicasInput');
+  const saveBtn = document.getElementById('scaleDeploymentSaveBtn');
+  if (!modalEl || !labelEl || !nameEl || !inputEl || !saveBtn) {
+    alert('Scale modal bulunamadı.');
+    return;
+  }
+  // Set fields
+  labelEl.textContent = 'Deployment Scale';
+  nameEl.textContent = `${namespace}/${name}`;
+  inputEl.value = (typeof replicas === 'number' ? replicas : (parseInt(replicas) || 0));
+
+  // Wire save button
+  saveBtn.onclick = async () => {
+    const val = parseInt(inputEl.value);
+  if (isNaN(val) || val < 0) { showToast('Geçerli bir sayı girin', 'warning'); return; }
+    try {
+      saveBtn.disabled = true;
+      const r = await fetch('/k8s-explorer/scale-deployment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, namespace, replicas: val })
+      });
+      if (r.ok) {
+        // Close modal
+        bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+  showToast('İşleminiz başarılı şekilde yapıldı', 'success');
+        if (typeof fetchAndRenderDeploymentsTable === 'function') fetchAndRenderDeploymentsTable();
+        if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
+        if (typeof loadOverviewData === 'function') loadOverviewData();
+      } else {
+        const txt = await r.text();
+        showToast('Scale başarısız: ' + txt, 'danger');
+      }
+    } catch (e) {
+      showToast('Scale isteği başarısız: ' + e, 'danger');
+    } finally {
+      saveBtn.disabled = false;
     }
-  }).catch(e => alert('Scale isteği başarısız: ' + e));
+  };
+
+  // Show modal
+  if (!document.body.contains(modalEl)) document.body.appendChild(modalEl);
+  bootstrap.Modal.getOrCreateInstance(modalEl).show();
+}
+
+// Simple Bootstrap toast helper
+function showToast(message, type = 'success') {
+  const container = document.getElementById('toastContainer');
+  if (!container) return alert(message);
+  const bgClass = type === 'success' ? 'text-bg-success' : (type === 'warning' ? 'text-bg-warning' : (type === 'danger' ? 'text-bg-danger' : 'text-bg-primary'));
+  const toastEl = document.createElement('div');
+  toastEl.className = `toast align-items-center ${bgClass} border-0`;
+  toastEl.setAttribute('role', 'alert');
+  toastEl.setAttribute('aria-live', 'assertive');
+  toastEl.setAttribute('aria-atomic', 'true');
+  toastEl.innerHTML = `
+    <div class="d-flex">
+      <div class="toast-body">${message}</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>`;
+  container.appendChild(toastEl);
+  const t = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 3000, autohide: true });
+  toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+  t.show();
+}
+
+// Reusable confirm modal helper
+function openConfirmActionModal(message, onConfirm) {
+  const modalEl = document.getElementById('confirmActionModal');
+  const msgEl = document.getElementById('confirmActionMessage');
+  const btnEl = document.getElementById('confirmActionConfirmBtn');
+  if (!modalEl || !msgEl || !btnEl) { return onConfirm && onConfirm(); }
+  msgEl.textContent = message || 'Onaylıyor musunuz?';
+  const bs = bootstrap.Modal.getOrCreateInstance(modalEl);
+  btnEl.onclick = null;
+  btnEl.disabled = false;
+  btnEl.onclick = async () => {
+    try {
+      btnEl.disabled = true;
+      if (onConfirm) await onConfirm();
+      bs.hide();
+    } finally {
+      btnEl.disabled = false;
+    }
+  };
+  bs.show();
 }
 
 function restartDeployment(name, namespace) {
-  if (!confirm(`${namespace}/${name} Deployment'ını yeniden başlatmak istediğinizden emin misiniz?`)) return;
-  fetch('/k8s-explorer/restart-deployment', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, namespace })
-  }).then(async r => {
-    if (r.ok) {
-  alert('Deployment restart talebi gönderildi.');
-  // Refresh deployments, pods and overview so the UI reflects restarted pods immediately
-  if (typeof fetchAndRenderDeploymentsTable === 'function') fetchAndRenderDeploymentsTable();
-  if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
-  if (typeof loadOverviewData === 'function') loadOverviewData();
-    } else {
-      const txt = await r.text();
-      alert('Restart başarısız: ' + txt);
+  openConfirmActionModal(`${namespace}/${name} Deployment'ını yeniden başlatmak istiyor musunuz?`, async () => {
+    try {
+      const r = await fetch('/k8s-explorer/restart-deployment', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, namespace })
+      });
+      if (r.ok) {
+        showToast('İşleminiz başarılı şekilde yapıldı', 'success');
+        if (typeof fetchAndRenderDeploymentsTable === 'function') fetchAndRenderDeploymentsTable();
+        if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
+        if (typeof loadOverviewData === 'function') loadOverviewData();
+      } else {
+        const txt = await r.text();
+        showToast('Restart başarısız: ' + txt, 'danger');
+      }
+    } catch (e) {
+      showToast('Restart isteği başarısız: ' + e, 'danger');
     }
-  }).catch(e => alert('Restart isteği başarısız: ' + e));
+  });
 }
 
 // Pod actions: properties modal and restart
@@ -1713,89 +2123,190 @@ function showPodProperties(name, namespace) {
   if (!document.body.contains(modalEl)) document.body.appendChild(modalEl);
   const bs = bootstrap.Modal.getOrCreateInstance(modalEl);
   bs.show();
-  fetch(`/k8s-explorer/pod-properties?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`)
-    .then(r => r.json())
+  fetchJsonWithTimeout(`/k8s-explorer/pod-properties?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`, {}, 10000)
     .then(data => {
       if (data.error) {
         body.innerHTML = `<div class="text-danger">Properties alınamadı: ${data.error}</div>`;
         return;
       }
-      body.innerHTML = `<pre style="white-space:pre-wrap;">${JSON.stringify(data, null, 2)}</pre>`;
+      // Build a compact resources table (per-container requests/limits)
+      let resHtml = '';
+      if (Array.isArray(data.containers)) {
+        const rows = data.containers.map(c => {
+          const r = (c.resources && c.resources.requests) || {};
+          const l = (c.resources && c.resources.limits) || {};
+          const rCpu = r.cpu || '-';
+          const rMem = r.memory || '-';
+          const lCpu = l.cpu || '-';
+          const lMem = l.memory || '-';
+          return `<tr><td><code>${c.name}</code></td><td>${rCpu}</td><td>${rMem}</td><td>${lCpu}</td><td>${lMem}</td></tr>`;
+        }).join('');
+        resHtml = `
+          <div class="table-responsive mb-3">
+            <table class="table table-sm table-striped align-middle">
+              <thead>
+                <tr>
+                  <th>Container</th>
+                  <th>Req CPU</th>
+                  <th>Req Mem</th>
+                  <th>Limit CPU</th>
+                  <th>Limit Mem</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>`;
+      }
+      body.innerHTML = `${resHtml}<pre style="white-space:pre-wrap;">${JSON.stringify(data, null, 2)}</pre>`;
+      // Fetch and render metrics beneath
+      const chartDiv = document.getElementById('podResourceChart');
+      if (chartDiv) {
+        chartDiv.innerHTML = '<div class="d-flex align-items-center text-muted"><div class="loading-spinner me-2"></div>Metrikler yükleniyor...</div>';
+  fetchJsonWithTimeout(`/k8s-explorer/pod-metrics?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`, {}, 10000)
+          .then(m=>{
+            if (m.error) {
+              chartDiv.innerHTML = `<div class="text-danger">Metrikler alınamadı: ${m.error}</div>`;
+              return;
+            }
+            const cpu = (m.cpu_mcores||0);
+            const memBytes = (m.memory_bytes||0);
+            const memMB = (memBytes/1024/1024).toFixed(1);
+            const src = m.source||'none';
+            const endpoint = m.endpoint ? ` <small class=\"text-muted\">(${m.endpoint})</small>` : '';
+            let contHtml = '';
+            if (Array.isArray(m.containers) && m.containers.length) {
+              contHtml = '<div class=\"mt-2\"><strong>Containerlar:</strong><ul class=\"mb-0\">' + m.containers.map(c=>{
+                const mb = ((c.memory_bytes || 0) / 1024 / 1024);
+                return `<li><code>${c.name}</code>: CPU ${c.cpu_mcores||0}m, Mem ${mb.toFixed(1)} MB</li>`;
+              }).join('') + '</ul></div>';
+            }
+            chartDiv.innerHTML = `
+              <div class="row g-3">
+                <div class="col-sm-4">
+                  <div class="metric-card">
+                    <div class="metric-number">${cpu}m</div>
+                    <div class="metric-label">CPU</div>
+                  </div>
+                </div>
+                <div class="col-sm-4">
+                  <div class="metric-card">
+                    <div class="metric-number">${memMB} MB</div>
+                    <div class="metric-label">Memory</div>
+                  </div>
+                </div>
+                <div class="col-sm-4">
+                  <div class="metric-card">
+                    <div class=\"metric-number\">${src}${endpoint}</div>
+                    <div class="metric-label">Kaynak</div>
+                  </div>
+                </div>
+              </div>
+              ${contHtml}
+            `;
+          })
+          .catch(e=>{
+            const msg = (''+e).includes('AbortError') ? 'İstek zaman aşımına uğradı (10s). Ağ/erişim ayarlarını kontrol edin ve tekrar deneyin.' : (''+e);
+            chartDiv.innerHTML = `<div class=\"alert alert-warning\">Metrikler alınırken hata: ${msg} <button class=\"btn btn-sm btn-outline-secondary ms-2\" onclick=\"showPodProperties('${name}','${namespace}')\">Tekrar Dene</button></div>`;
+          });
+      }
     }).catch(e => {
       body.innerHTML = `<div class="text-danger">Properties alınırken hata oluştu: ${e}</div>`;
     });
 }
 
 function restartPod(name, namespace) {
-  if (!confirm(`${namespace}/${name} podunu yeniden başlatmak istediğinize emin misiniz?`)) return;
-  fetch('/k8s-explorer/restart-pod', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, namespace })
-  }).then(async r => {
-    if (r.ok) {
-      alert('Pod restart edildi (silme talebi gönderildi).');
-      if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
-    } else {
-      const txt = await r.text();
-      alert('Restart başarısız: ' + txt);
+  openConfirmActionModal(`${namespace}/${name} podunu yeniden başlatmak istiyor musunuz?`, async () => {
+    try {
+      const r = await fetch('/k8s-explorer/restart-pod', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, namespace })
+      });
+      if (r.ok) {
+        showToast('İşleminiz başarılı şekilde yapıldı', 'success');
+        if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
+      } else {
+        const txt = await r.text();
+        showToast('Restart başarısız: ' + txt, 'danger');
+      }
+    } catch (e) {
+      showToast('Restart isteği başarısız: ' + e, 'danger');
     }
-  }).catch(e => alert('Restart isteği başarısız: ' + e));
+  });
 }
 
 function showScaleStatefulSetModal(name, namespace, replicas) {
-  const input = prompt(`${namespace}/${name} için yeni replica sayısını girin:`, replicas);
-  if (input === null) return; // canceled
-  const newReplicas = parseInt(input);
-  if (isNaN(newReplicas) || newReplicas < 0) { alert('Geçerli bir sayı girin'); return; }
-  fetch('/k8s-explorer/scale-statefulset', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, namespace, replicas: newReplicas })
-  }).then(async r => {
-    if (r.ok) {
-      alert('StatefulSet replica sayısı güncellendi.');
-      if (typeof fetchAndRenderStatefulSetsTable === 'function') fetchAndRenderStatefulSetsTable();
-      if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
-      if (typeof loadOverviewData === 'function') loadOverviewData();
-    } else {
-      const txt = await r.text();
-      alert('Scale başarısız: ' + txt);
+  const modalEl = document.getElementById('scaleStatefulSetModal');
+  const labelEl = document.getElementById('scaleStatefulSetModalLabel');
+  const nameEl = document.getElementById('scaleStatefulSetName');
+  const inputEl = document.getElementById('scaleStatefulSetReplicasInput');
+  const saveBtn = document.getElementById('scaleStatefulSetSaveBtn');
+  if (!modalEl || !labelEl || !nameEl || !inputEl || !saveBtn) {
+    alert('Scale modal bulunamadı.');
+    return;
+  }
+  labelEl.textContent = 'StatefulSet Scale';
+  nameEl.textContent = `${namespace}/${name}`;
+  inputEl.value = (typeof replicas === 'number' ? replicas : (parseInt(replicas) || 0));
+
+  saveBtn.onclick = async () => {
+    const val = parseInt(inputEl.value);
+    if (isNaN(val) || val < 0) { return showToast('Geçerli bir sayı girin', 'warning'); }
+    try {
+      saveBtn.disabled = true;
+      const r = await fetch('/k8s-explorer/scale-statefulset', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, namespace, replicas: val })
+      });
+      if (r.ok) {
+        bootstrap.Modal.getOrCreateInstance(modalEl).hide();
+        showToast('İşleminiz başarılı şekilde yapıldı', 'success');
+        if (typeof fetchAndRenderStatefulSetsTable === 'function') fetchAndRenderStatefulSetsTable();
+        if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
+        if (typeof loadOverviewData === 'function') loadOverviewData();
+      } else {
+        const txt = await r.text();
+        showToast('Scale başarısız: ' + txt, 'danger');
+      }
+    } catch (e) {
+      showToast('Scale isteği başarısız: ' + e, 'danger');
+    } finally {
+      saveBtn.disabled = false;
     }
-  }).catch(e => alert('Scale isteği başarısız: ' + e));
+  };
+
+  if (!document.body.contains(modalEl)) document.body.appendChild(modalEl);
+  bootstrap.Modal.getOrCreateInstance(modalEl).show();
 }
 
 function deleteReplicaSet(name, namespace) {
-  if (!confirm(`${namespace}/${name} ReplicaSet'ini silmek istediğinizden emin misiniz?`)) return;
-  // Call backend bulk delete endpoint with a single item
-  fetch('/k8s-explorer/delete-replicasets', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ items: [{ namespace: namespace, name: name }] })
-  }).then(async r => {
-    let txt = '';
-    try { txt = await r.text(); } catch(e){ txt = '' + e; }
-    if (!r.ok && r.status !== 207) {
-      alert('Delete başarısız: ' + txt);
-      return;
+  openConfirmActionModal(`${namespace}/${name} ReplicaSet'ini silmek istiyor musunuz?`, async () => {
+    try {
+      const r = await fetch('/k8s-explorer/delete-replicasets', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: [{ namespace, name }] })
+      });
+      let txt = '';
+      try { txt = await r.text(); } catch(e) { txt = '' + e; }
+      if (!r.ok && r.status !== 207) {
+        return showToast('Delete başarısız: ' + txt, 'danger');
+      }
+      let json = {};
+      try { json = JSON.parse(txt || '{}'); } catch(e) { json = { deleted: [], errors: [{ error: txt }] }; }
+      const deleted = json.deleted || [];
+      const errors = json.errors || [];
+      if (deleted.length > 0) {
+        showToast(`ReplicaSet silindi: ${name} (ns: ${namespace})`, 'success');
+      }
+      if (errors.length > 0) {
+        console.warn('Delete errors:', errors);
+        showToast('Bazı hatalar oluştu. Konsolu kontrol edin.', 'warning');
+      }
+      if (typeof fetchAndRenderReplicaSetsTable === 'function') fetchAndRenderReplicaSetsTable();
+      if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
+      if (typeof loadOverviewData === 'function') loadOverviewData();
+    } catch (e) {
+      showToast('Delete isteği başarısız: ' + e, 'danger');
     }
-    let json = {};
-    try { json = JSON.parse(txt || '{}'); } catch(e) { json = { deleted: [], errors: [{ error: txt }] }; }
-    const deleted = json.deleted || [];
-    const errors = json.errors || [];
-    if (deleted.length > 0) {
-      alert(`ReplicaSet silindi: ${name} (ns: ${namespace})`);
-    }
-    if (errors.length > 0) {
-      console.warn('Delete errors:', errors);
-      alert('Bazı hatalar oluştu. Konsolu kontrol edin.');
-    }
-    // Refresh UI
-    if (typeof fetchAndRenderReplicaSetsTable === 'function') fetchAndRenderReplicaSetsTable();
-    if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
-    if (typeof loadOverviewData === 'function') loadOverviewData();
-  }).catch(e => {
-    alert('Delete isteği başarısız: ' + e);
   });
 }
 
@@ -1846,4 +2357,4 @@ function updateDeploymentsPieChart(deployments, containerId) {
 </script>
 <!-- Added missing endblock tag to close the content block -->
 {% endblock %}
-</html>
+ 

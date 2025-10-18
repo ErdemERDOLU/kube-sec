@@ -741,9 +741,19 @@
       <div class="col-12">
         <div class="workload-card">
           <div class="card-header text-white" style="background: var(--success-gradient);">
-            <h5 class="mb-0 fw-bold">
-              <i class="bi bi-box me-2"></i>Pods Listesi
-            </h5>
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="mb-0 fw-bold">
+                <i class="bi bi-box me-2"></i>Pods Listesi
+              </h5>
+              <div class="d-flex align-items-center gap-2">
+                <select id="podsNamespaceFilter" class="form-select form-select-sm" style="width:200px;">
+                  <option value="">Tüm Namespace'ler</option>
+                </select>
+                <button class="btn btn-outline-light btn-sm" onclick="fetchAndRenderPodsTable(true)">
+                  <i class="bi bi-arrow-clockwise me-1"></i>Yenile
+                </button>
+              </div>
+            </div>
           </div>
           <div class="card-body p-0">
             <div id="pods-table-container">
@@ -778,9 +788,19 @@
       <div class="col-12">
         <div class="workload-card">
           <div class="card-header text-white" style="background: var(--primary-gradient);">
-            <h5 class="mb-0 fw-bold">
-              <i class="bi bi-arrow-repeat me-2"></i>Deployments Listesi
-            </h5>
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="mb-0 fw-bold">
+                <i class="bi bi-arrow-repeat me-2"></i>Deployments Listesi
+              </h5>
+              <div class="d-flex align-items-center gap-2">
+                <select id="deploymentsNamespaceFilter" class="form-select form-select-sm" style="width:200px;">
+                  <option value="">Tüm Namespace'ler</option>
+                </select>
+                <button class="btn btn-outline-light btn-sm" onclick="fetchAndRenderDeploymentsTable(true)">
+                  <i class="bi bi-arrow-clockwise me-1"></i>Yenile
+                </button>
+              </div>
+            </div>
           </div>
           <div class="card-body p-0">
             <div id="deployments-table-container">
@@ -1151,13 +1171,26 @@ function handleTabChange(tabId) {
   }
 }
 
-async function fetchAndRenderPodsTable() {
+async function fetchAndRenderPodsTable(forceRefresh = false) {
   const container = document.getElementById('pods-table-container');
   container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Pod listesi yükleniyor...</span></div>';
   
   try {
-  const data = await fetchJsonWithTimeout('/k8s-explorer/pods-summary', {}, 10000);
-    const pods = data.pods || [];
+    // Always fetch fresh server data when explicitly refreshed or first load
+    const data = await fetchJsonWithTimeout('/k8s-explorer/pods-summary', {}, 10000);
+    let pods = data.pods || [];
+    // Populate namespace filter once
+    const nsFilter = document.getElementById('podsNamespaceFilter');
+    if (nsFilter && !nsFilter.dataset.filled) {
+      const namespaces = [...new Set(pods.map(p => p.namespace))].sort();
+      nsFilter.innerHTML = '<option value="">Tüm Namespace\'ler</option>' + namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
+      nsFilter.dataset.filled = '1';
+      nsFilter.addEventListener('change', () => fetchAndRenderPodsTable());
+    }
+    // Apply client-side filter if any
+    if (nsFilter && nsFilter.value) {
+      pods = pods.filter(p => p.namespace === nsFilter.value);
+    }
     
     if (pods.length === 0) {
       container.innerHTML = '<div class="empty-state"><i class="bi bi-box"></i><h5>Pod Bulunamadı</h5><p class="text-muted">Cluster\'da hiç Pod bulunmuyor.</p></div>';
@@ -1210,7 +1243,7 @@ async function fetchAndRenderPodsTable() {
     
     html += '</tbody></table></div>';
     container.innerHTML = html;
-    // Attach sorting handlers
+  // Attach sorting handlers
     setupPodsTableSorting();
     // Fetch metrics for rows (limited concurrency)
     fetchMetricsForPods(pods);
@@ -1310,13 +1343,24 @@ async function fetchMetricsForPods(pods) {
   await Promise.all(workers);
 }
 
-async function fetchAndRenderDeploymentsTable() {
+async function fetchAndRenderDeploymentsTable(forceRefresh = false) {
   const container = document.getElementById('deployments-table-container');
   container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Deployment listesi yükleniyor...</span></div>';
   
   try {
-  const data = await fetchJsonWithTimeout('/k8s-explorer/deployments-summary', {}, 10000);
-    const deployments = data.deployments || [];
+    const data = await fetchJsonWithTimeout('/k8s-explorer/deployments-summary', {}, 10000);
+    let deployments = data.deployments || [];
+    // Populate namespace filter once
+    const nsFilter = document.getElementById('deploymentsNamespaceFilter');
+    if (nsFilter && !nsFilter.dataset.filled) {
+      const namespaces = [...new Set(deployments.map(d => d.namespace))].sort();
+      nsFilter.innerHTML = '<option value="">Tüm Namespace\'ler</option>' + namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
+      nsFilter.dataset.filled = '1';
+      nsFilter.addEventListener('change', () => fetchAndRenderDeploymentsTable());
+    }
+    if (nsFilter && nsFilter.value) {
+      deployments = deployments.filter(d => d.namespace === nsFilter.value);
+    }
     
     if (deployments.length === 0) {
       container.innerHTML = '<div class="empty-state"><i class="bi bi-arrow-repeat"></i><h5>Deployment Bulunamadı</h5><p class="text-muted">Cluster\'da hiç Deployment bulunmuyor.</p></div>';

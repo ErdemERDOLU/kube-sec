@@ -90,6 +90,7 @@ I18N = {
     'nav.cmsecrets': {'tr': 'ConfigMap Gizli Bilgi', 'en': 'ConfigMap Secret Data'},
     'nav.yamllint': {'tr': 'YAML Linter', 'en': 'YAML Linter'},
     'nav.trivy': {'tr': 'Harbor Trivy Sonuçları', 'en': 'Harbor Trivy Results'},
+    'nav.trivyoperator': {'tr': 'Trivy Operator Raporları', 'en': 'Trivy Operator Reports'},
     'nav.explorer': {'tr': 'Kubernetes Explorer', 'en': 'Kubernetes Explorer'},
     'nav.nodes': {'tr': "Node's", 'en': 'Nodes'},
     'nav.workloads': {'tr': 'Workloads', 'en': 'Workloads'},
@@ -3836,6 +3837,373 @@ def harbor_trivy_api():
         harbor_trivy_cache[cache_key] = response
         harbor_trivy_cache_time[cache_key] = now
         return jsonify(response)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ---- Trivy Operator: Install, Status, Reports ----
+@app.route('/trivy-operator')
+def trivy_operator_page():
+    return render_template('trivy_operator.html')
+
+def _run_cmd(cmd, timeout=120):
+    try:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        out, err = proc.communicate(timeout=timeout)
+        return proc.returncode, out, err
+    except subprocess.TimeoutExpired:
+        return 124, '', 'timeout'
+    except Exception as e:
+        return 1, '', str(e)
+
+def _kubectl_base_args():
+    args = ["kubectl"]
+    try:
+        kc = get_active_kubeconfig_path()
+        if kc:
+            args += ["--kubeconfig", kc]
+    except Exception:
+        pass
+    return args
+
+@app.route('/trivy-operator/status')
+def trivy_operator_status():
+    try:
+        # Load kube config and relax SSL verification to avoid false negatives on self-signed clusters
+        load_kube_config_active()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+
+        # Clients
+        apps_api = client.AppsV1Api()
+        core_api = client.CoreV1Api()
+        status = {
+            'installed': False,
+            'namespace': None,
+            'deployment_ready': False
+        }
+
+        # 1) Try detect CRD presence (helps decide if operator was installed at least once)
+        crd_present = False
+        try:
+            api_ext = client.ApiextensionsV1Api()
+            _ = api_ext.read_custom_resource_definition('vulnerabilityreports.aquasecurity.github.io')
+            crd_present = True
+        except Exception:
+            crd_present = False
+
+        # 2) Check default namespace first
+        found_ns = None
+        try:
+            ns_obj = core_api.read_namespace('trivy-system')
+            if ns_obj:
+                found_ns = 'trivy-system'
+        except Exception:
+            # namespace may be customized; continue with cluster-wide discovery
+            pass
+
+        # 3) Try to find the operator Deployment either in found_ns or cluster-wide
+        operator_dep = None
+        if found_ns:
+            try:
+                operator_dep = apps_api.read_namespaced_deployment('trivy-operator', found_ns)
+            except Exception:
+                operator_dep = None
+        if not operator_dep:
+            # Fallback: list all deployments and find by name or known labels
+            try:
+                for dep in apps_api.list_deployment_for_all_namespaces().items:
+                    name = getattr(dep.metadata, 'name', '') or ''
+                    labels = getattr(dep.metadata, 'labels', {}) or {}
+                    if (
+                        name == 'trivy-operator' or
+                        labels.get('app.kubernetes.io/name') == 'trivy-operator' or
+                        labels.get('name') == 'trivy-operator'
+                    ):
+                        operator_dep = dep
+                        found_ns = getattr(dep.metadata, 'namespace', None)
+                        break
+            except Exception:
+                pass
+
+        # 4) Compute readiness and installation flags
+        if operator_dep:
+            ready = False
+            try:
+                # Prefer Available condition
+                for cond in (getattr(operator_dep.status, 'conditions', []) or []):
+                    if getattr(cond, 'type', '') == 'Available' and getattr(cond, 'status', '') == 'True':
+                        ready = True
+                        break
+                # Fallback: availableReplicas >= 1
+                if not ready:
+                    avail = getattr(operator_dep.status, 'available_replicas', 0) or 0
+                    ready = avail >= 1
+            except Exception:
+                ready = False
+            status['namespace'] = found_ns
+            status['deployment_ready'] = ready
+            status['installed'] = True
+        else:
+            # No deployment found; still consider installed if CRD exists
+            status['installed'] = bool(crd_present)
+            status['namespace'] = found_ns or 'trivy-system'
+            status['deployment_ready'] = False
+
+        # Optional debugging hints for UI (ignored if not used)
+        status['crd_present'] = crd_present
+        return jsonify(status)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/trivy-operator/install', methods=['POST'])
+def trivy_operator_install():
+    """Install Trivy Operator via helm if available, else apply static manifest."""
+    try:
+        data = request.get_json(silent=True) or {}
+        use_helm = data.get('use_helm', True)
+        version = data.get('version')  # e.g. 0.31.0
+
+        # Ensure kubeconfig
+        _ = get_active_kubeconfig_path()
+
+        if use_helm:
+            # helm repo add/update, then install
+            cmds = []
+            base = []
+            kc = get_active_kubeconfig_path()
+            if kc:
+                base = ["--kubeconfig", kc]
+            cmds.append(["helm", "repo", "add", "aqua", "https://aquasecurity.github.io/helm-charts/"])
+            cmds.append(["helm", "repo", "update"])
+            install_cmd = ["helm", "upgrade", "--install", "trivy-operator", "aqua/trivy-operator", "-n", "trivy-system", "--create-namespace"]
+            if version:
+                install_cmd += ["--version", str(version)]
+            # helm doesn’t support --kubeconfig directly; set env KUBECONFIG
+            env = os.environ.copy()
+            if kc:
+                env['KUBECONFIG'] = kc
+            for c in cmds:
+                code, out, err = _run_cmd(c, timeout=90)
+                if code != 0:
+                    return jsonify({'error': f'helm error: {err or out}', 'cmd': c}), 500
+            code, out, err = _run_cmd(install_cmd, timeout=300)
+            if code != 0:
+                return jsonify({'error': f'helm install error: {err or out}', 'cmd': install_cmd}), 500
+            return jsonify({'ok': True, 'method': 'helm', 'output': out})
+        else:
+            # Fallback to static manifest apply from GitHub raw (requires network on client)
+            # Prefer kubectl apply -f with local cached path if exists under yaml/
+            manifest_path = os.path.join(os.path.dirname(__file__), '..', '..', 'yaml', 'trivy-operator.yaml')
+            if not os.path.exists(manifest_path):
+                # Try to apply remote manifest url via kubectl
+                url = 'https://raw.githubusercontent.com/aquasecurity/trivy-operator/main/deploy/static/trivy-operator.yaml'
+                cmd = _kubectl_base_args() + ["apply", "-f", url]
+                code, out, err = _run_cmd(cmd, timeout=300)
+                if code != 0:
+                    return jsonify({'error': f'kubectl apply failed: {err or out}'}), 500
+                return jsonify({'ok': True, 'method': 'kubectl-url', 'output': out})
+            else:
+                cmd = _kubectl_base_args() + ["apply", "-f", manifest_path]
+                code, out, err = _run_cmd(cmd, timeout=300)
+                if code != 0:
+                    return jsonify({'error': f'kubectl apply failed: {err or out}'}), 500
+                return jsonify({'ok': True, 'method': 'kubectl-file', 'output': out})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/trivy-operator/list-vulnerabilityreports')
+def list_vulnerability_reports():
+    """List VulnerabilityReport CRs across namespaces or a specific namespace."""
+    try:
+        namespace = request.args.get('namespace')  # optional
+        load_kube_config_active()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        co = client.CustomObjectsApi()
+        group = 'aquasecurity.github.io'
+        version = 'v1alpha1'
+        plural = 'vulnerabilityreports'
+        if namespace and namespace.strip() and namespace != '-A':
+            resp = co.list_namespaced_custom_object(group, version, namespace.strip(), plural)
+        else:
+            resp = co.list_cluster_custom_object(group, version, f'cluster{plural}') if False else None
+            # Fallback: iterate all namespaces when cluster list not available for namespaced resource
+            core = client.CoreV1Api()
+            ns_list = [ns.metadata.name for ns in core.list_namespace().items]
+            items = []
+            for ns in ns_list:
+                try:
+                    r = co.list_namespaced_custom_object(group, version, ns, plural)
+                    items.extend(r.get('items', []))
+                except Exception:
+                    continue
+            resp = {'items': items}
+
+        out = []
+        for it in resp.get('items', []):
+            md = it.get('metadata', {})
+            rep = it.get('report', {})
+            sumry = rep.get('summary', {})
+            art = rep.get('artifact', {})
+            out.append({
+                'name': md.get('name'),
+                'namespace': md.get('namespace'),
+                'repository': art.get('repository'),
+                'tag': art.get('tag'),
+                'scanner': (rep.get('scanner') or {}).get('name'),
+                'summary': {
+                    'critical': sumry.get('criticalCount'),
+                    'high': sumry.get('highCount'),
+                    'medium': sumry.get('mediumCount'),
+                    'low': sumry.get('lowCount'),
+                    'unknown': sumry.get('unknownCount'),
+                },
+                'updateTimestamp': rep.get('updateTimestamp'),
+            })
+        return jsonify({'items': out})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/trivy-operator/scan', methods=['POST'])
+def trivy_operator_scan():
+    """Trigger on-demand scan by annotating workloads with trivy-operator scan annotation.
+    Body: { namespace?: str, target?: 'all'|'workload', kind?: str, name?: str }
+    """
+    try:
+        data = request.get_json(force=True) or {}
+        namespace = data.get('namespace')
+        target = data.get('target') or 'all'
+        kind = (data.get('kind') or '').lower()
+        name = data.get('name')
+
+        load_kube_config_active()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+
+        anno = {
+            'trivy-operator.aquasecurity.github.io/scan': 'true',
+            'trivy-operator.aquasecurity.github.io/scan-ts': datetime.utcnow().isoformat() + 'Z'
+        }
+
+        patched = []
+        errors = []
+
+        def patch_meta(obj_kind, ns, nm):
+            try:
+                if obj_kind == 'deployment':
+                    api = client.AppsV1Api()
+                    api.patch_namespaced_deployment(nm, ns, {'metadata': {'annotations': anno}})
+                elif obj_kind == 'statefulset':
+                    api = client.AppsV1Api()
+                    api.patch_namespaced_stateful_set(nm, ns, {'metadata': {'annotations': anno}})
+                elif obj_kind == 'daemonset':
+                    api = client.AppsV1Api()
+                    api.patch_namespaced_daemon_set(nm, ns, {'metadata': {'annotations': anno}})
+                elif obj_kind == 'replicaset':
+                    api = client.AppsV1Api()
+                    api.patch_namespaced_replica_set(nm, ns, {'metadata': {'annotations': anno}})
+                elif obj_kind == 'job':
+                    api = client.BatchV1Api()
+                    api.patch_namespaced_job(nm, ns, {'metadata': {'annotations': anno}})
+                elif obj_kind == 'cronjob':
+                    api = client.BatchV1Api()
+                    api.patch_namespaced_cron_job(nm, ns, {'metadata': {'annotations': anno}})
+                elif obj_kind == 'pod':
+                    api = client.CoreV1Api()
+                    api.patch_namespaced_pod(nm, ns, {'metadata': {'annotations': anno}})
+                elif obj_kind in ('replicationcontroller', 'rc'):
+                    api = client.CoreV1Api()
+                    api.patch_namespaced_replication_controller(nm, ns, {'metadata': {'annotations': anno}})
+                else:
+                    raise ValueError(f'Unsupported kind: {obj_kind}')
+                patched.append({'kind': obj_kind, 'namespace': ns, 'name': nm})
+            except Exception as e:
+                errors.append({'kind': obj_kind, 'namespace': ns, 'name': nm, 'error': str(e)})
+
+        def list_and_patch_all_in_ns(ns):
+            apps = client.AppsV1Api()
+            batch = client.BatchV1Api()
+            corev1 = client.CoreV1Api()
+            # deployments
+            for d in apps.list_namespaced_deployment(ns).items:
+                patch_meta('deployment', ns, d.metadata.name)
+            # statefulsets
+            for s in apps.list_namespaced_stateful_set(ns).items:
+                patch_meta('statefulset', ns, s.metadata.name)
+            # daemonsets
+            for ds in apps.list_namespaced_daemon_set(ns).items:
+                patch_meta('daemonset', ns, ds.metadata.name)
+            # jobs
+            for j in batch.list_namespaced_job(ns).items:
+                patch_meta('job', ns, j.metadata.name)
+            # cronjobs
+            for cj in batch.list_namespaced_cron_job(ns).items:
+                patch_meta('cronjob', ns, cj.metadata.name)
+            # pods
+            for p in corev1.list_namespaced_pod(ns).items:
+                patch_meta('pod', ns, p.metadata.name)
+
+        if target == 'workload' and kind and name and namespace:
+            patch_meta(kind, namespace, name)
+        else:
+            # all in namespace (or across all namespaces if none given)
+            if namespace:
+                list_and_patch_all_in_ns(namespace)
+            else:
+                core = client.CoreV1Api()
+                for ns in [n.metadata.name for n in core.list_namespace().items]:
+                    list_and_patch_all_in_ns(ns)
+
+        return jsonify({'ok': True, 'patched': patched, 'errors': errors})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/trivy-operator/get-vulnerabilityreport')
+def get_vulnerability_report():
+    """Get a single VulnerabilityReport with vulnerabilities for a specific namespace/name."""
+    try:
+        namespace = request.args.get('namespace')
+        name = request.args.get('name')
+        if not namespace or not name:
+            return jsonify({'error': 'namespace and name are required'}), 400
+        load_kube_config_active()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        co = client.CustomObjectsApi()
+        group = 'aquasecurity.github.io'
+        version = 'v1alpha1'
+        plural = 'vulnerabilityreports'
+        obj = co.get_namespaced_custom_object(group, version, namespace, plural, name)
+        rep = obj.get('report') or {}
+        vulns = rep.get('vulnerabilities') or []
+        # Normalize fields commonly used on UI
+        items = []
+        for v in vulns:
+            items.append({
+                'vulnerabilityID': v.get('vulnerabilityID') or v.get('id'),
+                'title': v.get('title'),
+                'severity': v.get('severity'),
+                'resource': v.get('resource'),
+                'installedVersion': v.get('installedVersion'),
+                'fixedVersion': v.get('fixedVersion'),
+                'score': v.get('score') or (v.get('cvss') or {}).get('V3Score') or (v.get('cvss') or {}).get('V2Score'),
+                'primaryLink': v.get('primaryLink') or (v.get('links')[0] if isinstance(v.get('links'), list) and v.get('links') else None),
+                'target': v.get('target'),
+            })
+        return jsonify({'name': name, 'namespace': namespace, 'vulnerabilities': items})
+    except ApiException as e:
+        try:
+            return jsonify({'error': e.body}), e.status
+        except Exception:
+            return jsonify({'error': str(e)}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

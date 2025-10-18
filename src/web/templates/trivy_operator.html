@@ -1,0 +1,770 @@
+{% extends "base.html" %}
+{% block title %}Trivy Operator Reports{% endblock %}
+{% block page_title %}Trivy Operator Security Dashboard{% endblock %}
+{% block content %}
+
+<style>
+  /* Enhanced styling that matches the existing Bootstrap theme */
+  .trivy-header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #1d4ed8 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 1rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 8px 30px rgba(37, 99, 235, 0.2);
+  }
+  
+  .trivy-header h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+  
+  .trivy-header p {
+    opacity: 0.95;
+    margin-bottom: 0;
+    font-size: 1rem;
+  }
+  
+  .control-card {
+    background: white;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    margin-bottom: 2rem;
+  }
+  
+  .control-row {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  
+  .btn-install {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #1d4ed8 100%);
+    border: none;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  }
+  
+  .btn-install:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
+  }
+  
+  .btn-refresh {
+    background: white;
+    border: 2px solid var(--secondary-color);
+    color: var(--secondary-color);
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+  }
+  
+  .btn-refresh:hover {
+    background: var(--secondary-color);
+    color: white;
+    transform: translateY(-2px);
+  }
+  
+  .btn-action {
+    background: linear-gradient(135deg, var(--success-color) 0%, #047857 100%);
+    border: none;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+  }
+  
+  .btn-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(5, 150, 105, 0.4);
+  }
+  
+  .select-namespace {
+    border: 2px solid #e2e8f0;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    min-width: 200px;
+    transition: all 0.3s ease;
+    font-weight: 500;
+  }
+  
+  .select-namespace:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+  
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: linear-gradient(135deg, rgba(5, 150, 105, 0.1) 0%, rgba(4, 120, 87, 0.1) 100%);
+    border: 2px solid var(--success-color);
+    border-radius: 0.75rem;
+    color: var(--success-color);
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  
+  .status-badge::before {
+    content: '';
+    width: 10px;
+    height: 10px;
+    background: var(--success-color);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.9); }
+  }
+  
+  .install-output {
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    margin-top: 1rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    color: var(--success-color);
+    white-space: pre-wrap;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .stat-card {
+    background: white;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+  }
+  
+  .stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.12);
+    border-color: var(--primary-color);
+  }
+  
+  .stat-label {
+    color: var(--secondary-color);
+    font-size: 0.875rem;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+  }
+  
+  .stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--dark-color);
+  }
+  
+  .stat-card-critical .stat-value {
+    color: var(--danger-color);
+  }
+  
+  .stat-card-high .stat-value {
+    color: var(--warning-color);
+  }
+  
+  .stat-card-medium .stat-value {
+    color: #eab308;
+  }
+  
+  .table-card {
+    background: white;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+  }
+  
+  .table-modern {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 0;
+  }
+  
+  .table-modern thead th {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #1d4ed8 100%);
+    color: white;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    padding: 1rem;
+    border: none;
+    text-align: left;
+  }
+  
+  .table-modern thead th:first-child {
+    border-top-left-radius: 0.75rem;
+  }
+  
+  .table-modern thead th:last-child {
+    border-top-right-radius: 0.75rem;
+  }
+  
+  .table-modern tbody tr {
+    border-bottom: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+  }
+  
+  .table-modern tbody tr:hover {
+    background: #f8fafc;
+  }
+  
+  .table-modern tbody tr:last-child {
+    border-bottom: none;
+  }
+  
+  .table-modern tbody td {
+    padding: 1rem;
+    color: var(--dark-color);
+    font-size: 0.875rem;
+  }
+  
+  .severity-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 45px;
+    padding: 0.375rem 0.875rem;
+    border-radius: 0.5rem;
+    font-weight: 700;
+    font-size: 0.875rem;
+  cursor: pointer;
+  }
+  
+  .severity-critical {
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.15) 0%, rgba(185, 28, 28, 0.15) 100%);
+    color: var(--danger-color);
+    border: 2px solid var(--danger-color);
+  }
+  
+  .severity-high {
+    background: linear-gradient(135deg, rgba(217, 119, 6, 0.15) 0%, rgba(180, 83, 9, 0.15) 100%);
+    color: var(--warning-color);
+    border: 2px solid var(--warning-color);
+  }
+  
+  .severity-medium {
+    background: linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(202, 138, 4, 0.15) 100%);
+    color: #eab308;
+    border: 2px solid #eab308;
+  }
+  
+  .severity-low {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(29, 78, 216, 0.15) 100%);
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+  }
+  
+  .severity-unknown {
+    background: linear-gradient(135deg, rgba(100, 116, 139, 0.15) 0%, rgba(71, 85, 105, 0.15) 100%);
+    color: var(--secondary-color);
+    border: 2px solid var(--secondary-color);
+  }
+  
+  .alert-modern {
+    padding: 1.25rem 1.5rem;
+    border-radius: 0.75rem;
+    margin: 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 500;
+  }
+  
+  .alert-info {
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(29, 78, 216, 0.1) 100%);
+    border: 2px solid var(--primary-color);
+    color: var(--primary-color);
+  }
+  
+  .alert-danger {
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.1) 0%, rgba(185, 28, 28, 0.1) 100%);
+    border: 2px solid var(--danger-color);
+    color: var(--danger-color);
+  }
+  
+  .pagination-modern {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-top: 1.5rem;
+  }
+  
+  .page-btn {
+    background: white;
+    border: 2px solid #e2e8f0;
+    color: var(--dark-color);
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 600;
+  }
+  
+  .page-btn:hover:not(.disabled) {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+  }
+  
+  .page-btn.active {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #1d4ed8 100%);
+    border-color: var(--primary-color);
+    color: white;
+  }
+  
+  .page-btn.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  
+  .loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(37, 99, 235, 0.3);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  .note-box {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-left: 4px solid var(--primary-color);
+    padding: 1rem 1.25rem;
+    border-radius: 0.5rem;
+    margin-top: 1.5rem;
+    font-size: 0.875rem;
+    color: var(--secondary-color);
+  }
+  
+  .note-box strong {
+    color: var(--dark-color);
+  }
+  
+  .note-box code {
+    background: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    color: var(--primary-color);
+    font-weight: 600;
+    border: 1px solid #e2e8f0;
+  }
+  
+  .repo-tag {
+    font-family: 'Courier New', monospace;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.1) 0%, rgba(29, 78, 216, 0.1) 100%);
+    padding: 0.25rem 0.625rem;
+    border-radius: 0.375rem;
+    color: var(--primary-color);
+    font-weight: 600;
+    border: 1px solid rgba(37, 99, 235, 0.2);
+  }
+  
+  .icon-wrapper {
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+</style>
+
+<!-- Beautiful header section with gradient background -->
+<div class="trivy-header">
+  <h2><i class="bi bi-shield-check me-2"></i>Trivy Operator Security Dashboard</h2>
+  <p>Real-time vulnerability scanning and security reports for your Kubernetes cluster</p>
+</div>
+
+<!-- Modern control panel with improved button styling -->
+<div class="control-card">
+  <div class="control-row">
+    <button id="btn-install" class="btn btn-install">
+      <i class="bi bi-download me-2"></i>Install Operator
+    </button>
+    <button id="btn-refresh" class="btn btn-refresh">
+      <i class="bi bi-arrow-clockwise me-2"></i>Refresh Status
+    </button>
+    <select id="ns-select" class="form-select select-namespace">
+      <option value="">All Namespaces</option>
+    </select>
+    <button id="btn-load" class="btn btn-action">
+      <i class="bi bi-file-earmark-text me-2"></i>Load Reports
+    </button>
+    <button id="btn-scan" class="btn btn-action">
+      <i class="bi bi-search me-2"></i>Start Scan
+    </button>
+    <span id="status-text" class="status-badge" style="display:none;"></span>
+  </div>
+  <div id="install-output" class="install-output" style="display:none;"></div>
+</div>
+
+<!-- Beautiful stats grid with hover effects -->
+<div class="stats-grid" id="stats-grid" style="display:none;">
+  <div class="stat-card">
+    <div class="stat-label"><i class="bi bi-file-earmark-text me-1"></i>Total Reports</div>
+    <div class="stat-value" id="stat-total">0</div>
+  </div>
+  <div class="stat-card stat-card-critical">
+    <div class="stat-label"><i class="bi bi-exclamation-triangle me-1"></i>Critical Issues</div>
+    <div class="stat-value" id="stat-critical">0</div>
+  </div>
+  <div class="stat-card stat-card-high">
+    <div class="stat-label"><i class="bi bi-exclamation-circle me-1"></i>High Severity</div>
+    <div class="stat-value" id="stat-high">0</div>
+  </div>
+  <div class="stat-card stat-card-medium">
+    <div class="stat-label"><i class="bi bi-info-circle me-1"></i>Medium Severity</div>
+    <div class="stat-value" id="stat-medium">0</div>
+  </div>
+</div>
+
+<!-- Modern table with gradient header and improved styling -->
+<div class="table-card">
+  <div class="table-responsive">
+    <table class="table table-modern" id="reports-table">
+      <thead>
+        <tr>
+          <th><i class="bi bi-folder me-1"></i>Namespace</th>
+          <th><i class="bi bi-box me-1"></i>Repository:Tag</th>
+          <th><i class="bi bi-search me-1"></i>Scanner</th>
+          <th><i class="bi bi-exclamation-triangle me-1"></i>Critical</th>
+          <th><i class="bi bi-exclamation-circle me-1"></i>High</th>
+          <th><i class="bi bi-info-circle me-1"></i>Medium</th>
+          <th><i class="bi bi-dash-circle me-1"></i>Low</th>
+          <th><i class="bi bi-question-circle me-1"></i>Unknown</th>
+          <th><i class="bi bi-clock me-1"></i>Last Updated</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  
+  <div id="no-data" class="alert-modern alert-info" style="display:none;">
+    <span class="icon-wrapper">
+      <i class="bi bi-info-circle-fill"></i>
+    </span>
+    <span>No vulnerability reports found. Try loading reports or starting a scan.</span>
+  </div>
+  
+  <div id="error" class="alert-modern alert-danger" style="display:none;">
+    <span class="icon-wrapper">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+    </span>
+    <span id="error-text"></span>
+  </div>
+  
+  <div id="loading" class="alert-modern alert-info" style="display:none;">
+    <span class="loading-spinner"></span>
+    <span>Loading vulnerability reports...</span>
+  </div>
+  
+  <div id="pager" class="pagination-modern"></div>
+  
+  <div class="note-box">
+    <strong><i class="bi bi-lightbulb me-1"></i>Note:</strong> For detailed CVE information, inspect the Custom Resource directly using:<br>
+    <code>kubectl get vulnerabilityreports.aquasecurity.github.io -A</code>
+  </div>
+</div>
+
+<!-- Modal: Vulnerability Details -->
+<div class="modal fade" id="vulnModal" tabindex="-1" aria-labelledby="vulnModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="vulnModalLabel"><i class="bi bi-bug me-2"></i>Vulnerability Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="vulnModalInfo" class="mb-3 text-secondary" style="font-size:0.9rem;"></div>
+        <div class="table-responsive">
+          <table class="table table-sm table-striped">
+            <thead>
+              <tr>
+                <th style="width:140px;">ID</th>
+                <th>Title</th>
+                <th style="width:100px;">Severity</th>
+                <th style="width:140px;">Installed</th>
+                <th style="width:140px;">Fixed</th>
+                <th style="width:70px;">Score</th>
+                <th>Link</th>
+              </tr>
+            </thead>
+            <tbody id="vulnModalTbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+ </div>
+
+<script>
+const pageSize = 20;
+let allReports = [];
+let filtered = [];
+let currentPage = 1;
+
+function setStatus(s){
+  const statusEl = document.getElementById('status-text');
+  if(s) {
+    statusEl.innerHTML = '<i class="bi bi-check-circle me-1"></i>' + s;
+    statusEl.style.display = 'inline-flex';
+  } else {
+    statusEl.style.display = 'none';
+  }
+}
+
+function updateStats() {
+  if(filtered.length === 0) {
+    document.getElementById('stats-grid').style.display = 'none';
+    return;
+  }
+  
+  document.getElementById('stats-grid').style.display = 'grid';
+  
+  let totalCritical = 0;
+  let totalHigh = 0;
+  let totalMedium = 0;
+  
+  filtered.forEach(r => {
+    if(r.summary) {
+      totalCritical += r.summary.critical || 0;
+      totalHigh += r.summary.high || 0;
+      totalMedium += r.summary.medium || 0;
+    }
+  });
+  
+  document.getElementById('stat-total').innerText = filtered.length;
+  document.getElementById('stat-critical').innerText = totalCritical;
+  document.getElementById('stat-high').innerText = totalHigh;
+  document.getElementById('stat-medium').innerText = totalMedium;
+}
+
+function renderPager(){
+  const total = filtered.length;
+  const pages = Math.ceil(total/pageSize);
+  const pager = document.getElementById('pager');
+  if (pages <= 1){ pager.innerHTML=''; return; }
+  
+  let html = '';
+  html += `<button class="page-btn ${currentPage===1?'disabled':''}" data-p="prev"><i class="bi bi-chevron-left"></i></button>`;
+  
+  for(let i=1;i<=pages;i++){
+    if(i === 1 || i === pages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+      html += `<button class="page-btn ${currentPage===i?'active':''}" data-p="${i}">${i}</button>`;
+    } else if(i === currentPage - 2 || i === currentPage + 2) {
+      html += `<span style="color: var(--secondary-color); padding: 0.5rem;">...</span>`;
+    }
+  }
+  
+  html += `<button class="page-btn ${currentPage===pages?'disabled':''}" data-p="next"><i class="bi bi-chevron-right"></i></button>`;
+  pager.innerHTML = html;
+  
+  pager.querySelectorAll('button.page-btn').forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.preventDefault();
+      const p = btn.getAttribute('data-p');
+      if(p==='prev' && currentPage>1) currentPage--;
+      else if(p==='next' && currentPage<pages) currentPage++;
+      else if(!isNaN(parseInt(p))) currentPage=parseInt(p);
+      renderTable();
+    };
+  });
+}
+
+function renderTable(){
+  const tbody = document.querySelector('#reports-table tbody');
+  tbody.innerHTML = '';
+  const start=(currentPage-1)*pageSize;
+  const end=start+pageSize;
+  const page = filtered.slice(start,end);
+  
+  page.forEach(r=>{
+    const tr = document.createElement('tr');
+    // each severity cell is clickable to open details
+    tr.innerHTML = `
+      <td><strong>${r.namespace||''}</strong></td>
+      <td><span class="repo-tag">${(r.repository||'')}${r.tag?':'+r.tag:''}</span></td>
+      <td>${r.scanner||''}</td>
+      <td><button class="severity-badge severity-critical" data-sev="CRITICAL" data-ns="${r.namespace||''}" data-name="${r.name||''}">${(r.summary&&r.summary.critical)||0}</button></td>
+      <td><button class="severity-badge severity-high" data-sev="HIGH" data-ns="${r.namespace||''}" data-name="${r.name||''}">${(r.summary&&r.summary.high)||0}</button></td>
+      <td><button class="severity-badge severity-medium" data-sev="MEDIUM" data-ns="${r.namespace||''}" data-name="${r.name||''}">${(r.summary&&r.summary.medium)||0}</button></td>
+      <td><button class="severity-badge severity-low" data-sev="LOW" data-ns="${r.namespace||''}" data-name="${r.name||''}">${(r.summary&&r.summary.low)||0}</button></td>
+      <td><button class="severity-badge severity-unknown" data-sev="UNKNOWN" data-ns="${r.namespace||''}" data-name="${r.name||''}">${(r.summary&&r.summary.unknown)||0}</button></td>
+      <td style="font-size:0.75rem; color: var(--secondary-color);">${r.updateTimestamp||''}</td>`;
+    tbody.appendChild(tr);
+  });
+  
+  document.getElementById('no-data').style.display = (filtered.length===0)?'flex':'none';
+  updateStats();
+  renderPager();
+}
+
+async function openVulnModal(namespace, name, severity){
+  try{
+    const url = `/trivy-operator/get-vulnerabilityreport?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`;
+    const data = await fetch(url).then(r=>r.json());
+    if(data.error){
+      document.getElementById('error-text').innerText = data.error;
+      document.getElementById('error').style.display='flex';
+      return;
+    }
+    const vulns = Array.isArray(data.vulnerabilities)? data.vulnerabilities : [];
+    const filtered = severity? vulns.filter(v=>v.severity===severity) : vulns;
+    const info = document.getElementById('vulnModalInfo');
+    info.innerHTML = `<strong>${namespace}</strong> / <code>${name}</code> — Showing <strong>${severity||'ALL'}</strong> (${filtered.length} items)`;
+    const tb = document.getElementById('vulnModalTbody');
+    tb.innerHTML = filtered.map(v=>{
+      const link = v.primaryLink ? `<a href="${v.primaryLink}" target="_blank">link</a>` : '';
+      return `<tr>
+        <td><code>${v.vulnerabilityID||''}</code></td>
+        <td>${v.title||''}</td>
+        <td>${v.severity||''}</td>
+        <td>${v.installedVersion||''}</td>
+        <td>${v.fixedVersion||''}</td>
+        <td>${v.score!=null? v.score:''}</td>
+        <td>${link}</td>
+      </tr>`;
+    }).join('');
+    const modal = new bootstrap.Modal(document.getElementById('vulnModal'));
+    modal.show();
+  }catch(e){
+    document.getElementById('error-text').innerText = e;
+    document.getElementById('error').style.display='flex';
+  }
+}
+
+function loadNamespaces(){
+  fetch('/k8s-explorer/namespaces').then(r=>r.json()).then(d=>{
+    const sel = document.getElementById('ns-select');
+  const items = Array.isArray(d.namespaces) ? d.namespaces : [];
+  sel.innerHTML = '<option value="">All Namespaces (-A)</option>' + items.map(ns=>`<option value="${ns}">${ns}</option>`).join('');
+  }).catch(()=>{});
+}
+
+function refreshStatus(){
+  setStatus('Checking status...');
+  fetch('/trivy-operator/status').then(r=>r.json()).then(d=>{
+    if(d.error){ setStatus('Error: '+d.error); return; }
+  if(!d.installed){ setStatus('Not Installed'); return; }
+  const ns = d.namespace || 'trivy-system';
+  const ready = d.deployment_ready ? 'Ready' : 'Not Ready';
+  const hint = (!d.deployment_ready && d.crd_present) ? ' — CRD present' : '';
+  setStatus(`Installed @ ${ns} — ${ready}${hint}`);
+  }).catch(e=> setStatus('Error: '+e));
+}
+
+function installOperator(){
+  const out = document.getElementById('install-output');
+  out.style.display = 'block';
+  out.innerText = 'Starting installation (helm)...';
+  
+  fetch('/trivy-operator/install',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({use_helm:true})})
+  .then(r=>r.json()).then(d=>{
+    if(d.error){
+      out.innerText = 'Helm installation failed: '+d.error+'\nRetrying with kubectl...';
+      return fetch('/trivy-operator/install',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({use_helm:false})})
+        .then(r2=>r2.json()).then(d2=>{
+          if(d2.error){ out.innerText += '\nKubectl error: '+d2.error; }
+          else { out.innerText += '\nKubectl installation completed.\n'+(d2.output||''); }
+        });
+    } else {
+      out.innerText = 'Installation completed successfully.\n'+(d.output||'');
+    }
+  }).catch(e=>{ out.innerText = 'Error: '+e; })
+  .finally(()=>{ refreshStatus(); });
+}
+
+function loadReports(){
+  document.getElementById('loading').style.display='flex';
+  document.getElementById('error').style.display='none';
+  const ns = document.getElementById('ns-select').value;
+  const url = '/trivy-operator/list-vulnerabilityreports'+(ns?`?namespace=${encodeURIComponent(ns)}`:'');
+  
+  fetch(url).then(r=>r.json()).then(d=>{
+    document.getElementById('loading').style.display='none';
+    if(d.error){
+      const el = document.getElementById('error');
+      document.getElementById('error-text').innerText = d.error;
+      el.style.display='flex';
+      return;
+    }
+    allReports = d.items||[];
+    filtered = allReports;
+    currentPage = 1;
+    renderTable();
+  }).catch(e=>{
+    document.getElementById('loading').style.display='none';
+    const el = document.getElementById('error');
+    document.getElementById('error-text').innerText = e;
+    el.style.display='flex';
+  });
+}
+
+document.getElementById('btn-install').onclick = installOperator;
+document.getElementById('btn-refresh').onclick = refreshStatus;
+document.getElementById('btn-load').onclick = loadReports;
+document.getElementById('btn-scan').onclick = function(){
+  const ns = document.getElementById('ns-select').value;
+  const body = ns? {namespace: ns, target: 'all'} : {target: 'all'};
+  setStatus('Triggering scan...');
+  
+  fetch('/trivy-operator/scan',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
+    .then(r=>r.json()).then(d=>{
+      if(d.error){ setStatus('Error: '+d.error); return; }
+      setStatus(`Scan triggered. Success: ${d.patched?.length||0}, Errors: ${d.errors?.length||0}`);
+    }).catch(e=> setStatus('Error: '+e));
+};
+
+loadNamespaces();
+refreshStatus();
+
+// Delegate click events for severity buttons to open modal
+document.addEventListener('click', function(e){
+  const btn = e.target.closest('button.severity-badge');
+  if(!btn) return;
+  const ns = btn.getAttribute('data-ns');
+  const name = btn.getAttribute('data-name');
+  const sev = btn.getAttribute('data-sev');
+  if(!ns || !name) return;
+  openVulnModal(ns, name, sev);
+});
+</script>
+{% endblock %}

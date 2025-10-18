@@ -36,7 +36,7 @@ clusters:
 users:
 - name: "mbs-dev"
   user:
-    token: "kubeconfig-user-dqghngbpcj:svhj9z4gmzlnqmfx5mcsjmxlpgq4qcwntv6h9jjgsj8qbnpn6smj22"
+    token: "kubeconfig-user-dqghn96rqm:vbkbtlkdxt4jvnn8mffqcmnl4csgzvpt8x9r7zpxwh8mfb6j9p94gn"
 
 
 contexts:

@@ -6,6 +6,7 @@ from kubernetes.client.rest import ApiException
 from datetime import datetime
 from flasgger import Swagger
 import threading, time, sys, traceback, os, subprocess, json, yaml, urllib.parse, requests
+from collections import deque
 import traceback
 import urllib.parse
 import sys
@@ -1157,60 +1158,131 @@ def delete_pdb():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Prometheus endpoint autodiscovery (Kubernetes üzerinden)
+# Prometheus endpoint bilgisi (frontend rehberlik eder; gerçek çağrılar backend proxy üzerinden yapılır)
 @app.route('/k8s-explorer/prometheus-url')
 def prometheus_url():
     try:
+        manual_url = request.args.get('prometheus') or os.environ.get('PROMETHEUS_URL')
+        if manual_url:
+            return jsonify({'mode': 'manual', 'url': manual_url})
+        # Varsayılan olarak backend proxy kullanılır
+        return jsonify({'mode': 'proxy', 'url': '/k8s-explorer/prometheus-proxy'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Prometheus dahili proxy (Kubernetes API service-proxy üzerinden)
+@app.route('/k8s-explorer/prometheus-proxy')
+def prometheus_proxy():
+    """Prometheus HTTP API için dahili proxy.
+    Desteklenen parametreler: path=query|query_range, query, start, end, step, prometheus (opsiyonel override)
+    Öncelik: Kubernetes API service-proxy → manuel URL.
+    """
+    try:
+        api_path = (request.args.get('path') or 'query').strip()
+        if api_path not in ('query', 'query_range'):
+            return jsonify({'error': 'path sadece query veya query_range olabilir'}), 400
+        query = request.args.get('query') or ''
+        start = request.args.get('start')
+        end = request.args.get('end')
+        step = request.args.get('step')
+        manual_url = request.args.get('prometheus') or os.environ.get('PROMETHEUS_URL')
+
         load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
         client.Configuration.set_default(c)
+
         core_v1 = client.CoreV1Api()
-        # Tüm namespace'lerde controller-prometheus veya prometheus içeren servisleri ara
-        for ns in [ns.metadata.name for ns in core_v1.list_namespace().items]:
-            for svc in core_v1.list_namespaced_service(ns).items:
-                labels = svc.metadata.labels or {}
-                name = svc.metadata.name or ''
-                if (
-                    'prometheus' in name or
-                    'prometheus' in labels.get('app', '') or
-                    'prometheus' in labels.get('component', '') or
-                    'controller' in name or
-                    'controller' in labels.get('app', '') or
-                    'controller' in labels.get('component', '')
-                ):
-                    ports = svc.spec.ports or []
-                    port = None
-                    for p in ports:
-                        if p.port == 9090:
-                            port = p
-                            break
-                    if not port and ports:
-                        port = ports[0]
-                    if port:
-                        # NodePort varsa dışarıdan erişim için node IP ile dön
-                        if svc.spec.type == 'NodePort' and port.node_port:
-                            nodes = core_v1.list_node().items
-                            node_ip = None
-                            for node in nodes:
-                                for addr in node.status.addresses or []:
-                                    if addr.type == 'ExternalIP':
-                                        node_ip = addr.address
-                                        break
-                                if not node_ip:
-                                    for addr in node.status.addresses or []:
-                                        if addr.type == 'InternalIP':
-                                            node_ip = addr.address
-                                            break
-                                if node_ip:
-                                    url = f'http://{node_ip}:{port.node_port}'
-                                    return jsonify({'url': url, 'namespace': ns, 'service': name})
-                        # Yoksa ClusterIP ile dön (sadece cluster içi erişim için)
-                        if svc.spec.cluster_ip and svc.spec.cluster_ip != 'None':
-                            url = f'http://{svc.spec.cluster_ip}:{port.port}'
-                            return jsonify({'url': url, 'namespace': ns, 'service': name})
-        return jsonify({'error': 'Prometheus servisi bulunamadı'}), 404
+        api_client = client.ApiClient()
+
+        def detect_prom_service_targets(max_targets: int = 8):
+            targets = []  # (ns, svc, port_designator)
+            try:
+                all_ns = [ns.metadata.name for ns in core_v1.list_namespace().items]
+                prio = ['monitoring', 'prometheus', 'observability', 'default', 'kube-system']
+                ordered_ns = prio + [n for n in all_ns if n not in prio]
+                for nsn in ordered_ns:
+                    for svc in core_v1.list_namespaced_service(nsn).items:
+                        name_s = (svc.metadata.name or '').lower()
+                        labels = {k.lower(): (v.lower() if isinstance(v, str) else v) for k, v in ((svc.metadata.labels or {}).items())}
+                        looks = ('prometheus' in name_s) or any(isinstance(v, str) and 'prometheus' in v for v in (labels or {}).values())
+                        if not looks:
+                            continue
+                        ports = svc.spec.ports or []
+                        pref_names = ['web', 'http', 'http-web', 'prometheus']
+                        port_obj = None
+                        for p in ports:
+                            pname = (getattr(p, 'name', '') or '').lower()
+                            if pname in pref_names or getattr(p, 'port', None) == 9090:
+                                port_obj = p; break
+                        if not port_obj and ports:
+                            port_obj = ports[0]
+                        if not port_obj:
+                            continue
+                        port_designator = getattr(port_obj, 'name', None) or getattr(port_obj, 'port', None)
+                        if not port_designator:
+                            continue
+                        targets.append((nsn, svc.metadata.name, str(port_designator)))
+                        if len(targets) >= max_targets:
+                            raise StopIteration
+            except StopIteration:
+                pass
+            except Exception:
+                pass
+            # de-dup
+            seen = set(); out = []
+            for t in targets:
+                key = (t[0], t[1], t[2])
+                if key not in seen:
+                    out.append(t); seen.add(key)
+            return out
+
+        def prom_call_via_proxy(ns: str, svc: str, port: str, path_suffix: str, qp: list, timeout_s: float = 3.0):
+            for scheme in ['http', 'https']:
+                try:
+                    p = f'/api/v1/namespaces/{ns}/services/{scheme}:{svc}:{port}/proxy/api/v1/{path_suffix}'
+                    resp = api_client.call_api(p, 'GET', query_params=qp, auth_settings=['BearerToken'], _preload_content=False, request_timeout=timeout_s)[0]
+                    body = resp.data.decode('utf-8') if hasattr(resp, 'data') else str(resp)
+                    j = json.loads(body)
+                    if j.get('status') == 'success':
+                        return j, f'k8s-proxy://{scheme}:{svc}:{port} (ns {ns})'
+                except Exception:
+                    continue
+            return None, None
+
+        qp = []
+        if query:
+            qp.append(('query', query))
+        if api_path == 'query_range':
+            # start/end/step gereklidir
+            if not start or not end or not step:
+                return jsonify({'error': 'query_range için start, end ve step zorunlu'}), 400
+            qp.extend([('start', start), ('end', end), ('step', step)])
+
+        # 1) Kubernetes API service-proxy ile dene
+        try:
+            start_budget = time.time(); budget = 5.0
+            for ns_s, svc_s, port_s in detect_prom_service_targets():
+                if time.time() - start_budget > budget:
+                    break
+                j, ep = prom_call_via_proxy(ns_s, svc_s, port_s, api_path, qp, timeout_s=2.5)
+                if j:
+                    return jsonify({'source': 'prometheus', 'endpoint': ep, **j})
+        except Exception:
+            pass
+
+        # 2) Manuel URL (opsiyonel)
+        if manual_url:
+            try:
+                r = requests.get(f"{manual_url.rstrip('/')}/api/v1/{api_path}", params=qp, timeout=3.0, verify=False)
+                if r.status_code == 200:
+                    j = r.json()
+                    return jsonify({'source': 'prometheus', 'endpoint': manual_url, **j})
+            except Exception:
+                pass
+
+        return jsonify({'error': 'Prometheus erişilemedi (proxy/manual)'}), 502
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1797,55 +1869,53 @@ def pod_metrics():
         if not namespace or not name:
             return jsonify({'error': 'namespace ve name zorunlu'}), 400
 
-        # Optional manual Prometheus endpoint override
         manual_url = request.args.get('prometheus') or os.environ.get('PROMETHEUS_URL')
 
         load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        c = client.Configuration.get_default_copy(); c.verify_ssl = False; c.assert_hostname = False; client.Configuration.set_default(c)
+        core_v1 = client.CoreV1Api(); api_client = client.ApiClient()
 
-        core_v1 = client.CoreV1Api()
-        api_client = client.ApiClient()
-
-        # Queries
         q_cpu = f'sum(rate(container_cpu_usage_seconds_total{{namespace="{namespace}",pod="{name}",container!="",image!=""}}[5m]))'
         q_mem = f'sum(container_memory_working_set_bytes{{namespace="{namespace}",pod="{name}",container!="",image!=""}})'
 
-        # Helper: query a Prometheus base URL
-        def prom_query(base_url: str, query: str, timeout_s: float = 1.5):
-            r = requests.get(f'{base_url.rstrip('/')}/api/v1/query', params={'query': query}, timeout=timeout_s, verify=False)
+        def prom_query(base_url: str, query: str, timeout_s: float = 2.0):
+            r = requests.get(f"{base_url.rstrip('/')}/api/v1/query", params={'query': query}, timeout=timeout_s, verify=False)
             if r.status_code != 200:
                 return None
             return r.json()
 
-        # 1) Manual override first (if provided)
+        # 1) Manual override
         if manual_url:
             try:
-                d1 = prom_query(manual_url, q_cpu, timeout_s=1.5)
-                d2 = prom_query(manual_url, q_mem, timeout_s=1.5)
-                if d1 and d2:
-                    res1 = (d1.get('data', {}) or {}).get('result', []) or []
-                    res2 = (d2.get('data', {}) or {}).get('result', []) or []
+                d1 = prom_query(manual_url, q_cpu, timeout_s=2.0)
+                d2 = prom_query(manual_url, q_mem, timeout_s=2.0)
+                res1 = (d1.get('data', {}) or {}).get('result', []) if d1 else []
+                res2 = (d2.get('data', {}) or {}).get('result', []) if d2 else []
+                if res1 or res2:
                     cpu_val = float(res1[0]['value'][1]) if res1 else 0.0
                     mem_val = float(res2[0]['value'][1]) if res2 else 0.0
                     return jsonify({'source': 'prometheus', 'cpu_mcores': int(round(cpu_val * 1000)), 'memory_bytes': int(round(mem_val)), 'endpoint': manual_url})
             except Exception:
                 pass
 
-        # 2) Try via Kubernetes API service proxy (no public ingress needed)
-        def detect_prom_service_targets(max_targets: int = 6):
-            targets = []  # (ns, svc, port_designator)
+        # 2) Via k8s API service-proxy
+        def detect_prom_service_targets(max_targets: int = 8):
+            targets = []
             try:
                 all_ns = [ns.metadata.name for ns in core_v1.list_namespace().items]
                 prio = ['monitoring', 'prometheus', 'observability', 'default', 'kube-system']
                 ordered_ns = prio + [n for n in all_ns if n not in prio]
-                for ns in ordered_ns:
-                    for svc in core_v1.list_namespaced_service(ns).items:
+                for nsn in ordered_ns:
+                    for svc in core_v1.list_namespaced_service(nsn).items:
                         name_s = (svc.metadata.name or '').lower()
                         labels = {k.lower(): (v.lower() if isinstance(v, str) else v) for k, v in ((svc.metadata.labels or {}).items())}
-                        looks = ('prometheus' in name_s) or any(isinstance(v, str) and 'prometheus' in v for v in labels.values() or [])
+                        looks = (
+                            'prometheus' in name_s or 'thanos' in name_s or
+                            'prometheus' in (labels.get('app') or '') or
+                            'prometheus' in (labels.get('component') or '') or
+                            'prometheus' in (labels.get('app.kubernetes.io/name') or '') or
+                            'prometheus' in (labels.get('app.kubernetes.io/instance') or '')
+                        )
                         if not looks:
                             continue
                         ports = svc.spec.ports or []
@@ -1862,22 +1932,21 @@ def pod_metrics():
                         port_designator = getattr(port_obj, 'name', None) or getattr(port_obj, 'port', None)
                         if not port_designator:
                             continue
-                        targets.append((ns, svc.metadata.name, str(port_designator)))
+                        targets.append((nsn, svc.metadata.name, str(port_designator)))
                         if len(targets) >= max_targets:
                             raise StopIteration
             except StopIteration:
                 pass
             except Exception:
                 pass
-            # de-dup
             seen = set(); out = []
             for t in targets:
-                key = (t[0], t[1], t[2])
-                if key not in seen:
-                    out.append(t); seen.add(key)
+                k = (t[0], t[1], t[2])
+                if k not in seen:
+                    out.append(t); seen.add(k)
             return out
 
-        def prom_query_via_proxy(ns: str, svc: str, port: str, query: str, timeout_s: float = 1.5):
+        def prom_query_via_proxy(ns: str, svc: str, port: str, query: str, timeout_s: float = 2.5):
             for scheme in ['http', 'https']:
                 try:
                     path = f'/api/v1/namespaces/{ns}/services/{scheme}:{svc}:{port}/proxy/api/v1/query'
@@ -1892,78 +1961,22 @@ def pod_metrics():
             return None, None
 
         try:
-            start = time.time(); budget = 3.0
+            start = time.time(); budget = 6.0
             for ns_s, svc_s, port_s in detect_prom_service_targets():
                 if time.time() - start > budget:
                     break
-                j1, ep1 = prom_query_via_proxy(ns_s, svc_s, port_s, q_cpu, timeout_s=1.5)
-                if not j1:
-                    continue
-                j2, ep2 = prom_query_via_proxy(ns_s, svc_s, port_s, q_mem, timeout_s=1.5)
-                if not j2:
-                    continue
-                res1 = (j1.get('data', {}) or {}).get('result', []) or []
-                res2 = (j2.get('data', {}) or {}).get('result', []) or []
-                cpu_val = float(res1[0]['value'][1]) if res1 else 0.0
-                mem_val = float(res2[0]['value'][1]) if res2 else 0.0
-                return jsonify({'source': 'prometheus', 'cpu_mcores': int(round(cpu_val * 1000)), 'memory_bytes': int(round(mem_val)), 'endpoint': ep1 or ep2})
+                j1, ep1 = prom_query_via_proxy(ns_s, svc_s, port_s, q_cpu, timeout_s=2.5)
+                j2, ep2 = prom_query_via_proxy(ns_s, svc_s, port_s, q_mem, timeout_s=2.5)
+                res1 = (j1.get('data', {}) or {}).get('result', []) if j1 else []
+                res2 = (j2.get('data', {}) or {}).get('result', []) if j2 else []
+                if res1 or res2:
+                    cpu_val = float(res1[0]['value'][1]) if res1 else 0.0
+                    mem_val = float(res2[0]['value'][1]) if res2 else 0.0
+                    return jsonify({'source': 'prometheus', 'cpu_mcores': int(round(cpu_val * 1000)), 'memory_bytes': int(round(mem_val)), 'endpoint': ep1 or ep2})
         except Exception:
             pass
 
-        # 3) Fallback: metrics-server (metrics.k8s.io) — hızlı yanıt için direkt deneyelim
-        try:
-            co = client.CustomObjectsApi()
-            obj = co.get_namespaced_custom_object('metrics.k8s.io', 'v1beta1', namespace, 'pods', name)
-            containers = (obj.get('containers') or []) if isinstance(obj, dict) else []
-
-            def parse_cpu_to_mcores(cpu_str: str) -> float:
-                s = str(cpu_str or '').strip()
-                if not s:
-                    return 0.0
-                try:
-                    if s.endswith('n'):
-                        return float(s[:-1]) / 1e6
-                    if s.endswith('u'):
-                        return float(s[:-1]) / 1e3
-                    if s.endswith('m'):
-                        return float(s[:-1])
-                    return float(s) * 1000.0
-                except Exception:
-                    return 0.0
-
-            def parse_mem_to_bytes(mem_str: str) -> float:
-                s = str(mem_str or '').strip()
-                if not s:
-                    return 0.0
-                try:
-                    units = {'Ki': 1024,'Mi': 1024**2,'Gi': 1024**3,'Ti': 1024**4,'Pi': 1024**5,'Ei': 1024**6,'K': 1000,'M': 1000**2,'G': 1000**3,'T': 1000**4,'P': 1000**5,'E': 1000**6}
-                    for u, mul in units.items():
-                        if s.endswith(u):
-                            return float(s[:-len(u)]) * mul
-                    return float(s)
-                except Exception:
-                    return 0.0
-
-            total_cpu_m = 0.0
-            total_mem_b = 0.0
-            cont_out = []
-            for ct in containers:
-                nm = ct.get('name')
-                usage = ct.get('usage', {}) or {}
-                c_m = parse_cpu_to_mcores(usage.get('cpu'))
-                m_b = parse_mem_to_bytes(usage.get('memory'))
-                total_cpu_m += c_m
-                total_mem_b += m_b
-                cont_out.append({'name': nm, 'cpu_mcores': int(round(c_m)), 'memory_bytes': int(round(m_b))})
-
-            # Eğer değerler mevcutsa hızlıca dön
-            if total_cpu_m > 0 or total_mem_b > 0 or cont_out:
-                return jsonify({'source': 'metrics-server','cpu_mcores': int(round(total_cpu_m)),'memory_bytes': int(round(total_mem_b)),'containers': cont_out})
-        except Exception:
-            # metrics-server yoksa sessiz geç
-            pass
-
-        # 4) Try direct service discovery (NodePort/ClusterIP) with capped candidates and short time budget
+        # 3) Direct service URLs (NodePort/ClusterIP)
         def detect_prom_urls(max_candidates: int = 3):
             candidates = []
             try:
@@ -2010,7 +2023,6 @@ def pod_metrics():
                 pass
             except Exception:
                 pass
-            # Dedup & cap
             seen = set(); out = []
             for u in candidates:
                 if u not in seen:
@@ -2019,28 +2031,391 @@ def pod_metrics():
                     break
             return out
 
-        start = time.time(); budget = 2.0
+        start = time.time(); budget = 4.0
         for base in detect_prom_urls():
             if time.time() - start > budget:
                 break
             try:
-                d1 = prom_query(base, q_cpu, timeout_s=1.0)
-                d2 = prom_query(base, q_mem, timeout_s=1.0)
-                if not d1 or not d2:
-                    continue
-                res1 = (d1.get('data', {}) or {}).get('result', []) or []
-                res2 = (d2.get('data', {}) or {}).get('result', []) or []
-                cpu_val = float(res1[0]['value'][1]) if res1 else 0.0
-                mem_val = float(res2[0]['value'][1]) if res2 else 0.0
-                return jsonify({'source': 'prometheus', 'cpu_mcores': int(round(cpu_val * 1000)), 'memory_bytes': int(round(mem_val)), 'endpoint': base})
+                d1 = prom_query(base, q_cpu, timeout_s=2.0)
+                d2 = prom_query(base, q_mem, timeout_s=2.0)
+                res1 = (d1.get('data', {}) or {}).get('result', []) if d1 else []
+                res2 = (d2.get('data', {}) or {}).get('result', []) if d2 else []
+                if res1 or res2:
+                    cpu_val = float(res1[0]['value'][1]) if res1 else 0.0
+                    mem_val = float(res2[0]['value'][1]) if res2 else 0.0
+                    return jsonify({'source': 'prometheus', 'cpu_mcores': int(round(cpu_val * 1000)), 'memory_bytes': int(round(mem_val)), 'endpoint': base})
             except Exception:
                 continue
 
-        # Son çare: hiçbiri ölçüm vermezse boş dön
+        # 4) Fallback to metrics-server
+        try:
+            co = client.CustomObjectsApi()
+            obj = co.get_namespaced_custom_object('metrics.k8s.io', 'v1beta1', namespace, 'pods', name)
+            containers = (obj.get('containers') or []) if isinstance(obj, dict) else []
+
+            def parse_cpu_to_mcores(cpu_str: str) -> float:
+                s = str(cpu_str or '').strip()
+                if not s:
+                    return 0.0
+                try:
+                    if s.endswith('n'):
+                        return float(s[:-1]) / 1e6
+                    if s.endswith('u'):
+                        return float(s[:-1]) / 1e3
+                    if s.endswith('m'):
+                        return float(s[:-1])
+                    return float(s) * 1000.0
+                except Exception:
+                    return 0.0
+
+            def parse_mem_to_bytes(mem_str: str) -> float:
+                s = str(mem_str or '').strip()
+                if not s:
+                    return 0.0
+                try:
+                    units = {'Ki': 1024,'Mi': 1024**2,'Gi': 1024**3,'Ti': 1024**4,'Pi': 1024**5,'Ei': 1024**6,'K': 1000,'M': 1000**2,'G': 1000**3,'T': 1000**4,'P': 1000**5,'E': 1000**6}
+                    for u, mul in units.items():
+                        if s.endswith(u):
+                            return float(s[:-len(u)]) * mul
+                    return float(s)
+                except Exception:
+                    return 0.0
+
+            total_cpu_m = 0.0
+            total_mem_b = 0.0
+            cont_out = []
+            for ct in containers:
+                nm = ct.get('name')
+                usage = ct.get('usage', {}) or {}
+                c_m = parse_cpu_to_mcores(usage.get('cpu'))
+                m_b = parse_mem_to_bytes(usage.get('memory'))
+                total_cpu_m += c_m
+                total_mem_b += m_b
+                cont_out.append({'name': nm, 'cpu_mcores': int(round(c_m)), 'memory_bytes': int(round(m_b))})
+
+            if total_cpu_m > 0 or total_mem_b > 0 or cont_out:
+                return jsonify({'source': 'metrics-server','cpu_mcores': int(round(total_cpu_m)),'memory_bytes': int(round(total_mem_b)),'containers': cont_out})
+        except Exception:
+            pass
+
         return jsonify({'source': 'none', 'cpu_mcores': 0, 'memory_bytes': 0, 'containers': []})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
+@app.route('/k8s-explorer/pod-metrics-range')
+def pod_metrics_range():
+    """Return time-series CPU/Memory usage for a Pod via Prometheus query_range.
+    Params: namespace, name, minutes(optional, default 30), step(optional, default 15s)
+    Response: { source: 'prometheus'|'none', endpoint?: str,
+                cpu: { unit: 'cores', data: [[ts(float seconds), value(float)]] },
+                memory: { unit: 'bytes', data: [[ts(float seconds), value(float)]] } }
+    """
+    try:
+        namespace = request.args.get('namespace')
+        name = request.args.get('name')
+        if not namespace or not name:
+            return jsonify({'error': 'namespace ve name zorunlu'}), 400
+
+        # Window and step
+        try:
+            minutes = int(request.args.get('minutes') or 30)
+        except Exception:
+            minutes = 30
+        minutes = max(5, min(240, minutes))
+        step = (request.args.get('step') or '15s').strip()
+        # Simple guard: allow Ns or Ms
+        if not step.endswith(('s', 'm')):
+            step = '15s'
+
+        manual_url = request.args.get('prometheus') or os.environ.get('PROMETHEUS_URL')
+
+        load_kube_config_active()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+
+        core_v1 = client.CoreV1Api()
+        api_client = client.ApiClient()
+
+        # Queries (CPU as rate over 5m; Memory as instantaneous working_set)
+        q_cpu = f'sum(rate(container_cpu_usage_seconds_total{{namespace="{namespace}",pod="{name}",container!="",image!=""}}[5m]))'
+        q_mem = f'sum(container_memory_working_set_bytes{{namespace="{namespace}",pod="{name}",container!="",image!=""}})'
+
+        end_ts = time.time()
+        start_ts = end_ts - minutes * 60
+
+        def prom_query_range(base_url: str, query: str, start_s: float, end_s: float, step_expr: str, timeout_s: float = 2.0):
+            params = {
+                'query': query,
+                'start': f"{start_s}",
+                'end': f"{end_s}",
+                'step': step_expr,
+            }
+            r = requests.get(f'{base_url.rstrip('/')}/api/v1/query_range', params=params, timeout=timeout_s, verify=False)
+            if r.status_code != 200:
+                return None
+            return r.json()
+
+        # 1) Manual override
+        if manual_url:
+            try:
+                d1 = prom_query_range(manual_url, q_cpu, start_ts, end_ts, step, timeout_s=2.0)
+                d2 = prom_query_range(manual_url, q_mem, start_ts, end_ts, step, timeout_s=2.0)
+                if d1 and d2:
+                    def extract_series(j):
+                        res = (j.get('data', {}) or {}).get('result', []) or []
+                        if not res:
+                            return []
+                        # Sum result vectors if multiple series (defensive)
+                        # But PromQL sum should already aggregate; still keep simple first series
+                        values = res[0].get('values') or []
+                        out = []
+                        for t, v in values:
+                            try:
+                                out.append([float(t), float(v)])
+                            except Exception:
+                                continue
+                        return out
+                    cpu_series = extract_series(d1)
+                    mem_series = extract_series(d2)
+                    if cpu_series or mem_series:
+                        return jsonify({'source': 'prometheus','endpoint': manual_url,
+                                        'cpu': {'unit': 'cores', 'data': cpu_series},
+                                        'memory': {'unit': 'bytes', 'data': mem_series}})
+            except Exception:
+                pass
+
+        # 2) Via Kubernetes API service proxy
+        def prom_query_range_via_proxy(ns: str, svc: str, port: str, query: str, start_s: float, end_s: float, step_expr: str, timeout_s: float = 2.0):
+            for scheme in ['http', 'https']:
+                try:
+                    path = f'/api/v1/namespaces/{ns}/services/{scheme}:{svc}:{port}/proxy/api/v1/query_range'
+                    qp = [('query', query), ('start', f'{start_s}'), ('end', f'{end_s}'), ('step', step_expr)]
+                    resp = api_client.call_api(path, 'GET', query_params=qp, auth_settings=['BearerToken'], _preload_content=False, request_timeout=timeout_s)[0]
+                    body = resp.data.decode('utf-8') if hasattr(resp, 'data') else str(resp)
+                    j = json.loads(body)
+                    if j.get('status') == 'success':
+                        return j, f'k8s-proxy://{scheme}:{svc}:{port} (ns {ns})'
+                except Exception:
+                    continue
+            return None, None
+
+        def detect_prom_service_targets(max_targets: int = 6):
+            targets = []
+            try:
+                all_ns = [ns.metadata.name for ns in core_v1.list_namespace().items]
+                prio = ['monitoring', 'prometheus', 'observability', 'default', 'kube-system']
+                ordered_ns = prio + [n for n in all_ns if n not in prio]
+                for ns in ordered_ns:
+                    for svc in core_v1.list_namespaced_service(ns).items:
+                        name_s = (svc.metadata.name or '').lower()
+                        labels = {k.lower(): (v.lower() if isinstance(v, str) else v) for k, v in ((svc.metadata.labels or {}).items())}
+                        looks = ('prometheus' in name_s) or any(isinstance(v, str) and 'prometheus' in v for v in labels.values() or [])
+                        if not looks:
+                            continue
+                        ports = svc.spec.ports or []
+                        pref_names = ['web', 'http', 'http-web', 'prometheus']
+                        port_obj = None
+                        for p in ports:
+                            pname = (getattr(p, 'name', '') or '').lower()
+                            if pname in pref_names or getattr(p, 'port', None) == 9090:
+                                port_obj = p; break
+                        if not port_obj and ports:
+                            port_obj = ports[0]
+                        if not port_obj:
+                            continue
+                        port_designator = getattr(port_obj, 'name', None) or getattr(port_obj, 'port', None)
+                        if not port_designator:
+                            continue
+                        targets.append((ns, svc.metadata.name, str(port_designator)))
+                        if len(targets) >= max_targets:
+                            raise StopIteration
+            except StopIteration:
+                pass
+            except Exception:
+                pass
+            seen = set(); out = []
+            for t in targets:
+                key = (t[0], t[1], t[2])
+                if key not in seen:
+                    out.append(t); seen.add(key)
+            return out
+
+        try:
+            start_budget = time.time(); budget = 4.0
+            for ns_s, svc_s, port_s in detect_prom_service_targets():
+                if time.time() - start_budget > budget:
+                    break
+                j1, ep = prom_query_range_via_proxy(ns_s, svc_s, port_s, q_cpu, start_ts, end_ts, step, timeout_s=2.0)
+                if not j1:
+                    continue
+                j2, _ = prom_query_range_via_proxy(ns_s, svc_s, port_s, q_mem, start_ts, end_ts, step, timeout_s=2.0)
+                if not j2:
+                    continue
+                def extract_series(j):
+                    res = (j.get('data', {}) or {}).get('result', []) or []
+                    if not res:
+                        return []
+                    values = res[0].get('values') or []
+                    out = []
+                    for t, v in values:
+                        try:
+                            out.append([float(t), float(v)])
+                        except Exception:
+                            continue
+                    return out
+                cpu_series = extract_series(j1)
+                mem_series = extract_series(j2)
+                if cpu_series or mem_series:
+                    return jsonify({'source': 'prometheus','endpoint': ep,
+                                    'cpu': {'unit': 'cores', 'data': cpu_series},
+                                    'memory': {'unit': 'bytes', 'data': mem_series}})
+        except Exception:
+            pass
+
+        # 3) Direct URLs (NodePort/ClusterIP)
+        def detect_prom_urls(max_candidates: int = 3):
+            candidates = []
+            try:
+                all_ns = [ns.metadata.name for ns in core_v1.list_namespace().items]
+                prio = ['monitoring', 'prometheus', 'observability', 'default', 'kube-system']
+                ordered_ns = prio + [n for n in all_ns if n not in prio]
+                for nsn in ordered_ns:
+                    for svc in core_v1.list_namespaced_service(nsn).items:
+                        name_s = (svc.metadata.name or '').lower()
+                        labels = {k.lower(): (v.lower() if isinstance(v, str) else v) for k, v in ((svc.metadata.labels or {}).items())}
+                        looks = ('prometheus' in name_s) or any(isinstance(v, str) and 'prometheus' in v for v in labels.values() or [])
+                        if not looks:
+                            continue
+                        ports = svc.spec.ports or []
+                        pref_names = ['web', 'http', 'http-web', 'prometheus']
+                        port_obj = None
+                        for p in ports:
+                            pname = (getattr(p, 'name', '') or '').lower()
+                            if pname in pref_names or getattr(p, 'port', None) == 9090:
+                                port_obj = p; break
+                        if not port_obj and ports:
+                            port_obj = ports[0]
+                        if not port_obj:
+                            continue
+                        if svc.spec.type == 'NodePort' and getattr(port_obj, 'node_port', None):
+                            try:
+                                for node in core_v1.list_node().items:
+                                    node_ip = None
+                                    for addr in node.status.addresses or []:
+                                        if addr.type in ('ExternalIP', 'InternalIP'):
+                                            node_ip = addr.address; break
+                                    if node_ip:
+                                        candidates.append(f'http://{node_ip}:{port_obj.node_port}')
+                                        candidates.append(f'https://{node_ip}:{port_obj.node_port}')
+                            except Exception:
+                                pass
+                        if svc.spec.cluster_ip and svc.spec.cluster_ip != 'None':
+                            cip = svc.spec.cluster_ip
+                            candidates.append(f'http://{cip}:{port_obj.port}')
+                            candidates.append(f'https://{cip}:{port_obj.port}')
+                        if len(candidates) >= max_candidates:
+                            raise StopIteration
+            except StopIteration:
+                pass
+            except Exception:
+                pass
+            seen = set(); out = []
+            for u in candidates:
+                if u not in seen:
+                    out.append(u); seen.add(u)
+                if len(out) >= max_candidates:
+                    break
+            return out
+
+        start2 = time.time(); budget2 = 3.0
+        for base in detect_prom_urls():
+            if time.time() - start2 > budget2:
+                break
+            try:
+                d1 = prom_query_range(base, q_cpu, start_ts, end_ts, step, timeout_s=1.5)
+                d2 = prom_query_range(base, q_mem, start_ts, end_ts, step, timeout_s=1.5)
+                if not d1 or not d2:
+                    continue
+                def extract_series(j):
+                    res = (j.get('data', {}) or {}).get('result', []) or []
+                    if not res:
+                        return []
+                    values = res[0].get('values') or []
+                    out = []
+                    for t, v in values:
+                        try:
+                            out.append([float(t), float(v)])
+                        except Exception:
+                            continue
+                    return out
+                cpu_series = extract_series(d1)
+                mem_series = extract_series(d2)
+                if cpu_series or mem_series:
+                    return jsonify({'source': 'prometheus','endpoint': base,
+                                    'cpu': {'unit': 'cores', 'data': cpu_series},
+                                    'memory': {'unit': 'bytes', 'data': mem_series}})
+            except Exception:
+                continue
+
+        # Prometheus başarısız olduysa metrics-server zaman serisi tamponunu dön (best-effort)
+        try:
+            key = (namespace, name)
+            with _METRICS_TS_LOCK:
+                dq = list(_METRICS_TS.get(key, []))
+            if dq:
+                # dq: [(ts_sec, cpu_mcores, mem_bytes)]
+                # İstenen pencereye göre filtrele ve downsample et (step yaklaşık saniye cinsinden)
+                def step_to_seconds(expr: str) -> float:
+                    try:
+                        if expr.endswith('ms'):
+                            return max(0.001, float(expr[:-2]) / 1000.0)
+                        if expr.endswith('s'):
+                            return max(1.0, float(expr[:-1]))
+                        if expr.endswith('m'):
+                            return max(60.0, float(expr[:-1]) * 60.0)
+                        if expr.endswith('h'):
+                            return max(3600.0, float(expr[:-1]) * 3600.0)
+                    except Exception:
+                        return 15.0
+                    return 15.0
+                st = end_ts - minutes * 60
+                secs = step_to_seconds(step)
+                cpu_series = []
+                mem_series = []
+                next_bucket = st
+                acc_cpu = 0
+                acc_mem = 0
+                acc_cnt = 0
+                for ts, cpu_m, mem_b in dq:
+                    if ts < st:
+                        continue
+                    # bucket dolduysa yaz ve yeni bucket'a geç
+                    while ts >= next_bucket + secs:
+                        if acc_cnt > 0:
+                            cpu_series.append([float(next_bucket + secs/2.0), float(acc_cpu)/1000.0/acc_cnt])  # cores
+                            mem_series.append([float(next_bucket + secs/2.0), float(acc_mem)/acc_cnt])
+                        next_bucket += secs
+                        acc_cpu = 0
+                        acc_mem = 0
+                        acc_cnt = 0
+                    acc_cpu += cpu_m
+                    acc_mem += mem_b
+                    acc_cnt += 1
+                # Kuyruk bitti; kalan varsa flush et
+                if acc_cnt > 0:
+                    cpu_series.append([float(min(end_ts, next_bucket + secs/2.0)), float(acc_cpu)/1000.0/acc_cnt])
+                    mem_series.append([float(min(end_ts, next_bucket + secs/2.0)), float(acc_mem)/acc_cnt])
+                return jsonify({'source': 'metrics-server',
+                                'cpu': {'unit': 'cores', 'data': cpu_series},
+                                'memory': {'unit': 'bytes', 'data': mem_series}})
+        except Exception:
+            pass
+        return jsonify({'source': 'none', 'cpu': {'unit': 'cores', 'data': []}, 'memory': {'unit': 'bytes', 'data': []}})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/k8s-explorer/describe')
 def k8s_explorer_describe():
@@ -2440,6 +2815,96 @@ def pods_summary():
         return jsonify(pods_summary_cache)
     except Exception as e:
         return jsonify({'pods': [], 'error': str(e)})
+
+# --- Metrics-server zaman serisi fallback tamponu ---
+# Yapı: {(namespace, pod_name): deque([(ts_sec, cpu_mcores, mem_bytes)], maxlen=N)}
+_METRICS_TS = {}
+_METRICS_TS_LOCK = threading.Lock()
+_METRICS_TS_MAXLEN = 600  # ~600 örnek (ör: 10s interval ile ~100 dakika)
+_METRICS_TS_INTERVAL = float(os.environ.get('METRICS_TS_INTERVAL_SEC', '10'))
+
+def _parse_cpu_to_mcores(cpu_str: str) -> float:
+    s = str(cpu_str or '').strip()
+    if not s:
+        return 0.0
+    try:
+        if s.endswith('n'):
+            return float(s[:-1]) / 1e6
+        if s.endswith('u'):
+            return float(s[:-1]) / 1e3
+        if s.endswith('m'):
+            return float(s[:-1])
+        return float(s) * 1000.0
+    except Exception:
+        return 0.0
+
+def _parse_mem_to_bytes(mem_str: str) -> float:
+    s = str(mem_str or '').strip()
+    if not s:
+        return 0.0
+    try:
+        units = {
+            'Ki': 1024, 'Mi': 1024**2, 'Gi': 1024**3, 'Ti': 1024**4, 'Pi': 1024**5, 'Ei': 1024**6,
+            'K': 1000, 'M': 1000**2, 'G': 1000**3, 'T': 1000**4, 'P': 1000**5, 'E': 1000**6
+        }
+        for u, mul in units.items():
+            if s.endswith(u):
+                return float(s[:-len(u)]) * mul
+        return float(s)
+    except Exception:
+        return 0.0
+
+def _metrics_sampler_loop():
+    """Arka planda metrics.k8s.io'dan tüm podlar için CPU/Memory kullanımlarını örnekler."""
+    while True:
+        try:
+            load_kube_config_active()
+            c = client.Configuration.get_default_copy(); c.verify_ssl=False; c.assert_hostname=False; client.Configuration.set_default(c)
+            co = client.CustomObjectsApi()
+            core_v1 = client.CoreV1Api()
+            # Tüm namespace'leri dolaş ve pod metriklerini al
+            ns_list = [ns.metadata.name for ns in core_v1.list_namespace().items]
+            now = time.time()
+            for ns in ns_list:
+                try:
+                    pods_metrics = co.list_namespaced_custom_object('metrics.k8s.io','v1beta1', ns, 'pods')
+                except Exception:
+                    continue
+                items = pods_metrics.get('items', []) if isinstance(pods_metrics, dict) else []
+                with _METRICS_TS_LOCK:
+                    for it in items:
+                        m = it or {}
+                        md = m.get('metadata', {}) or {}
+                        pod_name = md.get('name')
+                        if not pod_name:
+                            continue
+                        key = (ns, pod_name)
+                        containers = m.get('containers', []) or []
+                        total_cpu_m = 0.0
+                        total_mem_b = 0.0
+                        for ct in containers:
+                            usage = ct.get('usage', {}) or {}
+                            total_cpu_m += _parse_cpu_to_mcores(usage.get('cpu'))
+                            total_mem_b += _parse_mem_to_bytes(usage.get('memory'))
+                        dq = _METRICS_TS.get(key)
+                        if dq is None:
+                            dq = deque(maxlen=_METRICS_TS_MAXLEN)
+                            _METRICS_TS[key] = dq
+                        dq.append((now, int(round(total_cpu_m)), int(round(total_mem_b))))
+        except Exception as e:
+            try:
+                print('METRICS SAMPLER ERROR:', e, file=sys.stderr)
+            except Exception:
+                pass
+        # bir sonraki örnekleme
+        time.sleep(max(5.0, _METRICS_TS_INTERVAL))
+
+def start_metrics_sampler():
+    t = threading.Thread(target=_metrics_sampler_loop, daemon=True)
+    t.start()
+
+# sampler'ı başlat
+start_metrics_sampler()
 
 # Deployments summary for Overview tab
 @app.route('/k8s-explorer/deployments-summary')

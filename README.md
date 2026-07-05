@@ -66,7 +66,7 @@ make venv
 make install
 ```
 
-`make venv` creates `.venv/` in the project root using the system `python3`. `make install` installs into whichever Python interpreter is active (`.venv` if it exists, system `python3` otherwise).
+`make venv` creates `.venv/` in the project root using the system `python3`. `make install` installs into `.venv/bin/python` if that file exists on disk, or the system `python3` otherwise — it checks for the file, not whether a virtualenv is currently activated in your shell.
 
 **Dependencies installed** (from `requirements.txt`):
 
@@ -117,7 +117,7 @@ The image is based on `python:3.9-slim`. The entry point is `python src/main.py`
 
 The desktop build uses `launcher.py` as the PyInstaller entry point instead of `src/main.py`. The launcher:
 
-- Adjusts `sys.path` and template/static paths for the bundle environment
+- Adjusts `sys.path` so the bundled app can be imported, then imports `web.app` — which itself detects the frozen (`sys.frozen`) environment and adjusts its template/static paths accordingly
 - Selects a free port starting at 8080 (scans up to 30 consecutive ports)
 - Opens the system default browser automatically on startup
 
@@ -165,7 +165,7 @@ Every route handler calls `load_kube_config_active()` per request; there is no s
 | `KUBECONFIG` | — | Path to a kubeconfig file; used as the final fallback in cluster resolution |
 | `PROMETHEUS_URL` | — | Base URL of a Prometheus instance; used by the metrics proxy when in-cluster discovery is not available |
 | `NO_AUTO_BROWSER` | — | Set to `1` to prevent the desktop launcher from opening a browser tab on startup |
-| `APP_PORT` | `8080` | Port the desktop launcher binds to (overrides automatic free-port selection) |
+| `APP_PORT` | first free port from `8080` up | Port the desktop launcher binds to (overrides automatic free-port selection with a fixed value) |
 | `METRICS_TS_INTERVAL_SEC` | `10` | Polling interval in seconds for the background metrics sampler thread |
 | `FLASK_ENV` | — | Set to `development` by `make run-dev`; enables Flask debug reloader |
 

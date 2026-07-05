@@ -1,0 +1,50 @@
+# Proje talimat / context dosyaları - repoya commit/push edilmesin
+CLAUDE.md
+context.md
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+*.egg
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Sanal ortam
+.venv/
+venv/
+env/
+
+# Hassas / gizli veriler - kümeye ait kimlik bilgileri içerebilir
+kubeconfigs/
+*.pem
+*.key
+.env
+.env.*
+!.env.example
+
+# Node.js / Next.js frontend (app/, components/, package.json)
+node_modules/
+.next/
+out/
+.pnpm-store/
+npm-debug.log*
+pnpm-debug.log*
+
+# Paketleme / build çıktıları
+dist/
+build/
+*.dmg
+*.app/
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Uygulama logları
+*.log

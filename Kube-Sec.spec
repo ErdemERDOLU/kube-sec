@@ -47,5 +47,5 @@ app = BUNDLE(
     coll,
     name='Kube-Sec.app',
     icon='icon.icns',
-    bundle_identifier='com.example.kubesec',
+    bundle_identifier='com.kubesec.app',
 )

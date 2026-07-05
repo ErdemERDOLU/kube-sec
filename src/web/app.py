@@ -5,7 +5,9 @@ from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from datetime import datetime
 from flasgger import Swagger
-import threading, time, sys, traceback, os, subprocess, json, yaml, urllib.parse, requests
+import threading, time, sys, traceback, os, subprocess, json, yaml, urllib.parse, requests, secrets
+from pathlib import Path
+from version import __version__ as APP_VERSION
 from collections import deque
 import traceback
 import urllib.parse
@@ -41,7 +43,22 @@ else:
     STATIC_DIR = os.path.join(SRC_WEB_DIR, 'static')
 
 app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
-app.secret_key = os.environ.get('APP_SECRET_KEY','dev-secret')
+_env_secret = os.environ.get('APP_SECRET_KEY')
+if _env_secret:
+    app.secret_key = _env_secret
+elif getattr(sys, 'frozen', False):
+    _key_path = Path.home() / '.kubesec' / 'secret_key'
+    if _key_path.exists():
+        app.secret_key = _key_path.read_text().strip()
+    else:
+        _generated_key = secrets.token_hex(32)
+        _key_path.parent.mkdir(parents=True, exist_ok=True)
+        _key_path.write_text(_generated_key)
+        _key_path.chmod(0o600)
+        app.secret_key = _generated_key
+    app.logger.warning("APP_SECRET_KEY not set; using key from ~/.kubesec/secret_key")
+else:
+    app.secret_key = 'dev-secret-do-not-use-in-production'
 CORS(app, origins=CORS_ORIGINS, supports_credentials=True)
 swagger = Swagger(app, config={
     "headers": [],
@@ -381,6 +398,31 @@ def kubeconfigs_delete():
         return jsonify({'error': 'bulunamadı'}), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/k8s-explorer/health')
+def health():
+    """Health check endpoint.
+    ---
+    tags:
+      - health
+    responses:
+      200:
+        description: Application is running
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: ok
+            version:
+              type: string
+              example: 1.0.0
+    """
+    return jsonify({
+        "status": "ok",
+        "version": APP_VERSION
+    })
+
 
 @app.route('/set-locale')
 def set_locale():
@@ -4416,6 +4458,70 @@ def k8s_explorer_page():
 def harbor_trivy_page():
     return render_template('harbor_trivy.html')
 
+
+@app.route('/harbor-trivy-session', methods=['GET', 'POST'])
+def harbor_trivy_session():
+    """
+    Harbor Trivy oturum verisi (URL ve kullanici adi).
+    ---
+    get:
+      description: >
+        Mevcut Flask oturumunda kayitli Harbor URL ve kullanici adini dondurur.
+        Sifre hicbir kosulda dondurulmez.
+      responses:
+        200:
+          description: Oturumdaki Harbor baglanti bilgileri
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  harbor_url:
+                    type: string
+                  harbor_username:
+                    type: string
+    post:
+      description: >
+        Harbor URL ve kullanici adini Flask oturumuna kaydeder.
+        Body'de 'password' anahtari gelse bile kesinlikle yok sayilir ve
+        session'a ya da baska herhangi bir sunucu tarafli storage'a yazilmaz.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                harbor_url:
+                  type: string
+                username:
+                  type: string
+      responses:
+        200:
+          description: Kayit basarili
+        400:
+          description: Gecersiz istek
+    """
+    try:
+        if request.method == 'GET':
+            return jsonify({
+                'harbor_url': session.get('harbor_url', ''),
+                'harbor_username': session.get('harbor_username', '')
+            })
+        # POST: yalnizca harbor_url ve username session'a yazilir.
+        # 'password' anahtari body'de bulunsa bile kasitli olarak yok sayilir;
+        # sifre hicbir sekilde session'a veya sunucu tarafli storage'a yazilmaz.
+        data = request.get_json(force=True) or {}
+        harbor_url = data.get('harbor_url', '').strip()
+        username = data.get('username', '').strip()
+        if not harbor_url:
+            return jsonify({'error': 'harbor_url zorunlu'}), 400
+        session['harbor_url'] = harbor_url
+        session['harbor_username'] = username
+        # NOT: data.get('password') kasitli olarak okunmuyor/atanmiyor.
+        return jsonify({'ok': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/harbor-trivy-api', methods=['POST'])

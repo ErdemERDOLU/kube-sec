@@ -2854,6 +2854,13 @@ window.showSecret = function(name, namespace) {
       }
       
       const secret = data.secret;
+
+      // Approach (A): Store decoded values in JS map — NOT injected into DOM while masked.
+      // This prevents DOM inspector from reading the value when it is visually hidden.
+      const secretEntries = Object.entries(secret.data || {});
+      const secretsMap = {};
+      secretEntries.forEach(([key, value], idx) => { secretsMap[idx] = value; });
+
       const modalHtml = `
         <div class="modal fade" id="secretViewModal" tabindex="-1">
           <div class="modal-dialog modal-lg">
@@ -2878,23 +2885,28 @@ window.showSecret = function(name, namespace) {
                       <tr>
                         <th>Key</th>
                         <th>Value</th>
-                        <th>Action</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      ${Object.entries(secret.data || {}).map(([key, value]) => `
+                      ${secretEntries.map(([key], idx) => `
                         <tr>
                           <td><code>${key}</code></td>
                           <td>
                             <div class="secret-value-container">
-                              <span class="secret-value-hidden">••••••••</span>
-                              <pre class="secret-value-shown mb-0 d-none" style="max-height: 200px; overflow-y: auto;">${value}</pre>
+                              <span class="secret-value-hidden text-muted">••••••••</span>
+                              <pre class="secret-value-shown mb-0 d-none" style="max-height: 200px; overflow-y: auto;"></pre>
                             </div>
                           </td>
                           <td>
-                            <button type="button" class="btn btn-sm btn-outline-secondary toggle-secret-value">
-                              <i class="bi bi-eye"></i> Show
-                            </button>
+                            <div class="d-flex gap-1">
+                              <button type="button" class="btn btn-sm btn-outline-secondary toggle-secret-value" data-secret-idx="${idx}" title="Show / Hide">
+                                <i class="bi bi-eye"></i> Show
+                              </button>
+                              <button type="button" class="btn btn-sm btn-outline-secondary copy-secret-value" data-secret-idx="${idx}" title="Copy to clipboard">
+                                <i class="bi bi-clipboard"></i>
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       `).join('')}
@@ -2910,41 +2922,72 @@ window.showSecret = function(name, namespace) {
           </div>
         </div>
       `;
-      
+
       // Add modal to body and show
       document.body.insertAdjacentHTML('beforeend', modalHtml);
       const modalElement = document.getElementById('secretViewModal');
       const modal = new bootstrap.Modal(modalElement);
-      
-      // Add toggle functionality for secret values
+
+      // Per-row auto-remask timers; cleared on modal close (Risk 3)
+      const remaskTimers = {};
+
+      // Helper: mask a single row and cancel its timer
+      function maskSecretRow(container, toggleBtn, idx) {
+        const shownPre = container.querySelector('.secret-value-shown');
+        const hiddenSpan = container.querySelector('.secret-value-hidden');
+        shownPre.textContent = '';           // Remove value from DOM (Approach A)
+        shownPre.classList.add('d-none');
+        hiddenSpan.classList.remove('d-none');
+        toggleBtn.innerHTML = '<i class="bi bi-eye"></i> Show';
+        if (remaskTimers[idx]) { clearTimeout(remaskTimers[idx]); delete remaskTimers[idx]; }
+      }
+
+      // Unified click handler for toggle and clipboard buttons
       modalElement.addEventListener('click', function(e) {
-        if (e.target.closest('.toggle-secret-value')) {
-          const btn = e.target.closest('tr').querySelector('.secret-value-container');
-          const hiddenSpan = btn.querySelector('.secret-value-hidden');
-          const shownPre = btn.querySelector('.secret-value-shown');
-          
-          if (hiddenSpan.classList.contains('d-none')) {
-            // Currently showing, hide it
-            hiddenSpan.classList.remove('d-none');
-            shownPre.classList.add('d-none');
-            e.target.closest('button').innerHTML = '<i class="bi bi-eye"></i> Show';
+        const toggleBtn = e.target.closest('.toggle-secret-value');
+        if (toggleBtn) {
+          const idx = toggleBtn.getAttribute('data-secret-idx');
+          const container = toggleBtn.closest('tr').querySelector('.secret-value-container');
+          const hiddenSpan = container.querySelector('.secret-value-hidden');
+          const shownPre = container.querySelector('.secret-value-shown');
+
+          if (!shownPre.classList.contains('d-none')) {
+            // Currently revealed → mask it
+            maskSecretRow(container, toggleBtn, idx);
           } else {
-            // Currently hidden, show it
-            hiddenSpan.classList.add('d-none');
+            // Currently masked → reveal; insert value into DOM only now
+            shownPre.textContent = secretsMap[idx];
             shownPre.classList.remove('d-none');
-            e.target.closest('button').innerHTML = '<i class="bi bi-eye-slash"></i> Hide';
+            hiddenSpan.classList.add('d-none');
+            toggleBtn.innerHTML = '<i class="bi bi-eye-slash"></i> Hide';
+            // Auto re-mask after 30 seconds
+            if (remaskTimers[idx]) clearTimeout(remaskTimers[idx]);
+            remaskTimers[idx] = setTimeout(() => maskSecretRow(container, toggleBtn, idx), 30000);
           }
+          return;
+        }
+
+        const copyBtn = e.target.closest('.copy-secret-value');
+        if (copyBtn) {
+          const idx = copyBtn.getAttribute('data-secret-idx');
+          navigator.clipboard.writeText(secretsMap[idx]).then(() => {
+            const orig = copyBtn.innerHTML;
+            copyBtn.innerHTML = '<i class="bi bi-check"></i>';
+            setTimeout(() => { copyBtn.innerHTML = orig; }, 2000);
+          }).catch(() => {});
         }
       });
-      
+
       modalElement.addEventListener('hidden.bs.modal', function () {
+        // Clear all auto-remask timers to prevent leaks (Risk 3)
+        Object.values(remaskTimers).forEach(t => clearTimeout(t));
         modal.dispose();
         modalElement.remove();
         // Restore body scroll
         document.body.style.overflow = '';
         document.body.style.paddingRight = '';
       });
-      
+
       modal.show();
     })
     .catch(error => {

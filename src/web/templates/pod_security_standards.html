@@ -1,0 +1,714 @@
+{% extends "base.html" %}
+{% block title %}{{ t('pss.title') }}{% endblock %}
+{% block page_title %}{{ t('pss.title') }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h1 class="h3 mb-0 text-gray-800">
+                        <i class="bi bi-shield-check text-primary me-2"></i>
+                        {{ t('pss.title') }}
+                    </h1>
+                    <p class="text-muted mb-0">{{ t('pss.subtitle') }}</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="exportPssTable()">
+                        <i class="fas fa-download me-1"></i>{{ t('pss.export_csv') }}
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="location.reload()">
+                        <i class="fas fa-sync-alt me-1"></i>{{ t('pss.refresh') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MVP Disclaimer (Risk #3) -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="alert alert-info d-flex align-items-start gap-2 mb-0" role="alert">
+                <i class="bi bi-info-circle-fill flex-shrink-0 mt-1"></i>
+                <div>{{ t('pss.disclaimer') }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards (AC-9) -->
+    <div class="row mb-4 mt-3" id="pss-summary-cards">
+        <div class="col-md-4 mb-3">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                {{ t('pss.psa_defined_ns') }}
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="card-psa-defined">-</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-shield-check text-gray-300" style="font-size:2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                {{ t('pss.noncompliant_pods_total') }}
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="card-noncompliant-pods">-</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-triangle text-gray-300" style="font-size:2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                {{ t('pss.unlabeled_ns') }}
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="card-unlabeled-ns">-</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-tag-x text-gray-300" style="font-size:2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Namespace Table Card -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between flex-wrap gap-2">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="bi bi-shield-check me-2"></i>{{ t('pss.table_title') }}
+            </h6>
+            <!-- System NS toggle (Risk #2: client-side, default: hidden) -->
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" role="switch"
+                       id="hideSystemNsToggle" checked
+                       onchange="onSystemNsToggle()"
+                       aria-label="{{ t('pss.hide_system_ns') }}">
+                <label class="form-check-label small text-muted" for="hideSystemNsToggle">
+                    {{ t('pss.hide_system_ns') }}
+                </label>
+            </div>
+        </div>
+        <div class="card-body">
+            <div id="pss-result"></div>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover d-none" id="pss-ns-table" aria-label="{{ t('pss.table_title') }}">
+                    <thead class="table-dark">
+                        <tr>
+                            <th scope="col"><i class="fas fa-layer-group me-1"></i>{{ t('pss.namespace') }}</th>
+                            <th scope="col"><i class="bi bi-lock me-1"></i>{{ t('pss.enforce') }}</th>
+                            <th scope="col"><i class="bi bi-exclamation-circle me-1"></i>{{ t('pss.warn') }}</th>
+                            <th scope="col"><i class="bi bi-eye me-1"></i>{{ t('pss.audit') }}</th>
+                            <th scope="col"><i class="bi bi-bar-chart me-1"></i>{{ t('pss.compliance_ratio') }}</th>
+                            <th scope="col"></th>
+                        </tr>
+                        <!-- Filter row (AC-6) -->
+                        <tr class="bg-light">
+                            <th>
+                                <select class="form-select form-select-sm" data-col="0">
+                                    <option value="">{{ t('pss.all') }}</option>
+                                </select>
+                            </th>
+                            <th>
+                                <select class="form-select form-select-sm" data-col="1">
+                                    <option value="">{{ t('pss.all') }}</option>
+                                </select>
+                            </th>
+                            <th>
+                                <select class="form-select form-select-sm" data-col="2">
+                                    <option value="">{{ t('pss.all') }}</option>
+                                </select>
+                            </th>
+                            <th>
+                                <select class="form-select form-select-sm" data-col="3">
+                                    <option value="">{{ t('pss.all') }}</option>
+                                </select>
+                            </th>
+                            <th>
+                                <select class="form-select form-select-sm" data-col="4">
+                                    <option value="">{{ t('pss.all') }}</option>
+                                </select>
+                            </th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="pss-tbody"></tbody>
+                </table>
+            </div>
+            <!-- Pagination (AC-6) -->
+            <nav aria-label="{{ t('pss.pagination_label') }}">
+                <ul class="pagination justify-content-center" id="pss-pagination"></ul>
+            </nav>
+        </div>
+    </div>
+
+</div>
+
+<!-- Namespace Detail Modal (AC-8) -->
+<div class="modal fade" id="pssDetailModal" tabindex="-1"
+     aria-labelledby="pssDetailModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="pssDetailModalLabel">
+                    <i class="bi bi-shield-check me-2 text-primary"></i>
+                    {{ t('pss.detail_title') }}: <span id="pssDetailNsName" class="fw-bold"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        aria-label="{{ t('pss.modal_close') }}"></button>
+            </div>
+            <div class="modal-body" id="pssDetailModalBody">
+                <div class="text-center py-3">
+                    <span class="loading-spinner me-2"></span>
+                    <span class="text-muted">{{ t('pss.loading_detail') }}</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                    {{ t('pss.modal_close') }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.border-left-primary  { border-left: 0.25rem solid #2563eb !important; }
+.border-left-danger   { border-left: 0.25rem solid #dc2626 !important; }
+.border-left-warning  { border-left: 0.25rem solid #d97706 !important; }
+
+.text-xs          { font-size: 0.7rem; }
+.font-weight-bold { font-weight: 700 !important; }
+.text-gray-800    { color: #5a5c69 !important; }
+.text-gray-300    { color: #dddfeb !important; }
+
+/* Profile badge color overrides for Restricted / Baseline */
+.badge-profile-restricted { background-color: #059669 !important; }
+.badge-profile-baseline   { background-color: #d97706 !important; color: #fff !important; }
+.badge-profile-privileged { background-color: #dc2626 !important; }
+.badge-profile-unknown    { background-color: #6c757d !important; }
+
+/* Row hover cursor for clickable rows */
+#pss-ns-table tbody tr { cursor: pointer; }
+
+/* Progress bar inside table cell */
+.pss-progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.pss-progress-wrap .progress {
+    flex: 1;
+    height: 8px;
+    min-width: 50px;
+}
+</style>
+
+<script>
+(function () {
+    'use strict';
+
+    /* -------------------------------------------------------
+       I18N string cache – these are Jinja2 t() calls rendered
+       server-side; the resulting strings are baked into the JS
+       at page render time so dynamic HTML snippets can use them.
+    ------------------------------------------------------- */
+    const I18N = {
+        noLabel:       {{ t('pss.no_label')       | tojson }},
+        compliant:     {{ t('pss.compliant')       | tojson }},
+        noncompliant:  {{ t('pss.noncompliant')    | tojson }},
+        notComputed:   {{ t('pss.not_computed')    | tojson }},
+        loadingDetail: {{ t('pss.loading_detail')  | tojson }},
+        noViolations:  {{ t('pss.no_violations')   | tojson }},
+        detailError:   {{ t('pss.detail_error')    | tojson }},
+        noPsaMsg:      {{ t('pss.no_psa_msg')      | tojson }},
+        allOption:     {{ t('pss.all')             | tojson }},
+        detailBtn:          {{ t('pss.detail')               | tojson }},
+        loadingGeneric:     {{ t('pss.loading_generic')      | tojson }},
+        noNamespacesFound:  {{ t('pss.no_namespaces_found')  | tojson }},
+        noncompliantDetected: {{ t('pss.noncompliant_detected') | tojson }},
+        violationsLabel:    {{ t('pss.violations_label')     | tojson }},
+        preparingAnalysis:  {{ t('pss.preparing_analysis')   | tojson }},
+        namespacesLoaded:   {{ t('pss.namespaces_loaded')    | tojson }},
+        apiErrorPrefix:     {{ t('pss.api_error_prefix')     | tojson }},
+    };
+
+    /* -------------------------------------------------------
+       Constants
+    ------------------------------------------------------- */
+    const SYSTEM_NAMESPACES = new Set(['kube-system', 'kube-public', 'kube-node-lease']);
+    const ROWS_PER_PAGE = 10;
+
+    /* -------------------------------------------------------
+       State
+    ------------------------------------------------------- */
+    let pssAllData = [];        // raw API response
+    let hideSystemNs = true;   // toggle default: hidden (Risk #2)
+    // pssFilterState[col] = selected filter value string
+    const pssFilterState = ['', '', '', '', ''];
+
+    /* -------------------------------------------------------
+       Utility helpers
+    ------------------------------------------------------- */
+    function escapeHtml(s) {
+        if (s == null) return '';
+        return String(s).replace(/[&<>"'`]/g, function (m) {
+            return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' })[m];
+        });
+    }
+
+    function showLoadingState(elementId) {
+        const el = document.getElementById(elementId);
+        if (el) {
+            el.innerHTML = [
+                '<div class="d-flex justify-content-center align-items-center py-4">',
+                '<div class="loading-spinner me-2"></div>',
+                '<span class="text-muted">' + escapeHtml(I18N.loadingGeneric) + '</span>',
+                '</div>'
+            ].join('');
+        }
+    }
+
+    /* -------------------------------------------------------
+       Profile badge renderer
+    ------------------------------------------------------- */
+    function profileBadge(profile) {
+        if (!profile) {
+            return '<span class="badge badge-profile-unknown">' + escapeHtml(I18N.noLabel) + '</span>';
+        }
+        const cls = {
+            restricted: 'badge-profile-restricted',
+            baseline:   'badge-profile-baseline',
+            privileged: 'badge-profile-privileged'
+        }[profile] || 'badge-profile-unknown';
+        return '<span class="badge ' + cls + '">' + escapeHtml(profile) + '</span>';
+    }
+
+    /* -------------------------------------------------------
+       Compliance visual cell (AC-7)
+    ------------------------------------------------------- */
+    function complianceCell(ns) {
+        if (ns.labels === null || ns.compliant_pods === null || ns.noncompliant_pods === null) {
+            return '<span class="text-muted small">—</span>';
+        }
+        const total     = ns.total_pods || 0;
+        const compliant = ns.compliant_pods || 0;
+        const pct       = total > 0 ? Math.round((compliant / total) * 100) : 0;
+        const barCls    = pct === 100 ? 'bg-success' : pct >= 70 ? 'bg-warning' : 'bg-danger';
+        return [
+            '<div class="pss-progress-wrap">',
+            '  <div class="progress">',
+            '    <div class="progress-bar ' + barCls + '" role="progressbar"',
+            '         style="width:' + pct + '%;"',
+            '         aria-valuenow="' + pct + '" aria-valuemin="0" aria-valuemax="100"></div>',
+            '  </div>',
+            '  <small class="text-nowrap">' + escapeHtml(compliant) + '/' + escapeHtml(total) + ' (' + pct + '%)</small>',
+            '</div>'
+        ].join('');
+    }
+
+    /* -------------------------------------------------------
+       Per-namespace extractors used in filter logic
+    ------------------------------------------------------- */
+    function getNsName(ns)    { return ns.name; }
+    function getEnforce(ns)   { return ns.labels ? (ns.labels.enforce || I18N.noLabel) : I18N.noLabel; }
+    function getWarn(ns)      { return ns.labels ? (ns.labels.warn    || I18N.noLabel) : I18N.noLabel; }
+    function getAudit(ns)     { return ns.labels ? (ns.labels.audit   || I18N.noLabel) : I18N.noLabel; }
+    function getComplStatus(ns) {
+        if (ns.labels === null || ns.noncompliant_pods === null) return I18N.notComputed;
+        return ns.noncompliant_pods === 0 ? I18N.compliant : I18N.noncompliant;
+    }
+
+    const EXTRACTORS = [getNsName, getEnforce, getWarn, getAudit, getComplStatus];
+
+    /* -------------------------------------------------------
+       Row renderer (AC-2, AC-7, AC-8)
+    ------------------------------------------------------- */
+    function nsRowRenderer(ns) {
+        const unlabeled     = ns.labels === null;
+        const hasViolations = !unlabeled && ns.noncompliant_pods > 0;
+        const rowCls        = unlabeled ? 'table-warning' : (hasViolations ? 'table-danger' : '');
+        const nsEsc         = escapeHtml(ns.name);
+
+        return [
+            '<tr class="' + rowCls + '" onclick="openNsDetail(' + JSON.stringify(ns.name) + ')">',
+            '  <td><strong>' + nsEsc + '</strong></td>',
+            '  <td>' + profileBadge(ns.labels ? ns.labels.enforce || null : null) + '</td>',
+            '  <td>' + profileBadge(ns.labels ? ns.labels.warn    || null : null) + '</td>',
+            '  <td>' + profileBadge(ns.labels ? ns.labels.audit   || null : null) + '</td>',
+            '  <td>' + complianceCell(ns) + '</td>',
+            '  <td>',
+            '    <button class="btn btn-sm btn-outline-primary"',
+            '            onclick="event.stopPropagation(); openNsDetail(' + JSON.stringify(ns.name) + ')"',
+            '            aria-label="' + escapeHtml(I18N.detailBtn) + ': ' + nsEsc + '">',
+            '      <i class="bi bi-info-circle me-1"></i>' + escapeHtml(I18N.detailBtn),
+            '    </button>',
+            '  </td>',
+            '</tr>'
+        ].join('');
+    }
+
+    /* -------------------------------------------------------
+       Data view helpers
+    ------------------------------------------------------- */
+    function getBaseData() {
+        return hideSystemNs
+            ? pssAllData.filter(function (ns) { return !SYSTEM_NAMESPACES.has(ns.name); })
+            : pssAllData;
+    }
+
+    function applyPssFilters() {
+        return getBaseData().filter(function (ns) {
+            return pssFilterState.every(function (want, col) {
+                if (!want) return true;
+                var val = String(EXTRACTORS[col](ns) || '');
+                return val.toLowerCase().indexOf(want.toLowerCase()) !== -1;
+            });
+        });
+    }
+
+    /* -------------------------------------------------------
+       Filter dropdowns (AC-6) – mirrors privileged_containers.html
+       buildFilterOptions pattern
+    ------------------------------------------------------- */
+    function buildPssFilterOptions() {
+        var base  = getBaseData();
+        var table = document.getElementById('pss-ns-table');
+        if (!table) return;
+
+        EXTRACTORS.forEach(function (extractor, colIdx) {
+            var sel = table.querySelector('thead select[data-col="' + colIdx + '"]');
+            if (!sel) return;
+
+            var current = sel.value;
+            var values  = Array.from(new Set(base.map(extractor)))
+                              .filter(function (v) { return v && v !== 'undefined' && v !== 'null'; })
+                              .sort(function (a, b) { return String(a).localeCompare(String(b)); });
+
+            sel.innerHTML = '<option value="">' + escapeHtml(I18N.allOption) + '</option>';
+            values.forEach(function (v) {
+                var o = document.createElement('option');
+                o.value = v; o.textContent = v;
+                sel.appendChild(o);
+            });
+            if (current) sel.value = current;
+
+            sel.onchange = function () {
+                pssFilterState[Number(this.getAttribute('data-col'))] = this.value;
+                renderPssPage(1);
+            };
+        });
+    }
+
+    /* -------------------------------------------------------
+       Table render + pagination (AC-6)
+    ------------------------------------------------------- */
+    function renderPssPage(page) {
+        var filtered   = applyPssFilters();
+        var total      = filtered.length;
+        var totalPages = Math.max(1, Math.ceil(total / ROWS_PER_PAGE));
+        var curPage    = Math.min(Math.max(1, page || 1), totalPages);
+        var start      = (curPage - 1) * ROWS_PER_PAGE;
+        var pageRows   = filtered.slice(start, start + ROWS_PER_PAGE);
+
+        var table     = document.getElementById('pss-ns-table');
+        var tbody     = document.getElementById('pss-tbody');
+        var resultDiv = document.getElementById('pss-result');
+
+        if (filtered.length === 0) {
+            table.classList.add('d-none');
+            if ((resultDiv.innerHTML || '').trim() === '') {
+                resultDiv.innerHTML = '<div class="alert alert-warning"><i class="fas fa-info-circle me-2"></i>' + escapeHtml(I18N.noNamespacesFound) + '</div>';
+            }
+        } else {
+            table.classList.remove('d-none');
+            tbody.innerHTML = pageRows.map(nsRowRenderer).join('');
+            resultDiv.innerHTML = '';
+        }
+
+        updatePssPagination(curPage, totalPages);
+    }
+
+    function updatePssPagination(currentPage, totalPages) {
+        var ul = document.getElementById('pss-pagination');
+        if (!ul) return;
+        ul.innerHTML = '';
+
+        function li(label, page, disabled, active) {
+            var liEl = document.createElement('li');
+            liEl.className = 'page-item' +
+                (disabled ? ' disabled' : '') +
+                (active   ? ' active'   : '');
+            var a = document.createElement('a');
+            a.className = 'page-link';
+            a.href = '#';
+            a.textContent = label;
+            a.onclick = function (e) {
+                e.preventDefault();
+                if (!disabled && !active) renderPssPage(page);
+            };
+            liEl.appendChild(a);
+            return liEl;
+        }
+
+        ul.appendChild(li('«', 1, currentPage === 1));
+        ul.appendChild(li('‹', Math.max(1, currentPage - 1), currentPage === 1));
+
+        var maxBtns = 7;
+        var s = Math.max(1, currentPage - Math.floor(maxBtns / 2));
+        var e = Math.min(totalPages, s + maxBtns - 1);
+        if (e - s + 1 < maxBtns) s = Math.max(1, e - maxBtns + 1);
+        for (var p = s; p <= e; p++) {
+            ul.appendChild(li(String(p), p, false, p === currentPage));
+        }
+
+        ul.appendChild(li('›', Math.min(totalPages, currentPage + 1), currentPage === totalPages));
+        ul.appendChild(li('»', totalPages, currentPage === totalPages));
+    }
+
+    /* -------------------------------------------------------
+       System NS toggle (Risk #2)
+    ------------------------------------------------------- */
+    window.onSystemNsToggle = function () {
+        hideSystemNs = document.getElementById('hideSystemNsToggle').checked;
+        buildPssFilterOptions();
+        renderPssPage(1);
+    };
+
+    /* -------------------------------------------------------
+       Summary cards (AC-9)
+    ------------------------------------------------------- */
+    function updateSummaryCards(namespaces) {
+        var psaDefined      = namespaces.filter(function (ns) { return ns.labels !== null; }).length;
+        var unlabeled       = namespaces.filter(function (ns) { return ns.labels === null; }).length;
+        var noncompliantPods = namespaces.reduce(function (sum, ns) {
+            return sum + (ns.noncompliant_pods || 0);
+        }, 0);
+
+        var el;
+        el = document.getElementById('card-psa-defined');        if (el) el.textContent = psaDefined;
+        el = document.getElementById('card-noncompliant-pods');  if (el) el.textContent = noncompliantPods;
+        el = document.getElementById('card-unlabeled-ns');       if (el) el.textContent = unlabeled;
+    }
+
+    /* -------------------------------------------------------
+       CSV export (AC-10) – mirrors exportTable() pattern from
+       privileged_containers.html
+    ------------------------------------------------------- */
+    window.exportPssTable = function () {
+        var filtered = applyPssFilters();
+        if (filtered.length === 0) return;
+
+        var headers = [
+            'Namespace', 'Enforce', 'Enforce Version',
+            'Warn', 'Warn Version', 'Audit', 'Audit Version',
+            'Compliant Pods', 'Noncompliant Pods', 'Total Pods'
+        ];
+
+        var rows = filtered.map(function (ns) {
+            var lbl = ns.labels || {};
+            return [
+                ns.name,
+                lbl.enforce         || '',
+                lbl.enforce_version || '',
+                lbl.warn            || '',
+                lbl.warn_version    || '',
+                lbl.audit           || '',
+                lbl.audit_version   || '',
+                ns.compliant_pods   !== null ? ns.compliant_pods   : '',
+                ns.noncompliant_pods !== null ? ns.noncompliant_pods : '',
+                ns.total_pods       || 0
+            ];
+        });
+
+        var csv = headers.map(function (h) { return '"' + h + '"'; }).join(',') + '\n';
+        rows.forEach(function (row) {
+            csv += row.map(function (v) {
+                return '"' + String(v).replace(/"/g, '""') + '"';
+            }).join(',') + '\n';
+        });
+
+        var blob = new Blob([csv], { type: 'text/csv' });
+        var url  = window.URL.createObjectURL(blob);
+        var a    = document.createElement('a');
+        a.href     = url;
+        a.download = 'pss_namespace_analysis.csv';
+        a.click();
+        window.URL.revokeObjectURL(url);
+    };
+
+    /* -------------------------------------------------------
+       Namespace detail modal (AC-8)
+    ------------------------------------------------------- */
+    window.openNsDetail = function (namespace) {
+        var modal     = document.getElementById('pssDetailModal');
+        var labelEl   = document.getElementById('pssDetailNsName');
+        var bodyEl    = document.getElementById('pssDetailModalBody');
+
+        if (!modal || !labelEl || !bodyEl) return;
+
+        labelEl.textContent = namespace;
+        bodyEl.innerHTML = [
+            '<div class="text-center py-3">',
+            '  <span class="loading-spinner me-2"></span>',
+            '  <span class="text-muted">' + escapeHtml(I18N.loadingDetail) + '</span>',
+            '</div>'
+        ].join('');
+
+        var bsModal = bootstrap.Modal.getOrCreateInstance(modal);
+        bsModal.show();
+
+        fetch('/k8s-explorer/pss-namespace-detail?namespace=' + encodeURIComponent(namespace))
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.error) {
+                    bodyEl.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i>' + escapeHtml(data.error) + '</div>';
+                    return;
+                }
+
+                var pods       = data.pods || [];
+                var noncompliant = pods.filter(function (p) { return !p.compliant; });
+
+                if (noncompliant.length === 0) {
+                    bodyEl.innerHTML = [
+                        '<div class="alert alert-success d-flex align-items-center gap-2">',
+                        '  <i class="bi bi-check-circle-fill flex-shrink-0"></i>',
+                        '  <span>' + escapeHtml(I18N.noViolations) + '</span>',
+                        '</div>'
+                    ].join('');
+                    return;
+                }
+
+                var profileBadgeHtml = data.profile
+                    ? '<span class="badge badge-profile-' + escapeHtml(data.profile) + ' me-2">' + escapeHtml(data.profile) + '</span>'
+                    : '';
+
+                var html = [
+                    '<p class="mb-3">',
+                    profileBadgeHtml,
+                    '<strong>' + escapeHtml(noncompliant.length) + '</strong> ' + escapeHtml(I18N.noncompliantDetected),
+                    '</p>',
+                    '<div class="table-responsive">',
+                    '<table class="table table-sm table-bordered table-hover">',
+                    '<thead class="table-dark">',
+                    '<tr><th>Pod</th><th>' + escapeHtml(I18N.violationsLabel) + '</th></tr>',
+                    '</thead><tbody>'
+                ].join('');
+
+                noncompliant.forEach(function (pod) {
+                    var violations = (pod.violations || [])
+                        .map(function (v) { return '<li class="mb-1">' + escapeHtml(v) + '</li>'; })
+                        .join('');
+                    html += [
+                        '<tr>',
+                        '<td><strong>' + escapeHtml(pod.name) + '</strong></td>',
+                        '<td><ul class="mb-0 ps-3 small">' + violations + '</ul></td>',
+                        '</tr>'
+                    ].join('');
+                });
+
+                html += '</tbody></table></div>';
+                bodyEl.innerHTML = html;
+            })
+            .catch(function (err) {
+                bodyEl.innerHTML = [
+                    '<div class="alert alert-danger">',
+                    '<i class="fas fa-exclamation-triangle me-2"></i>',
+                    escapeHtml(I18N.detailError) + ': ' + escapeHtml(String(err)),
+                    '</div>'
+                ].join('');
+            });
+    };
+
+    /* -------------------------------------------------------
+       Bootstrap – load PSS summary on DOMContentLoaded
+    ------------------------------------------------------- */
+    document.addEventListener('DOMContentLoaded', function () {
+        showLoadingState('pss-result');
+
+        fetch('/k8s-explorer/pss-summary')
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var resultDiv = document.getElementById('pss-result');
+
+                if (data.error) {
+                    resultDiv.innerHTML = [
+                        '<div class="alert alert-danger">',
+                        '<i class="fas fa-exclamation-triangle me-2"></i>',
+                        escapeHtml(data.error),
+                        '</div>'
+                    ].join('');
+                    return;
+                }
+
+                // Backend may return {loading: true} while cache is warming (Risk #1)
+                if (data.loading) {
+                    resultDiv.innerHTML = [
+                        '<div class="alert alert-info d-flex align-items-center gap-2">',
+                        '<i class="bi bi-hourglass-split flex-shrink-0"></i>',
+                        '<span>' + escapeHtml(I18N.preparingAnalysis) + '</span>',
+                        '</div>'
+                    ].join('');
+                    return;
+                }
+
+                var namespaces = data.namespaces || [];
+                pssAllData = namespaces;
+
+                if (namespaces.length === 0) {
+                    resultDiv.innerHTML = [
+                        '<div class="alert alert-warning d-flex align-items-center gap-2">',
+                        '<i class="bi bi-info-circle flex-shrink-0"></i>',
+                        '<span>' + escapeHtml(I18N.noPsaMsg) + '</span>',
+                        '</div>'
+                    ].join('');
+                    updateSummaryCards([]);
+                    return;
+                }
+
+                updateSummaryCards(namespaces);
+                buildPssFilterOptions();
+                renderPssPage(1);
+
+                var info = namespaces.length + ' ' + I18N.namespacesLoaded;
+                resultDiv.innerHTML = '<div class="alert alert-info small py-2"><i class="fas fa-info-circle me-1"></i>' + escapeHtml(info) + '</div>';
+            })
+            .catch(function (err) {
+                var resultDiv = document.getElementById('pss-result');
+                if (resultDiv) {
+                    resultDiv.innerHTML = [
+                        '<div class="alert alert-danger">',
+                        '<i class="fas fa-exclamation-triangle me-2"></i>',
+                        escapeHtml(I18N.apiErrorPrefix) + escapeHtml(String(err)),
+                        '</div>'
+                    ].join('');
+                }
+            });
+    });
+
+}());
+</script>
+{% endblock %}

@@ -194,6 +194,67 @@ I18N = {
         'tr': 'Topluluk katkısı ile geliştirilen güvenli Kubernetes altyapıları için.',
         'en': 'For secure Kubernetes infrastructures developed with community contributions.'
     },
+    # PSS / PSA analysis page — flat key names matching pod_security_standards.html template
+    'nav.pss': {'tr': 'Pod Security Standards', 'en': 'Pod Security Standards'},
+    'pss.title': {'tr': 'Pod Security Standards (PSA) Analizi', 'en': 'Pod Security Standards (PSA) Analysis'},
+    'pss.subtitle': {
+        'tr': "Namespace'lerin PSA etiketlerini ve pod uyumluluk durumunu görüntüleyin.",
+        'en': 'View PSA labels and pod compliance status for each namespace.'
+    },
+    'pss.no_label': {'tr': 'Tanımlanmamış', 'en': 'Undefined'},
+    'pss.compliant': {'tr': 'Uyumlu', 'en': 'Compliant'},
+    'pss.noncompliant': {'tr': 'Uyumsuz', 'en': 'Non-compliant'},
+    'pss.profile.privileged': {'tr': 'Privileged', 'en': 'Privileged'},
+    'pss.profile.baseline': {'tr': 'Baseline', 'en': 'Baseline'},
+    'pss.profile.restricted': {'tr': 'Restricted', 'en': 'Restricted'},
+    'pss.disclaimer': {
+        'tr': "Bu analiz MVP kural setiyle (9 kural) yapılmıştır; tam profil uyumluluğu için Kubernetes'in kendi PSA controller'ına başvurun.",
+        'en': "This analysis is performed with an MVP rule set (9 rules); for full profile compliance refer to Kubernetes' own PSA controller."
+    },
+    'pss.loading': {'tr': 'PSA verileri yükleniyor...', 'en': 'Loading PSA data...'},
+    'pss.error': {'tr': 'PSA verileri yüklenemedi.', 'en': 'Failed to load PSA data.'},
+    # Özet kartlar
+    'pss.psa_defined_ns': {'tr': 'PSA Etiketli NS', 'en': 'PSA Labeled NS'},
+    'pss.noncompliant_pods_total': {'tr': 'Toplam Uyumsuz Pod', 'en': 'Total Non-compliant Pods'},
+    'pss.unlabeled_ns': {'tr': 'Etiketsiz NS', 'en': 'Unlabeled NS'},
+    # Tablo başlığı ve araç çubuğu
+    'pss.table_title': {'tr': 'Namespace PSA Durumu', 'en': 'Namespace PSA Status'},
+    'pss.hide_system_ns': {'tr': 'Sistem namespace\'lerini gizle', 'en': 'Hide system namespaces'},
+    'pss.export_csv': {'tr': 'CSV Dışa Aktar', 'en': 'Export CSV'},
+    'pss.refresh': {'tr': 'Yenile', 'en': 'Refresh'},
+    # Tablo sütun başlıkları
+    'pss.namespace': {'tr': 'Namespace', 'en': 'Namespace'},
+    'pss.enforce': {'tr': 'Enforce Profili', 'en': 'Enforce Profile'},
+    'pss.warn': {'tr': 'Warn Profili', 'en': 'Warn Profile'},
+    'pss.audit': {'tr': 'Audit Profili', 'en': 'Audit Profile'},
+    'pss.compliance_ratio': {'tr': 'Uyumluluk Oranı', 'en': 'Compliance Rate'},
+    'pss.detail': {'tr': 'Detay', 'en': 'Detail'},
+    # Filtre / sayfalama
+    'pss.all': {'tr': 'Tümü', 'en': 'All'},
+    'pss.pagination_label': {'tr': 'Sayfa', 'en': 'Page'},
+    # Detay modalı
+    'pss.detail_title': {'tr': 'Pod Uyumluluk Detayı', 'en': 'Pod Compliance Detail'},
+    'pss.modal_close': {'tr': 'Kapat', 'en': 'Close'},
+    'pss.loading_detail': {'tr': 'Detay yükleniyor...', 'en': 'Loading detail...'},
+    'pss.not_computed': {'tr': 'Hesaplanmadı', 'en': 'Not computed'},
+    'pss.no_violations': {'tr': 'İhlal yok', 'en': 'No violations'},
+    'pss.detail_error': {'tr': 'Detay yüklenemedi.', 'en': 'Failed to load detail.'},
+    # Boş durum mesajı
+    'pss.no_psa_msg': {
+        'tr': "Bu cluster'da PSA etiketi tanımlı namespace bulunamadı.",
+        'en': 'No namespace with PSA labels found in this cluster.'
+    },
+    # Frontend hardcoded string temizliği için eklenen 7 ek flat key
+    'pss.loading_generic': {'tr': 'Veriler yükleniyor...', 'en': 'Loading data...'},
+    'pss.no_namespaces_found': {'tr': 'Hiç namespace bulunamadı.', 'en': 'No namespaces found.'},
+    'pss.noncompliant_detected': {'tr': 'uyumsuz pod tespit edildi.', 'en': 'noncompliant pods detected.'},
+    'pss.violations_label': {'tr': 'İhlaller', 'en': 'Violations'},
+    'pss.preparing_analysis': {
+        'tr': 'Analiz hazırlanıyor, lütfen birkaç saniye sonra yenileyin...',
+        'en': 'Analysis is being prepared, please refresh in a few seconds...'
+    },
+    'pss.namespaces_loaded': {'tr': 'namespace yüklendi.', 'en': 'namespaces loaded.'},
+    'pss.api_error_prefix': {'tr': 'API hatası: ', 'en': 'API error: '},
 }
 
 def translate(key: str, lang: str) -> str:
@@ -371,6 +432,10 @@ def kubeconfigs_activate():
             pass
         try:
             update_workload_stats_cache()
+        except Exception:
+            pass
+        try:
+            update_pss_cache()
         except Exception:
             pass
         return jsonify({'ok': True, 'active': name})
@@ -5578,3 +5643,355 @@ def exec_events():
         return jsonify({'events': events})
     except Exception as e:
         return jsonify({'error': str(e), 'events': []}), 500
+
+
+# =============================================================================
+# PSS / PSA (Pod Security Standards / Pod Security Admission) Analizi
+# =============================================================================
+
+# --- PSS Kural Değerlendirme Fonksiyonu ---
+
+def _evaluate_pod_pss_compliance(pod, profile):
+    """Bir pod'u verilen PSS profiline karşı R1-R9 kurallarına göre değerlendirir.
+
+    :param pod: kubernetes.client.models.V1Pod nesnesi
+    :param profile: 'privileged' | 'baseline' | 'restricted'
+    :returns: (compliant: bool, violations: list[str])
+              violations içeriği insan-okunabilir ihlal açıklamalarıdır.
+
+    Kural profil tablosu:
+      Baseline (R1-R5): R1 privileged, R2 hostNetwork, R3 hostPID,
+                        R4 hostIPC, R5 hostPorts
+      Restricted (R1-R9): Baseline kurallarına ek olarak
+                        R6 allowPrivilegeEscalation, R7 runAsNonRoot,
+                        R8 capabilities.drop ALL, R9 capabilities.add kısıtlama
+    Hem spec.containers hem de spec.initContainers kontrol edilir.
+    """
+    if profile == 'privileged':
+        # Privileged profilinde kısıtlama yok; tüm pod'lar uyumlu
+        return (True, [])
+
+    violations = []
+    spec = pod.spec
+
+    # Tüm container'ları birleştir: normal + init
+    all_containers = list(getattr(spec, 'containers', None) or [])
+    init_containers = list(getattr(spec, 'init_containers', None) or [])
+    all_containers_combined = all_containers + init_containers
+
+    # --- Baseline + Restricted kuralları (R1-R5) ---
+
+    # R1: Privileged container — her container/initContainer için
+    for c in all_containers_combined:
+        sc = getattr(c, 'security_context', None)
+        if sc and getattr(sc, 'privileged', False):
+            violations.append(f"privileged=true (container: {c.name})")
+
+    # R2: Host network — pod spec seviyesinde
+    if getattr(spec, 'host_network', False):
+        violations.append("hostNetwork=true")
+
+    # R3: Host PID — pod spec seviyesinde
+    if getattr(spec, 'host_pid', False):
+        violations.append("hostPID=true")
+
+    # R4: Host IPC — pod spec seviyesinde
+    if getattr(spec, 'host_ipc', False):
+        violations.append("hostIPC=true")
+
+    # R5: Host ports — her container/initContainer için
+    for c in all_containers_combined:
+        ports = getattr(c, 'ports', None) or []
+        for port in ports:
+            host_port = getattr(port, 'host_port', None)
+            if host_port:
+                violations.append(f"hostPort={host_port} (container: {c.name})")
+
+    # --- Restricted-only kuralları (R6-R9) ---
+    if profile == 'restricted':
+
+        # R6: allowPrivilegeEscalation — her container'da explicit olarak False olmalı
+        for c in all_containers_combined:
+            sc = getattr(c, 'security_context', None)
+            ape = getattr(sc, 'allow_privilege_escalation', None) if sc else None
+            if ape is not False:
+                violations.append(f"allowPrivilegeEscalation=true (container: {c.name})")
+
+        # R7: runAsNonRoot — pod veya container seviyesinde en az birinde True olmalı
+        pod_sc = getattr(spec, 'security_context', None)
+        pod_run_as_non_root = getattr(pod_sc, 'run_as_non_root', None) if pod_sc else None
+        for c in all_containers_combined:
+            c_sc = getattr(c, 'security_context', None)
+            c_run_as_non_root = getattr(c_sc, 'run_as_non_root', None) if c_sc else None
+            if pod_run_as_non_root is not True and c_run_as_non_root is not True:
+                violations.append(f"runAsNonRoot not set to true (container: {c.name})")
+
+        # R8: capabilities.drop "ALL" içermeli — her container için
+        for c in all_containers_combined:
+            sc = getattr(c, 'security_context', None)
+            caps = getattr(sc, 'capabilities', None) if sc else None
+            drop = getattr(caps, 'drop', None) if caps else None
+            drop_upper = [d.upper() for d in (drop or [])]
+            if 'ALL' not in drop_upper:
+                violations.append(f"capabilities.drop does not include ALL (container: {c.name})")
+
+        # R9: capabilities.add yalnızca boş veya ["NET_BIND_SERVICE"] olabilir — her container için
+        _allowed_add = {'NET_BIND_SERVICE'}
+        for c in all_containers_combined:
+            sc = getattr(c, 'security_context', None)
+            caps = getattr(sc, 'capabilities', None) if sc else None
+            add = getattr(caps, 'add', None) if caps else None
+            add_upper = {a.upper() for a in (add or [])}
+            disallowed = add_upper - _allowed_add
+            if disallowed:
+                violations.append(
+                    f"capabilities.add contains disallowed caps: {sorted(disallowed)} (container: {c.name})"
+                )
+
+    return (len(violations) == 0, violations)
+
+
+# --- PSS In-Memory Cache ---
+
+pss_cache = None
+pss_cache_time = 0
+PSS_CACHE_TTL = 30  # 30 saniye; büyük cluster'larda artırılabilir
+
+
+def update_pss_cache():
+    """Tüm namespace'ler için PSA etiketlerini ve pod uyumluluk sayılarını hesaplar,
+    sonucu modül seviyesi pss_cache dict'ine yazar.
+
+    kubeconfigs_activate() tarafından kubeconfig değişiminde de çağrılır.
+    """
+    global pss_cache, pss_cache_time
+    try:
+        load_kube_config_active()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        core_v1 = client.CoreV1Api()
+
+        namespaces = core_v1.list_namespace().items
+        result = []
+
+        for ns in namespaces:
+            ns_name = ns.metadata.name
+            labels = ns.metadata.labels or {}
+            _prefix = 'pod-security.kubernetes.io/'
+
+            enforce = labels.get(f'{_prefix}enforce')
+            enforce_version = labels.get(f'{_prefix}enforce-version')
+            warn = labels.get(f'{_prefix}warn')
+            warn_version = labels.get(f'{_prefix}warn-version')
+            audit = labels.get(f'{_prefix}audit')
+            audit_version = labels.get(f'{_prefix}audit-version')
+
+            has_psa = any(v is not None for v in [enforce, warn, audit])
+            ns_labels = None
+            if has_psa:
+                ns_labels = {
+                    'enforce': enforce,
+                    'enforce_version': enforce_version,
+                    'warn': warn,
+                    'warn_version': warn_version,
+                    'audit': audit,
+                    'audit_version': audit_version,
+                }
+
+            # Pod'ları listele — hata olursa boş liste kullan
+            try:
+                pods = core_v1.list_namespaced_pod(ns_name).items
+            except Exception as _pod_err:
+                print(f'PSS CACHE: pod list error for ns {ns_name}: {_pod_err}', file=sys.stderr)
+                pods = []
+
+            total_pods = len(pods)
+            compliant_pods = None
+            noncompliant_pods = None
+
+            # Uyumluluk hesabı yalnızca enforce etiketi varsa yapılır
+            if enforce is not None:
+                compliant_count = 0
+                noncompliant_count = 0
+                for pod in pods:
+                    try:
+                        compliant, _ = _evaluate_pod_pss_compliance(pod, enforce)
+                        if compliant:
+                            compliant_count += 1
+                        else:
+                            noncompliant_count += 1
+                    except Exception as _eval_err:
+                        print(
+                            f'PSS CACHE: eval error pod {pod.metadata.name} ns {ns_name}: {_eval_err}',
+                            file=sys.stderr
+                        )
+                        noncompliant_count += 1
+                compliant_pods = compliant_count
+                noncompliant_pods = noncompliant_count
+
+            result.append({
+                'name': ns_name,
+                'labels': ns_labels,
+                'total_pods': total_pods,
+                'compliant_pods': compliant_pods,
+                'noncompliant_pods': noncompliant_pods,
+            })
+
+        pss_cache = {'namespaces': result}
+        pss_cache_time = time.time()
+    except Exception as e:
+        print('PSS CACHE ERROR:', e, file=sys.stderr)
+
+
+def pss_cache_refresher():
+    while True:
+        update_pss_cache()
+        time.sleep(PSS_CACHE_TTL)
+
+
+def start_pss_cache():
+    t = threading.Thread(target=pss_cache_refresher, daemon=True)
+    t.start()
+
+
+start_pss_cache()
+
+
+# --- PSS API Endpoint'leri ---
+
+@app.route('/k8s-explorer/pss-summary')
+def k8s_explorer_pss_summary():
+    """PSS Summary — tüm namespace'ler için PSA etiketleri ve pod uyumluluk istatistikleri.
+    ---
+    tags:
+      - pss
+    get:
+      description: >
+        Her namespace için pod-security.kubernetes.io/{enforce,warn,audit} etiketlerini
+        ve enforce profiline göre hesaplanmış compliant_pods / noncompliant_pods sayılarını döner.
+        Etiket yoksa labels=null döner. enforce etiketi yoksa compliant_pods/noncompliant_pods null olur.
+        Cache dolmamışsa {"loading": true} döner.
+      responses:
+        200:
+          description: PSS özet verisi
+          schema:
+            type: object
+            properties:
+              namespaces:
+                type: array
+                items:
+                  type: object
+        500:
+          description: Sunucu hatası
+    """
+    global pss_cache, pss_cache_time
+    try:
+        now = time.time()
+        if not pss_cache or (now - pss_cache_time > PSS_CACHE_TTL):
+            update_pss_cache()
+        if not pss_cache:
+            return jsonify({'loading': True})
+        return jsonify(pss_cache)
+    except Exception as e:
+        print('PSS SUMMARY ERROR:', e, file=sys.stderr)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/k8s-explorer/pss-namespace-detail')
+def k8s_explorer_pss_namespace_detail():
+    """PSS Namespace Detail — tek namespace için pod bazlı uyumluluk detayı.
+    ---
+    tags:
+      - pss
+    get:
+      description: >
+        Belirtilen namespace'teki her pod için compliant durumu ve violations listesini döner.
+        Hangi profilin uygulandığını (enforce etiketi) da içerir.
+      parameters:
+        - in: query
+          name: namespace
+          schema:
+            type: string
+          required: true
+          description: Detayı alınacak namespace adı
+      responses:
+        200:
+          description: Pod bazlı uyumluluk detayı
+          schema:
+            type: object
+            properties:
+              namespace:
+                type: string
+              profile:
+                type: string
+              pods:
+                type: array
+        400:
+          description: namespace parametresi eksik
+        404:
+          description: Namespace bulunamadı
+        500:
+          description: Sunucu hatası
+    """
+    namespace = request.args.get('namespace', '').strip()
+    if not namespace:
+        return jsonify({'error': 'namespace parametresi zorunlu'}), 400
+    try:
+        load_kube_config_active()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        core_v1 = client.CoreV1Api()
+
+        # Namespace'i oku — PSA enforce etiketini belirle
+        try:
+            ns_obj = core_v1.read_namespace(namespace)
+        except ApiException as ae:
+            if ae.status == 404:
+                return jsonify({'error': f'Namespace bulunamadı: {namespace}'}), 404
+            raise
+
+        ns_labels = ns_obj.metadata.labels or {}
+        _prefix = 'pod-security.kubernetes.io/'
+        profile = ns_labels.get(f'{_prefix}enforce')  # None olabilir
+
+        pods = core_v1.list_namespaced_pod(namespace).items
+        pods_result = []
+
+        for pod in pods:
+            if profile is not None:
+                try:
+                    compliant, violations = _evaluate_pod_pss_compliance(pod, profile)
+                except Exception as _eval_err:
+                    compliant = False
+                    violations = [f"Değerlendirme hatası: {str(_eval_err)}"]
+            else:
+                # enforce etiketi yok; uyumluluk hesaplanamaz
+                compliant = None
+                violations = []
+
+            pods_result.append({
+                'name': pod.metadata.name,
+                'compliant': compliant,
+                'violations': violations,
+            })
+
+        return jsonify({
+            'namespace': namespace,
+            'profile': profile,
+            'pods': pods_result,
+        })
+    except Exception as e:
+        print('PSS NAMESPACE DETAIL ERROR:', e, file=sys.stderr)
+        return jsonify({'error': str(e)}), 500
+
+
+# --- PSS Sayfa Route'u ---
+
+@app.route('/pod-security-standards')
+def pod_security_standards():
+    """Pod Security Standards analiz sayfasını render eder."""
+    return render_template('pod_security_standards.html')

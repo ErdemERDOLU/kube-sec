@@ -5,13 +5,13 @@
 <p>Harbor URL'sini girin ve son image'ların Trivy bulgularını görüntüleyin.</p>
 <div class="row mb-3">
   <div class="col-md-3 mb-2">
-    <input type="text" id="harbor-url" class="form-control" placeholder="Örn: https://harbor.example.com" />
+    <input type="text" id="harbor-url" class="form-control" placeholder="Örn: https://harbor.example.com" autocomplete="off" />
   </div>
   <div class="col-md-2 mb-2">
-    <input type="text" id="harbor-user" class="form-control" placeholder="Kullanıcı (opsiyonel)" />
+    <input type="text" id="harbor-user" class="form-control" placeholder="Kullanıcı (opsiyonel)" autocomplete="off" />
   </div>
   <div class="col-md-2 mb-2">
-    <input type="password" id="harbor-pass" class="form-control" placeholder="Şifre (opsiyonel)" />
+    <input type="password" id="harbor-pass" class="form-control" placeholder="Şifre (opsiyonel)" autocomplete="new-password" />
   </div>
   <div class="col-md-3 mb-2">
     <input type="text" id="project-name" class="form-control" placeholder="Proje adı" />
@@ -31,6 +31,25 @@ let allResults = [];
 let filteredResults = [];
 let currentPage = 1;
 const pageSize = 10;
+
+// AC-2: Sayfa yüklendiğinde önceki Harbor URL ve kullanıcı adını session'dan çek.
+// Şifre alanı kasıtlı olarak boş bırakılır.
+document.addEventListener('DOMContentLoaded', function() {
+  fetch('/harbor-trivy-session')
+    .then(function(resp) { return resp.json(); })
+    .then(function(data) {
+      if (data.harbor_url) {
+        document.getElementById('harbor-url').value = data.harbor_url;
+      }
+      if (data.harbor_username) {
+        document.getElementById('harbor-user').value = data.harbor_username;
+      }
+      // Şifre alanı hiçbir koşulda otomatik doldurulmaz.
+    })
+    .catch(function() {
+      // Session verisi alınamazsa sessizce devam et; kritik değil.
+    });
+});
 
 function renderTable(page=1) {
   const start = (page-1)*pageSize;
@@ -133,6 +152,15 @@ document.getElementById('fetch-trivy').onclick = function() {
       document.getElementById('pagination-container').style.display = 'none';
       return;
     }
+    // AC-2/AC-3: Başarılı yanıtta URL ve kullanıcı adını session'a kaydet.
+    // Şifre body'ye dahil edilmez — sadece harbor_url ve username gönderilir.
+    fetch('/harbor-trivy-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ harbor_url: url, username: username })
+    }).catch(function() {
+      // Session kaydı başarısız olursa ana akışı engelleme.
+    });
     if (data.results && data.results.length > 0) {
       allResults = data.results;
       filteredResults = allResults.slice();

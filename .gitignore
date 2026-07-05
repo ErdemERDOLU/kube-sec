@@ -50,6 +50,5 @@ build/
 *.log
 
 
-# Docs 
-
-.docs/
+# Docs (spec/görev dokümanları - repoya pushlanmasın)
+docs/

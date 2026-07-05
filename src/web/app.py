@@ -399,9 +399,9 @@ def kubeconfigs_delete():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/k8s-explorer/health')
-def health():
-    """Health check endpoint.
+@app.route('/k8s-explorer/app-health')
+def app_health():
+    """Kubeconfig gerektirmeyen basit uygulama canlılık kontrolü.
     ---
     tags:
       - health

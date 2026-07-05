@@ -1,8 +1,8 @@
 Flask>=2.2,<3.0
 Werkzeug>=2.2,<3.0
-kubernetes==21.7.0
+kubernetes==31.0.0
 PyYAML>=6.0,<7.0
-requests==2.26.0
+requests==2.32.3
 pytest==6.2.5
 flask-cors
 flasgger==0.9.7.1

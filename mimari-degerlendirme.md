@@ -8,9 +8,23 @@
 
 ## 1. Yönetici Özeti
 
-Kube-Sec, mevcut haliyle kullanıcıya tarayıcı sekmesi açan bir Flask sunucusudur; "masaüstü uygulaması" iddiasını yalnızca PyInstaller paketi desteklemekte, ancak açılan pencere native değil, varsayılan tarayıcının yeni bir sekmesidir. Bunun yanı sıra uygulama yalnızca 8 bağımlılık içeren sade bir Python yığınıyla çalışmakta ve 5.474 satırlık tek bir dosyada 119 HTTP route barındırmaktadır. Kritik güvenlik/ops mantığının tamamı bu dosyada olup flask arka plan iş parçacıkları (thread) tarafından desteklenen önbellek katmanı, kubeconfig yöneticisi ve Trivy/Harbor entegrasyonu da buraya gömülüdür.
+Kube-Sec, mevcut haliyle kullanıcıya tarayıcı sekmesi açan bir Flask sunucusudur; "masaüstü uygulaması" iddiasını yalnızca PyInstaller paketi desteklemekte, ancak açılan pencere native değil, varsayılan tarayıcının yeni bir sekmesidir. Bunun yanı sıra uygulama yalnızca 8 bağımlılık içeren sade bir Python yığınıyla çalışmakta ve 5.474 satırlık tek bir dosyada 119 HTTP route barındırmaktadır. Kritik güvenlik/ops mantığının tamamı bu dosyada olup Flask arka plan iş parçacıkları (thread) tarafından desteklenen önbellek katmanı, kubeconfig yöneticisi ve Trivy/Harbor entegrasyonu da buraya gömülüdür.
 
-**Tavsiye:** Mevcut Flask + PyInstaller mimarisinde KALINMALI; ancak `webbrowser.open` mekanizması `pywebview` ile değiştirilerek native pencere kazanılmalı, CDN bağımlılıkları çevrimdışı çalışmayı sağlamak için yerelleştirilmeli, `com.example.kubesec` bundle identifier ve `dev-secret` gizli anahtarı üretim değerleriyle değiştirilmeli, arka plan iş parçacıkları için yeniden deneme (retry) ve hata yalıtımı güçlendirilmelidir. Bu değişiklikler 4-6 adam-haftada tamamlanabilir; Next.js veya Electron'a tam geçiş ise küçük bir ekip için 20-40 adam-hafta gerektireceğinden kısa ve orta vadede geri dönüşü olmayan bir kaynak taahhüdü oluşturur.
+**Tavsiye:** Mevcut Flask + PyInstaller mimarisinde KALINMALI; ancak `webbrowser.open` mekanizması `pywebview` ile değiştirilerek native pencere kazanılmalı, CDN bağımlılıkları çevrimdışı çalışmayı sağlamak için yerelleştirilmeli, `com.example.kubesec` bundle identifier ve `dev-secret` gizli anahtarı üretim değerleriyle değiştirilmeli, arka plan iş parçacıkları için yeniden deneme (retry) ve hata yalıtımı güçlendirilmelidir. Bu değişiklikler 5-7 adam-haftada tamamlanabilir; Next.js veya Electron'a tam geçiş ise küçük bir ekip için 20-40 adam-hafta gerektireceğinden kısa ve orta vadede geri dönüşü olmayan bir kaynak taahhüdü oluşturur.
+
+---
+
+## Uygulama Durumu (Seçenek A Geçiş Planı — §6)
+
+| Aşama | Durum | Commit |
+|---|---|---|
+| Aşama 1 — Üretim Dışı Değerlerin Temizlenmesi | ✅ Tamamlandı (2026-07-05) | `2994474` |
+| Aşama 2 — CDN Bağımlılıklarının Yerelleştirilmesi | ✅ Tamamlandı (2026-07-05) | `eb20a66` |
+| Aşama 3 — Native Pencere (pywebview Entegrasyonu) | ⏳ Bekliyor | — |
+| Aşama 4 — Blueprint Refactor (app.py Parçalanması) | ⏳ Bekliyor | — |
+| Aşama 5 — Arka Plan İş Parçacıklarının Sağlamlaştırılması ve Güncelleme Kontrolü | ⏳ Bekliyor | — |
+
+Her aşamanın ayrıntıları ve kabul kriterleri için §6 "Geçiş Planı" bölümüne bakın.
 
 ---
 
@@ -56,8 +70,10 @@ Kritik bulgular:
 2. **İmzalama otomasyonu:** `Makefile:92-113` sign, notarize ve dmg hedeflerini içerir; ancak `SIGN_IDENTITY`, `NOTARY_APPLE_ID`, `NOTARY_TEAM_ID`, `NOTARY_PASSWORD` çevre değişkenlerinin her seferinde dışarıdan sağlanması gerekir. CI/CD pipeline yoktur.
 3. **Otomatik güncelleme yok:** `requirements.txt` ve `Kube-Sec.spec` incelendiğinde `sparkle`, `winsparkle`, `pyupdater` veya benzeri herhangi bir otomatik güncelleme mekanizması bulunmamaktadır. Kullanıcılar güncellemeleri yeni DMG veya EXE indirerek alır.
 4. **Windows build:** `build-windows.ps1` ve `build-windows.sh` mevcut; ancak `build-windows.sh:31`'de tek satırlık bir PyInstaller komutu önerilmekte ve bu komut `--add-data "public:public"` argümanıyla `public/` dizinine referans vermektedir. Bu dizin repoda mevcut değildir; Windows build kırık olabilir.
-5. **Paket boyutu:** Python 3.9 runtime (~20 MB) + Flask yığını + kubernetes==21.7.0 (dependencies dahil) + PyYAML + bundled template/static/yaml dizinleri birleşimi tipik PyInstaller çıktısını 200-350 MB'a taşır.
-6. **Antivirüs riski:** PyInstaller ile üretilen Windows EXE'leri, UPX sıkıştırmasının etkinleştirilmesi (`Kube-Sec.spec:32`'de `upx=True`) nedeniyle yanlış pozitif (false positive) virüs uyarısı tetiklemesiyle bilinen bir sorundur.
+5. **Versiyon yönetimi:** `VERSION` dosyası tek satır `1.0.0` içermekte, `src/version.py` dosyasına `__version__ = '1.0.0'` olarak senkronize edilmektedir. Senkronizasyon `Makefile`'daki `version-sync` hedefiyle (satır 67-72) yapılır. Docker build (`Dockerfile`) bu versiyon bilgisini hiç kullanmamaktadır.
+6. **Paket boyutu:** Python 3.9 runtime (~20 MB) + Flask yığını + kubernetes==21.7.0 (dependencies dahil) + PyYAML + bundled template/static/yaml dizinleri birleşimi tipik PyInstaller çıktısını 200-350 MB'a taşır.
+7. **Antivirüs riski:** PyInstaller ile üretilen Windows EXE'leri, UPX sıkıştırmasının etkinleştirilmesi (`Kube-Sec.spec:32`'de `upx=True`) nedeniyle yanlış pozitif (false positive) virüs uyarısı tetiklemesiyle bilinen bir sorundur.
+8. **Docker build:** `Dockerfile` Python 3.9-slim imajını temel alır ve `CMD ["python", "src/main.py"]` ile başlatır. Bu komut `src/main.py:4`'teki `debug=True` modunu tetikler; Dockerfile'da da üretim WSGI sunucusu kullanılmamaktadır. Ayrıca Dockerfile'a Kubernetes YAML manifests (`yaml/`) kopyalanmamaktadır, bu nedenle konteyner ortamında bu kaynaklar eksik olacaktır.
 
 **Puan: 2/5** — Build altyapısı mevcut fakat üretim dışı bir bundle identifier, eksik otomatik güncelleme ve potansiyel Windows kırıklığı ciddi engeller oluşturmaktadır.
 
@@ -96,7 +112,7 @@ https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js
 
 Performans sorunları:
 
-1. **Flask geliştirme sunucusu:** `src/main.py:4`'te `debug=True` ve Werkzeug'un çok iş parçacıklı olmayan geliştirme sunucusu (`app.run()`) kullanılmaktadır. Bu sunucu eş zamanlı (concurrent) istekleri verimli işleyemez.
+1. **Flask geliştirme sunucusu:** `src/main.py:4`'te `debug=True` ve Werkzeug'un çok iş parçacıklı olmayan geliştirme sunucusu (`app.run()`) kullanılmaktadır. `Dockerfile` da `CMD ["python", "src/main.py"]` ile aynı dev sunucusunu başlatır. Bu sunucu eş zamanlı (concurrent) istekleri verimli işleyemez.
 2. **Üç arka plan iş parçacığı:** `start_workload_stats_cache()` (satır 2683), `start_pods_summary_cache()` (satır 2802-2806 civarı) ve `start_metrics_sampler()` (satır 2907) her biri `daemon=True` ile başlatılmış ayrı iş parçacığıdır. `WORKLOAD_STATS_CACHE_TTL = 20` saniye (satır 2550) ve `PODS_SUMMARY_CACHE_TTL = 180` saniye (satır 2755) ile yapılandırılmıştır. Cluster bağlantısı kesildiğinde bu iş parçacıkları hata yutarak döngüye devam eder; exponential backoff veya devre kesici (circuit breaker) mekanizması yoktur.
 3. **Bellek profili:** Python 3.9 runtime + kubernetes==21.7.0 bağımlılıkları + Flask + 3 arka plan iş parçacığı başlangıçta 150-250 MB bellek tüketir. Bu miktar masaüstü uygulaması için kabul edilebilir olmakla birlikte optimize edilmemiştir.
 4. **SSL devre dışı:** Birden fazla route handler'da `c.verify_ssl = False` ve `c.assert_hostname = False` sabit olarak ayarlanmıştır. Bu güvenlik önlemi devre dışı bırakmaktadır.
@@ -119,6 +135,7 @@ Somut sorunlar:
 4. **Gizli anahtar güvensizliği:** `app.py:44`'te `app.secret_key = os.environ.get('APP_SECRET_KEY','dev-secret')`. Ortam değişkeni tanımlanmazsa üretim ortamında da `dev-secret` kullanılır.
 5. **i18n ölçeklenebilirliği:** `app.py:84`'te başlayan `I18N` sözlüğü yaklaşık 200 anahtar içerir ve yalnızca iki dili (`tr`/`en`) destekler. Çoğul (pluralization), sayı biçimlendirme veya bağlama duyarlı çeviri desteği yoktur. Üçüncü bir dil eklemek tüm anahtarların elle güncellenmesini gerektirir.
 6. **Frontend/backend sıkıştırması:** 22 şablonun tamamı `base.html`'i extend ederek (Jinja2 SSR) oluşturulmuştur. Sayfa başına JavaScript `{% block scripts %}` bloğu içinde şablona gömülüdür. `src/web/static/` dizininde yalnızca `pod_describe.js` (20 satır) mevcuttur; diğer tüm JavaScript inline'dır.
+7. **Versiyon senkronizasyonu:** `VERSION` dosyası (içerik: `1.0.0`) ile `src/version.py` (içerik: `__version__ = '1.0.0'`) arasındaki senkronizasyon `Makefile:67-72`'deki `version-sync` hedefiyle sağlanır. `src/version.py`'nin uygulama içinde hiçbir route handler tarafından kullanılmadığı görülmektedir; versiyon bilgisi şu an sadece build sürecinde işlevseldir.
 
 **Puan: 2/5** — Fonksiyonel ama sürdürülemez; tek geliştiricinin bile yeni özellik eklerken 5.474 satırlık dosyada yön bulmakta zorlanacağı bir yapı.
 
@@ -163,11 +180,11 @@ Flask + Jinja2 + PyInstaller'da kalarak `pywebview` ile native pencere eklemek, 
 
 | Alt başlık | Değerlendirme |
 |-----------|---------------|
-| **Geliştirme eforu** | **4-6 adam-hafta.** pywebview entegrasyonu (~1 hafta), CDN yerelleştirme (~0,5 hafta), Blueprint refactor (~2 hafta), üretim konfigürasyonu güncellemeleri (~0,5 hafta), arka plan iş parçacığı sağlamlaştırma (~1 hafta). |
+| **Geliştirme eforu** | **5-7 adam-hafta.** pywebview entegrasyonu (~1 hafta), CDN yerelleştirme (~0,5 hafta), Blueprint refactor (~2-3 hafta), üretim konfigürasyonu güncellemeleri (~0,5 hafta), arka plan iş parçacığı sağlamlaştırma (~1 hafta). |
 | **Mevcut kodun yeniden kullanım oranı** | **%100.** Hiçbir route handler değiştirilmez; launcher.py'deki `webbrowser.open` çağrısı (satır 44) `pywebview.create_window()` ile değiştirilir. app.py'de yapısal refactor dışında iş mantığı dokunulmaz kalır. |
 | **Masaüstü UX kazanımı** | Native pencere (tarayıcı sekmesi yerine), Dock'ta doğru uygulama simgesi, pencere kapatma/açma ile Flask yaşam döngüsü senkronizasyonu. Tray ve bildirim için `pystray`/`plyer` ek olarak eklenebilir (~1 hafta). |
 | **Paket boyutu tahmini** | **200-350 MB.** Python runtime + tüm bağımlılıklar + pywebview (~20 MB ek). macOS'ta pywebview sistem WebKit kullanır, Chromium paketlemez. |
-| **Otomatik güncelleme** | Manuel implement: başlangıçta GitHub API veya özel sunucu sorgulayarak versiyon karşılaştırması; güncelleme varsa DMG/EXE indirme. ~1-2 hafta ek efor. Hazır framework yoktur. |
+| **Otomatik güncelleme** | Manuel implement: başlangıçta GitHub API veya özel sunucu sorgulayarak `VERSION` dosyasındaki değerle (şu an `1.0.0`) uzak sürümü karşılaştırma; güncelleme varsa DMG/EXE indirme. ~1-2 hafta ek efor. Hazır framework yoktur. |
 | **Cross-platform** | macOS + Windows + Linux. pywebview üç platformu destekler; Windows'ta WebView2 (Edge) kullanır. build-windows.ps1 mevcuttur ancak `build-windows.sh:31`'deki `public:public` argümanı kırık olabilir. |
 | **Bilinen riskler** | (1) pywebview macOS'ta WKWebView, Windows'ta WebView2 kullanır; OS versiyonlarına göre CSS/JS uyumluluğu farklılaşabilir. (2) Blueprint refactor sırasında global değişkenlerin (`KUBECONFIG_ACTIVE_GLOBAL`, `workload_stats_cache`) modüller arası paylaşımı dikkat gerektirir; app.py:229-384 kubeconfig yöneticisi bu durumdan doğrudan etkilenir. |
 | **Artı yönler** | (1) Mevcut Kubernetes iş mantığını sıfırdan yazmak gerekmez. (2) En kısa sürede teslim edilebilir ("masaüstü uygulaması" hissi pywebview ile anında elde edilir). (3) Tek bir teknoloji yığını, ekibin öğrenme eğrisi minimaldır. |
@@ -208,7 +225,7 @@ Seçenek B ile aynı frontend stratejisi, ancak Electron yerine Tauri (Rust taba
 | **Otomatik güncelleme** | `tauri-updater` eklentisi hazır çözüm sunar; imzalı güncelleme paketlerini destekler. Electron-updater ile karşılaştırılabilir olgunluktadır. |
 | **Cross-platform** | macOS + Windows + Linux. Tauri resmi destek sunar; Windows'ta WebView2 kurulu olmasını gerektirir (Windows 11'de varsayılan, Windows 10'da isteğe bağlı kurulum). |
 | **Bilinen riskler** | (1) Rust bilgisi ekibin büyük ihtimalle sahip olmadığı bir yetkinliktir; Tauri eklentileri ve IPC sistemi Rust komutları gerektirir. (2) macOS WKWebView ve Windows WebView2 farklı JavaScript motorları kullandığından CSS/JS uyumluluğu testleri çift platforma bölünmek zorunda kalır. |
-| **Artı yönler** | (1) Seçenek B'ye kıyasla çok daha küçük paket boyutu (~250 MB yerine ~150 MB). (2) Daha düşük bellek tüketimi (Chromium çalışmaz). (3) Güvenlik odaklı tasarım: Tauri IPC sistemi sıkı izin modeline sahiptir. |
+| **Artı yönler** | (1) Seçenek B'ye kıyasla çok daha küçük paket boyutu (~150 MB yerine ~400+ MB). (2) Daha düşük bellek tüketimi (Chromium çalışmaz). (3) Güvenlik odaklı tasarım: Tauri IPC sistemi sıkı izin modeline sahiptir. |
 | **Eksi yönler** | (1) Rust öğrenme eğrisi küçük ekip için ciddi ek efor. (2) Topluluk ve ekosistem Electron'a kıyasla daha küçüktür; daha az hazır eklenti. (3) Windows 10 kullanıcılarında WebView2'nin yüklü olmama riski kullanıcı deneyimi sorununa yol açabilir. |
 | **Repo kökündeki Next.js iskeletinin kullanılabilme durumu** | Seçenek B ile aynı: **~%35 kullanılabilir** (UI bileşen kütüphanesi reusable, sayfa bileşenleri yoktan yazılmalı, `app/page.tsx` kırık). |
 
@@ -245,7 +262,7 @@ Flask backend'i tamamen bırakıp kubernetes client'ı Node.js'e (`@kubernetes/c
 4. `base.html:9-13`'teki dört CDN kaynağı (Bootstrap CSS/JS, Bootstrap Icons, Font Awesome) `src/web/static/` altına indirilmeli; çevrimdışı çalışma sağlanmalıdır.
 5. `src/web/app.py` Flask Blueprint'lere bölünmeli (örn. `blueprints/kubeconfig.py`, `blueprints/explorer.py`, `blueprints/security.py`). Kubeconfig yöneticisi (satır 229-384) bağımsız modüle taşınmalıdır.
 6. Arka plan iş parçacıklarına (`workload_stats_cache_refresher`, `pods_summary_cache_refresher`, `_metrics_sampler_loop`) exponential backoff ve maksimum hata sayısı sınırı eklenmelidir.
-7. `src/main.py:4`'teki `debug=True` kaldırılmalı; geliştirme için `Makefile`'daki `run-dev` hedefinde tutulmalıdır. Üretim build'inde `waitress` (Windows uyumlu) veya `gunicorn` kullanılmalıdır.
+7. `src/main.py:4`'teki `debug=True` kaldırılmalı; geliştirme için `Makefile`'daki `run-dev` hedefinde tutulmalıdır. Üretim build'inde ve `Dockerfile`'da `waitress` (Windows uyumlu) veya `gunicorn` kullanılmalıdır.
 
 ### Gerekçe
 
@@ -276,8 +293,8 @@ Flask + Python yığını, kubernetes API değişikliklerine hâlihazırda uyarl
 | Alan | Açıklama |
 |------|---------|
 | **Aşama adı** | Üretim Hazırlığı |
-| **Kapsam** | `Kube-Sec.spec:50` bundle identifier güncelleme, `app.py:44`'teki `dev-secret` fallback'inin kaldırılması, `src/main.py:4`'teki `debug=True` üretim için devre dışı bırakılması, `requirements.txt`'te bağımlılık sürümlerinin güncellenmesi (`requests`, `kubernetes` en az 2024 sürümlerine). |
-| **Tamamlanma kriteri** | `bundle_identifier` değeri `com.example.*` ile başlamıyor; `APP_SECRET_KEY` ortam değişkeni tanımlanmadan uygulama çalışmıyor veya uyarı veriyor; `python src/main.py` komutu `debug=False` ile başlatılıyor. |
+| **Kapsam** | `Kube-Sec.spec:50` bundle identifier güncelleme, `app.py:44`'teki `dev-secret` fallback'inin kaldırılması, `src/main.py:4`'teki `debug=True` üretim için devre dışı bırakılması, `requirements.txt`'te bağımlılık sürümlerinin güncellenmesi (`requests`, `kubernetes` en az 2024 sürümlerine), `VERSION` ve `src/version.py`'nin uygulama içindeki health endpoint'e (`/k8s-explorer/health`) eklenmesi böylece sürüm bilgisinin API'den okunabilmesi. |
+| **Tamamlanma kriteri** | `bundle_identifier` değeri `com.example.*` ile başlamıyor; `APP_SECRET_KEY` ortam değişkeni tanımlanmadan uygulama çalışmıyor veya uyarı veriyor; `python src/main.py` komutu `debug=False` ile başlatılıyor; `/k8s-explorer/health` yanıtında `version` alanı dönüyor. |
 | **Tahmini süre** | 0,5 adam-hafta |
 | **Bağımlılıkları** | Yok (ilk aşama) |
 | **Geri dönüş noktası** | Git revert; aşama boyunca tek bir feature branch'te çalışılır. |
@@ -290,7 +307,7 @@ Flask + Python yığını, kubernetes API değişikliklerine hâlihazırda uyarl
 |------|---------|
 | **Aşama adı** | Çevrimdışı-Hazır Statik Varlıklar |
 | **Kapsam** | `base.html:9-13`'teki dört CDN bağlantısını kaldırmak; Bootstrap 5.3.2 CSS+JS, Bootstrap Icons 1.11.1 ve Font Awesome 6.4.0'ı `src/web/static/vendor/` altına indirip yerel path'lerle bağlamak. `Kube-Sec.spec:8`'deki `datas` listesini `vendor/` dizinini içerecek şekilde güncellemek. |
-| **Tamamlanma kriteri** | İnternet bağlantısı kesilmiş bir ortamda (tarayıcı DevTools → Network → Offline) tüm 22 şablon stilsiz görünmüyor; tüm ikon ve JavaScript işlevleri çalışıyor. |
+| **Tamamlanma kriteri** | İnternet bağlantısı kesilmiş bir ortamda (tarayıcı DevTools, Network sekmesi, Offline modu) tüm 22 şablon stilsiz görünmüyor; tüm ikon ve JavaScript işlevleri çalışıyor. |
 | **Tahmini süre** | 0,5 adam-hafta |
 | **Bağımlılıkları** | Aşama 1'in tamamlanmış olması |
 | **Geri dönüş noktası** | Git revert; CDN bağlantıları eski haliyle geri yüklenir. |
@@ -328,7 +345,7 @@ Flask + Python yığını, kubernetes API değişikliklerine hâlihazırda uyarl
 | Alan | Açıklama |
 |------|---------|
 | **Aşama adı** | Kararlılık ve Güncelleme |
-| **Kapsam** | `_metrics_sampler_loop`, `workload_stats_cache_refresher` ve `pods_summary_cache_refresher` fonksiyonlarına exponential backoff (ilk deneme 5 sn, maks. 5 dakika) ve maksimum ardışık hata sayısı (10) eklenmesi. Ardışık hata eşiği aşıldığında `/k8s-explorer/health` endpoint'inin bunu yansıtması. Başlangıçta GitHub API veya özel bir endpoint sorgulayan yeni bir versiyon kontrolü fonksiyonu eklenmesi; pywebview penceresi açıldıktan 10 saniye sonra kullanıcıya non-modal bildirim gösterilmesi. |
+| **Kapsam** | `_metrics_sampler_loop`, `workload_stats_cache_refresher` ve `pods_summary_cache_refresher` fonksiyonlarına exponential backoff (ilk deneme 5 sn, maks. 5 dakika) ve maksimum ardışık hata sayısı (10) eklenmesi. Ardışık hata eşiği aşıldığında `/k8s-explorer/health` endpoint'inin bunu yansıtması. Başlangıçta GitHub API veya özel bir endpoint sorgulayan yeni bir versiyon kontrolü fonksiyonu eklenmesi; `src/version.py`'deki `__version__` değeri uzak sürümle karşılaştırılarak pywebview penceresi açıldıktan 10 saniye sonra kullanıcıya non-modal bildirim gösterilmesi. |
 | **Tamamlanma kriteri** | Cluster bağlantısı 10 dakika kesildiğinde arka plan iş parçacıkları CPU'da döngü yaratmıyor (Activity Monitor ile doğrulanabilir). Uygulama başlangıcında yeni sürüm varsa kullanıcı bilgilendiriliyor. |
 | **Tahmini süre** | 1 adam-hafta |
 | **Bağımlılıkları** | Aşama 4'ün tamamlanmış olması |

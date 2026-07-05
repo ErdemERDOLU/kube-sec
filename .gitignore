@@ -48,3 +48,8 @@ build/
 
 # Uygulama logları
 *.log
+
+
+# Docs 
+
+.docs/

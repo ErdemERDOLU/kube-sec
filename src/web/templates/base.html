@@ -48,6 +48,7 @@
             left: 0;
             height: 100vh;
             overflow-y: auto;
+            overflow-x: hidden;
             transition: all 0.3s ease;
             z-index: 1000;
             box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
@@ -55,6 +56,17 @@
 
         .sidebar.collapsed {
             width: var(--sidebar-collapsed-width);
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            justify-content: center;
+            gap: 0;
+        }
+
+        .sidebar.collapsed .sidebar-toggle {
+            margin-left: 0;
         }
 
         .sidebar-header {
@@ -73,7 +85,9 @@
         }
 
         .sidebar.collapsed .app-logo {
-            height: 28px;
+            opacity: 0;
+            width: 0;
+            height: 0;
         }
 
         .sidebar-header .brand-text {

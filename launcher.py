@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""macOS masaüstü başlatıcısı.
+"""Masaüstü başlatıcısı (macOS/Windows).
 
-PyInstaller ile .app içinde paketlendiğinde:
+PyInstaller ile paketlendiğinde:
  - src dizinini sys.path'e ekler
  - Flask uygulamasını uygun template/static yollarıyla başlatır
  - Port 8080 doluysa otomatik bir sonraki boş portu bulur

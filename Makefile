@@ -15,7 +15,8 @@ VERSION_FILE ?= VERSION
 APP_NAME ?= Kube-Sec
 
 .PHONY: venv install install-dev upgrade run run-dev clean version-show set-version bump-patch bump-minor bump-major version-sync build-macos tag push-tag \
-    build-macos-arm build-macos-intel build-macos-universal sign notarize dmg release-macos
+    build-macos-arm build-macos-intel build-macos-universal sign notarize dmg release-macos \
+    build-windows
 
 venv:
 	python3 -m venv $(VENV)
@@ -121,3 +122,9 @@ tag:
 push-tag:
 	@v=$$(cat $(VERSION_FILE)); \
 	git push origin v$$v
+
+# Windows build — gerçek Windows ortamında (veya Windows VM) çalıştırılmalı.
+# macOS'ta pwsh kurulu değilse hata verir.
+build-windows: version-sync
+	pwsh ./build-windows.ps1
+	@echo "Windows build tamamlandı (version $$(cat $(VERSION_FILE)))"

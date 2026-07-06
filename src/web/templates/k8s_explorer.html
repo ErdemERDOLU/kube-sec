@@ -245,6 +245,14 @@ function renderBreadcrumb(root) {
 
 async function fetchApi(url) {
   const resp = await fetch(url);
+  if (!resp.ok) {
+    let detail = `HTTP ${resp.status}`;
+    try {
+      const body = await resp.json();
+      if (body && body.error) detail += ': ' + body.error;
+    } catch (e) { /* JSON parse başarısız -- yalnızca HTTP status gösterilir */ }
+    throw new Error(detail);
+  }
   return await resp.json();
 }
 
@@ -979,8 +987,16 @@ async function showNamespaceSelector() {
   showLoading(root, 'Namespace listesi yükleniyor...');
   
   try {
-    let data = await fetch('/k8s-explorer/namespaces');
-    data = await data.json();
+    const nsResp = await fetch('/k8s-explorer/namespaces');
+    if (!nsResp.ok) {
+      let detail = `HTTP ${nsResp.status}`;
+      try {
+        const body = await nsResp.json();
+        if (body && body.error) detail += ': ' + body.error;
+      } catch (e) { /* ignore */ }
+      throw new Error(detail);
+    }
+    let data = await nsResp.json();
     
     root.innerHTML = '';
     renderBreadcrumb(root);
@@ -1033,8 +1049,16 @@ async function showNamespaceChildren(namespace) {
   showLoading(root, 'Kaynaklar yükleniyor...');
   
   try {
-    let data = await fetch(`/k8s-explorer/namespace-children?namespace=${encodeURIComponent(namespace)}`);
-    data = await data.json();
+    const childResp = await fetch(`/k8s-explorer/namespace-children?namespace=${encodeURIComponent(namespace)}`);
+    if (!childResp.ok) {
+      let detail = `HTTP ${childResp.status}`;
+      try {
+        const body = await childResp.json();
+        if (body && body.error) detail += ': ' + body.error;
+      } catch (e) { /* ignore */ }
+      throw new Error(detail);
+    }
+    let data = await childResp.json();
     
     root.innerHTML = '';
     renderBreadcrumb(root);

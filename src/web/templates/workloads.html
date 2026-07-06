@@ -139,33 +139,8 @@
   </div>
 </div>
 
-<!-- Global Toast Container -->
+<!-- Global Toast Container (common.js showToast .toast-container selector ile bulur) -->
 <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;" id="toastContainer"></div>
-
-<!-- Confirm Action Modal (Reusable) -->
-<div class="modal fade" id="confirmActionModal" tabindex="-1" aria-labelledby="confirmActionModalLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content border-0 shadow">
-      <div class="modal-header bg-danger text-white">
-        <h5 class="modal-title" id="confirmActionModalLabel">
-          <i class="bi bi-exclamation-triangle me-2"></i>Onay
-        </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div id="confirmActionMessage" class="fw-semibold"></div>
-      </div>
-      <div class="modal-footer bg-light">
-        <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">
-          <i class="bi bi-x-circle me-1"></i>Vazgeç
-        </button>
-        <button type="button" class="btn btn-warning rounded-pill" id="confirmActionConfirmBtn">
-          <i class="bi bi-check-circle me-1"></i>Onayla
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- Describe Modal -->
 <div class="modal fade" id="describeModal" tabindex="-1" aria-labelledby="describeModalLabel" aria-hidden="true">
@@ -518,6 +493,22 @@
 #replicasets-table th:nth-child(4){ width: 120px; }
 #replicasets-table th:nth-child(5){ width: 120px; }
 #replicasets-table th:nth-child(6){ width: auto; }
+
+/* Cache Freshness Bar */
+.cache-freshness-bar {
+  margin-bottom: 0.75rem;
+}
+.cache-freshness-bar > span {
+  font-size: 0.82rem;
+  padding: 0.35rem 0;
+  display: inline-block;
+}
+.cache-freshness-bar .alert {
+  border-radius: 6px;
+  margin-bottom: 0;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.82rem;
+}
 </style>
 
 <!-- Hero Header Section -->
@@ -610,6 +601,8 @@
 <div class="tab-content" id="workloadsTabContent">
   <!-- Overview Tab -->
   <div class="tab-pane fade show active" id="overview" role="tabpanel">
+    <!-- Cache tazelik gostergesi: workload-stats cache (#11) -->
+    <div id="workload-stats-cache-bar" class="cache-freshness-bar"></div>
     <div class="row g-4 mb-5">
       <div class="col-lg-4 col-md-6">
         <div class="workload-card h-100">
@@ -760,10 +753,15 @@
                 <button class="btn btn-outline-light btn-sm" onclick="fetchAndRenderPodsTable(true)">
                   <i class="bi bi-arrow-clockwise me-1"></i>Yenile
                 </button>
+                <button class="btn btn-outline-light btn-sm" onclick="exportWorkloadsPods()">
+                  <i class="bi bi-download me-1"></i>CSV
+                </button>
               </div>
             </div>
           </div>
           <div class="card-body p-0">
+            <!-- Cache tazelik gostergesi: pods-summary cache (#11) -->
+            <div id="pods-summary-cache-bar" class="cache-freshness-bar px-3 pt-2"></div>
             <div id="pods-table-container">
               <div class="d-flex align-items-center justify-content-center py-5">
                 <div class="loading-spinner me-2"></div>
@@ -807,6 +805,9 @@
                 <button class="btn btn-outline-light btn-sm" onclick="fetchAndRenderDeploymentsTable(true)">
                   <i class="bi bi-arrow-clockwise me-1"></i>Yenile
                 </button>
+                <button class="btn btn-outline-light btn-sm" onclick="exportWorkloadsDeployments()">
+                  <i class="bi bi-download me-1"></i>CSV
+                </button>
               </div>
             </div>
           </div>
@@ -843,9 +844,14 @@
       <div class="col-12">
         <div class="workload-card">
           <div class="card-header text-white" style="background: var(--info-gradient);">
-            <h5 class="mb-0 fw-bold">
-              <i class="bi bi-cpu me-2"></i>DaemonSet Listesi
-            </h5>
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="mb-0 fw-bold">
+                <i class="bi bi-cpu me-2"></i>DaemonSet Listesi
+              </h5>
+              <button class="btn btn-outline-light btn-sm" onclick="exportWorkloadsDaemonSets()">
+                <i class="bi bi-download me-1"></i>CSV
+              </button>
+            </div>
           </div>
           <div class="card-body p-0">
             <div id="daemonsets-table-container">
@@ -888,6 +894,9 @@
                 </select>
                 <button class="btn btn-outline-light btn-sm" onclick="fetchAndRenderStatefulSetsTable()">
                   <i class="bi bi-arrow-clockwise me-1"></i>Yenile
+                </button>
+                <button class="btn btn-outline-light btn-sm" onclick="exportWorkloadsStatefulSets()">
+                  <i class="bi bi-download me-1"></i>CSV
                 </button>
               </div>
             </div>
@@ -933,6 +942,9 @@
                 </select>
                 <button class="btn btn-outline-light btn-sm" onclick="fetchAndRenderReplicaSetsTable()">
                   <i class="bi bi-arrow-clockwise me-1"></i>Yenile
+                </button>
+                <button class="btn btn-outline-light btn-sm" onclick="exportWorkloadsReplicaSets()">
+                  <i class="bi bi-download me-1"></i>CSV
                 </button>
               </div>
             </div>
@@ -982,6 +994,9 @@
               <button class="btn btn-outline-primary btn-sm" onclick="fetchAndRenderJobsTable()">
                 <i class="bi bi-arrow-clockwise me-1"></i>Yenile
               </button>
+              <button class="btn btn-outline-secondary btn-sm" onclick="exportWorkloadsJobs()">
+                <i class="bi bi-download me-1"></i>CSV
+              </button>
             </div>
           </div>
           <div class="card-body">
@@ -1029,6 +1044,9 @@
               <button class="btn btn-outline-primary btn-sm" onclick="fetchAndRenderCronJobsTable()">
                 <i class="bi bi-arrow-clockwise me-1"></i>Yenile
               </button>
+              <button class="btn btn-outline-secondary btn-sm" onclick="exportWorkloadsCronJobs()">
+                <i class="bi bi-download me-1"></i>CSV
+              </button>
             </div>
           </div>
           <div class="card-body">
@@ -1058,6 +1076,15 @@ let allWorkloadsData = {
   cronjobs: []
 };
 
+// Export icin tab bazli son fetch edilen (ve namespace filtresi uygulanmis) veri
+let lastPodsData = [];
+let lastDeploymentsData = [];
+let lastDaemonSetsData = [];
+let lastStatefulSetsData = [];
+let lastReplicaSetsData = [];
+let lastJobsData = [];
+let lastCronJobsData = [];
+
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
   loadOverviewData();
@@ -1077,6 +1104,60 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 
+// Cache tazelik gostergesi (#11)
+// meta: { updated_at, age_seconds, stale, last_error }
+// containerId: 'workload-stats-cache-bar' veya 'pods-summary-cache-bar'
+function renderCacheMeta(meta, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  // I18N etiketleri -- Jinja2 server-side render eder
+  const LBL = {
+    last_update:      '{{ t("cache.last_update") }}',
+    ago:              '{{ t("cache.ago") }}',
+    seconds:          '{{ t("cache.seconds") }}',
+    minutes:          '{{ t("cache.minutes") }}',
+    stale_warning:    '{{ t("cache.stale_warning") }}',
+    error_prefix:     '{{ t("cache.error_prefix") }}',
+    error_stale_data: '{{ t("cache.error_stale_data") }}',
+    just_now:         '{{ t("cache.just_now") }}',
+    live_data:        '{{ t("cache.live_data") }}'
+  };
+  // Durum 4: Cache henuz dolmamis (updated_at === 0)
+  if (!meta || meta.updated_at === 0) {
+    container.innerHTML = '<div class="alert alert-info d-flex align-items-center mb-0 py-2" role="alert">'
+      + '<i class="bi bi-hourglass-split me-2"></i>Veriler yükleniyor, lütfen birkaç saniye bekleyin...</div>';
+    return;
+  }
+  // age_seconds backend'den gelir -- client-side Date.now() ile hesaplama yapilmaz (AC-10)
+  const age = meta.age_seconds || 0;
+  let timeText;
+  if (age < 10) {
+    timeText = LBL.just_now;
+  } else if (age < 60) {
+    timeText = age + ' ' + LBL.seconds + ' ' + LBL.ago;
+  } else {
+    timeText = Math.floor(age / 60) + ' ' + LBL.minutes + ' ' + LBL.ago;
+  }
+  // Durum 3: Hata durumu (last_error != null) -- hata, bayat durumun onunde gelir
+  if (meta.last_error) {
+    container.innerHTML = '<div class="alert alert-danger d-flex align-items-center mb-0 py-2" role="alert">'
+      + '<i class="bi bi-exclamation-circle me-2"></i>'
+      + LBL.error_prefix + ': ' + escapeHtml(String(meta.last_error)) + ' — ' + LBL.error_stale_data
+      + '</div>';
+  // Durum 2: Bayat durum (stale=true, last_error=null)
+  } else if (meta.stale) {
+    container.innerHTML = '<div class="alert alert-warning d-flex align-items-center mb-0 py-2" role="alert">'
+      + '<i class="bi bi-exclamation-triangle me-2"></i>'
+      + LBL.last_update + ': ' + timeText + ' — ' + LBL.stale_warning
+      + '</div>';
+  // Durum 1: Normal (taze, hatasiz)
+  } else {
+    container.innerHTML = '<span class="text-muted" style="font-size:0.82rem;">'
+      + '<i class="bi bi-clock me-1"></i>' + LBL.last_update + ': ' + timeText
+      + '</span>';
+  }
+}
+
 // Load overview data for all workload types
 async function loadOverviewData() {
   const results = await Promise.allSettled([
@@ -1086,7 +1167,8 @@ async function loadOverviewData() {
     fetchJsonWithTimeout('/k8s-explorer/statefulsets-summary'),
     fetchJsonWithTimeout('/k8s-explorer/replicasets-summary'),
     fetchJsonWithTimeout('/k8s-explorer/jobs-summary'),
-    fetchJsonWithTimeout('/k8s-explorer/cronjobs-summary')
+    fetchJsonWithTimeout('/k8s-explorer/cronjobs-summary'),
+    fetchJsonWithTimeout('/k8s-explorer/workload-stats')  // cache meta icin (#11)
   ]);
   const podsData = results[0].status === 'fulfilled' ? results[0].value : { pods: [] };
   const deploymentsData = results[1].status === 'fulfilled' ? results[1].value : { deployments: [] };
@@ -1095,6 +1177,7 @@ async function loadOverviewData() {
   const replicasetsData = results[4].status === 'fulfilled' ? results[4].value : { replicasets: [] };
   const jobsData = results[5].status === 'fulfilled' ? results[5].value : { jobs: [] };
   const cronjobsData = results[6].status === 'fulfilled' ? results[6].value : { cronjobs: [] };
+  const workloadStatsData = results[7].status === 'fulfilled' ? results[7].value : {};
 
   allWorkloadsData.pods = podsData.pods || [];
   allWorkloadsData.deployments = deploymentsData.deployments || [];
@@ -1103,6 +1186,11 @@ async function loadOverviewData() {
   allWorkloadsData.replicasets = replicasetsData.replicasets || [];
   allWorkloadsData.jobs = jobsData.jobs || [];
   allWorkloadsData.cronjobs = cronjobsData.cronjobs || [];
+
+  // Cache tazelik gostergesi: workload-stats cache'inden meta al (#11)
+  if (workloadStatsData._cache_meta) {
+    renderCacheMeta(workloadStatsData._cache_meta, 'workload-stats-cache-bar');
+  }
 
   updateOverviewCharts();
   updateMetrics();
@@ -1187,6 +1275,10 @@ async function fetchAndRenderPodsTable(forceRefresh = false) {
     // Always fetch fresh server data when explicitly refreshed or first load
     const data = await fetchJsonWithTimeout('/k8s-explorer/pods-summary', {}, 10000);
     let pods = data.pods || [];
+    // Cache tazelik gostergesi: pods-summary cache'inden meta al (#11)
+    if (data._cache_meta) {
+      renderCacheMeta(data._cache_meta, 'pods-summary-cache-bar');
+    }
     // Populate namespace filter once
     const nsFilter = document.getElementById('podsNamespaceFilter');
     if (nsFilter && !nsFilter.dataset.filled) {
@@ -1199,7 +1291,8 @@ async function fetchAndRenderPodsTable(forceRefresh = false) {
     if (nsFilter && nsFilter.value) {
       pods = pods.filter(p => p.namespace === nsFilter.value);
     }
-    
+    lastPodsData = pods;  // export icin sakla
+
     if (pods.length === 0) {
       container.innerHTML = '<div class="empty-state"><i class="bi bi-box"></i><h5>Pod Bulunamadı</h5><p class="text-muted">Cluster\'da hiç Pod bulunmuyor.</p></div>';
       updatePodsPieChart([], 'pie-pods-tab');
@@ -1369,7 +1462,8 @@ async function fetchAndRenderDeploymentsTable(forceRefresh = false) {
     if (nsFilter && nsFilter.value) {
       deployments = deployments.filter(d => d.namespace === nsFilter.value);
     }
-    
+    lastDeploymentsData = deployments;  // export icin sakla
+
     if (deployments.length === 0) {
       container.innerHTML = '<div class="empty-state"><i class="bi bi-arrow-repeat"></i><h5>Deployment Bulunamadı</h5><p class="text-muted">Cluster\'da hiç Deployment bulunmuyor.</p></div>';
       updateDeploymentsPieChart([], 'pie-deployments-tab');
@@ -1420,7 +1514,8 @@ async function fetchAndRenderDaemonSetsTable() {
   try {
   const data = await fetchJsonWithTimeout('/k8s-explorer/daemonsets-summary', {}, 10000);
     const daemonsets = data.daemonsets || [];
-    
+    lastDaemonSetsData = daemonsets;  // export icin sakla
+
     if (daemonsets.length === 0) {
       container.innerHTML = '<div class="empty-state"><i class="bi bi-cpu"></i><h5>DaemonSet Bulunamadı</h5><p class="text-muted">Cluster\'da hiç DaemonSet bulunmuyor.</p></div>';
       updateDaemonSetsPieChart([], 'pie-daemonsets-tab');
@@ -1474,7 +1569,8 @@ async function fetchAndRenderStatefulSetsTable() {
     
   const data = await fetchJsonWithTimeout(url, {}, 10000);
     const statefulsets = data.statefulsets || [];
-    
+    lastStatefulSetsData = statefulsets;  // export icin sakla
+
     // Populate namespace filter
     if (!nsFilter.dataset.filled) {
       const namespaces = [...new Set(statefulsets.map(ss => ss.namespace))];
@@ -1558,7 +1654,8 @@ async function fetchAndRenderReplicaSetsTable() {
 
 function renderReplicaSetsTable(replicasets) {
   const container = document.getElementById('replicasets-table-container');
-  
+  lastReplicaSetsData = replicasets;  // export icin sakla
+
   if (replicasets.length === 0) {
     container.innerHTML = '<div class="empty-state"><i class="bi bi-collection"></i><h5>ReplicaSet Bulunamadı</h5><p class="text-muted">Seçilen kriterlerde hiç ReplicaSet bulunmuyor.</p></div>';
     return;
@@ -1621,7 +1718,8 @@ async function fetchAndRenderJobsTable() {
 
 function renderJobsTable(jobs) {
   const container = document.getElementById('jobs-table-container');
-  
+  lastJobsData = jobs;  // export icin sakla
+
   if (jobs.length === 0) {
     container.innerHTML = '<div class="empty-state"><i class="bi bi-play-circle"></i><h5>Job Bulunamadı</h5><p class="text-muted">Seçilen kriterlerde hiç Job bulunmuyor.</p></div>';
     return;
@@ -1685,7 +1783,8 @@ async function fetchAndRenderCronJobsTable() {
 
 function renderCronJobsTable(cronjobs) {
   const container = document.getElementById('cronjobs-table-container');
-  
+  lastCronJobsData = cronjobs;  // export icin sakla
+
   if (cronjobs.length === 0) {
     container.innerHTML = '<div class="empty-state"><i class="bi bi-clock"></i><h5>CronJob Bulunamadı</h5><p class="text-muted">Seçilen kriterlerde hiç CronJob bulunmuyor.</p></div>';
     return;
@@ -1823,21 +1922,6 @@ function createPieChart(containerId, title, data) {
   });
 }
 
-// Utility functions
-function calculateAge(timestamp) {
-  if (!timestamp) return '-';
-  const created = new Date(timestamp);
-  const now = new Date();
-  const diffMs = now - created;
-  const diffDays = Math.floor(diffMs / (1000*60*60*24));
-  const diffHrs = Math.floor((diffMs % (1000*60*60*24)) / (1000*60*60));
-  const diffMin = Math.floor((diffMs % (1000*60*60)) / (1000*60));
-  
-  if (diffDays > 0) return diffDays + 'd';
-  else if (diffHrs > 0) return diffHrs + 'h';
-  else return diffMin + 'm';
-}
-
 // Timeout'lı güvenli JSON fetch
 async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 10000) {
   const controller = new AbortController();
@@ -1889,7 +1973,7 @@ function showDaemonSetProperties(name, namespace) {
 }
 
 function restartDaemonSet(name, namespace) {
-  openConfirmActionModal(`${namespace}/${name} DaemonSet'ini yeniden başlatmak istiyor musunuz?`, async () => {
+  openConfirmModal({ message: namespace + '/' + name + " DaemonSet'ini yeniden başlatmak istiyor musunuz?", onConfirm: async () => {
     try {
       const r = await fetch('/k8s-explorer/restart-daemonset', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1902,12 +1986,12 @@ function restartDaemonSet(name, namespace) {
         if (typeof loadOverviewData === 'function') loadOverviewData();
       } else {
         const txt = await r.text();
-        showToast('Restart başarısız: ' + txt, 'danger');
+        showToast('Restart başarısız: ' + txt, 'error');
       }
     } catch (e) {
-      showToast('Restart isteği başarısız: ' + e, 'danger');
+      showToast('Restart isteği başarısız: ' + e, 'error');
     }
-  });
+  }});
 }
 
 function showPodLogs(name, namespace) {
@@ -2024,7 +2108,7 @@ function showStatefulSetProperties(name, namespace) {
 }
 
 function restartStatefulSet(name, namespace) {
-  openConfirmActionModal(`${namespace}/${name} StatefulSet'ini yeniden başlatmak istiyor musunuz?`, async () => {
+  openConfirmModal({ message: namespace + '/' + name + " StatefulSet'ini yeniden başlatmak istiyor musunuz?", onConfirm: async () => {
     try {
       const r = await fetch('/k8s-explorer/restart-statefulset', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2037,12 +2121,12 @@ function restartStatefulSet(name, namespace) {
         if (typeof loadOverviewData === 'function') loadOverviewData();
       } else {
         const txt = await r.text();
-        showToast('Restart başarısız: ' + txt, 'danger');
+        showToast('Restart başarısız: ' + txt, 'error');
       }
     } catch (e) {
-      showToast('Restart isteği başarısız: ' + e, 'danger');
+      showToast('Restart isteği başarısız: ' + e, 'error');
     }
-  });
+  }});
 }
 
 // Deployment: scale and restart
@@ -2081,10 +2165,10 @@ function showScaleDeploymentModal(name, namespace, replicas) {
         if (typeof loadOverviewData === 'function') loadOverviewData();
       } else {
         const txt = await r.text();
-        showToast('Scale başarısız: ' + txt, 'danger');
+        showToast('Scale başarısız: ' + txt, 'error');
       }
     } catch (e) {
-      showToast('Scale isteği başarısız: ' + e, 'danger');
+      showToast('Scale isteği başarısız: ' + e, 'error');
     } finally {
       saveBtn.disabled = false;
     }
@@ -2095,51 +2179,9 @@ function showScaleDeploymentModal(name, namespace, replicas) {
   bootstrap.Modal.getOrCreateInstance(modalEl).show();
 }
 
-// Simple Bootstrap toast helper
-function showToast(message, type = 'success') {
-  const container = document.getElementById('toastContainer');
-  if (!container) return alert(message);
-  const bgClass = type === 'success' ? 'text-bg-success' : (type === 'warning' ? 'text-bg-warning' : (type === 'danger' ? 'text-bg-danger' : 'text-bg-primary'));
-  const toastEl = document.createElement('div');
-  toastEl.className = `toast align-items-center ${bgClass} border-0`;
-  toastEl.setAttribute('role', 'alert');
-  toastEl.setAttribute('aria-live', 'assertive');
-  toastEl.setAttribute('aria-atomic', 'true');
-  toastEl.innerHTML = `
-    <div class="d-flex">
-      <div class="toast-body">${message}</div>
-      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-    </div>`;
-  container.appendChild(toastEl);
-  const t = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 3000, autohide: true });
-  toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
-  t.show();
-}
-
-// Reusable confirm modal helper
-function openConfirmActionModal(message, onConfirm) {
-  const modalEl = document.getElementById('confirmActionModal');
-  const msgEl = document.getElementById('confirmActionMessage');
-  const btnEl = document.getElementById('confirmActionConfirmBtn');
-  if (!modalEl || !msgEl || !btnEl) { return onConfirm && onConfirm(); }
-  msgEl.textContent = message || 'Onaylıyor musunuz?';
-  const bs = bootstrap.Modal.getOrCreateInstance(modalEl);
-  btnEl.onclick = null;
-  btnEl.disabled = false;
-  btnEl.onclick = async () => {
-    try {
-      btnEl.disabled = true;
-      if (onConfirm) await onConfirm();
-      bs.hide();
-    } finally {
-      btnEl.disabled = false;
-    }
-  };
-  bs.show();
-}
 
 function restartDeployment(name, namespace) {
-  openConfirmActionModal(`${namespace}/${name} Deployment'ını yeniden başlatmak istiyor musunuz?`, async () => {
+  openConfirmModal({ message: namespace + '/' + name + " Deployment'ını yeniden başlatmak istiyor musunuz?", onConfirm: async () => {
     try {
       const r = await fetch('/k8s-explorer/restart-deployment', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2152,12 +2194,12 @@ function restartDeployment(name, namespace) {
         if (typeof loadOverviewData === 'function') loadOverviewData();
       } else {
         const txt = await r.text();
-        showToast('Restart başarısız: ' + txt, 'danger');
+        showToast('Restart başarısız: ' + txt, 'error');
       }
     } catch (e) {
-      showToast('Restart isteği başarısız: ' + e, 'danger');
+      showToast('Restart isteği başarısız: ' + e, 'error');
     }
-  });
+  }});
 }
 
 // Pod actions: properties modal and restart
@@ -2344,7 +2386,7 @@ function showPodProperties(name, namespace) {
 }
 
 function restartPod(name, namespace) {
-  openConfirmActionModal(`${namespace}/${name} podunu yeniden başlatmak istiyor musunuz?`, async () => {
+  openConfirmModal({ message: namespace + '/' + name + ' podunu yeniden başlatmak istiyor musunuz?', onConfirm: async () => {
     try {
       const r = await fetch('/k8s-explorer/restart-pod', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2355,12 +2397,12 @@ function restartPod(name, namespace) {
         if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
       } else {
         const txt = await r.text();
-        showToast('Restart başarısız: ' + txt, 'danger');
+        showToast('Restart başarısız: ' + txt, 'error');
       }
     } catch (e) {
-      showToast('Restart isteği başarısız: ' + e, 'danger');
+      showToast('Restart isteği başarısız: ' + e, 'error');
     }
-  });
+  }});
 }
 
 function showScaleStatefulSetModal(name, namespace, replicas) {
@@ -2394,10 +2436,10 @@ function showScaleStatefulSetModal(name, namespace, replicas) {
         if (typeof loadOverviewData === 'function') loadOverviewData();
       } else {
         const txt = await r.text();
-        showToast('Scale başarısız: ' + txt, 'danger');
+        showToast('Scale başarısız: ' + txt, 'error');
       }
     } catch (e) {
-      showToast('Scale isteği başarısız: ' + e, 'danger');
+      showToast('Scale isteği başarısız: ' + e, 'error');
     } finally {
       saveBtn.disabled = false;
     }
@@ -2408,7 +2450,7 @@ function showScaleStatefulSetModal(name, namespace, replicas) {
 }
 
 function deleteReplicaSet(name, namespace) {
-  openConfirmActionModal(`${namespace}/${name} ReplicaSet'ini silmek istiyor musunuz?`, async () => {
+  openConfirmModal({ message: namespace + '/' + name + " ReplicaSet'ini silmek istiyor musunuz?", onConfirm: async () => {
     try {
       const r = await fetch('/k8s-explorer/delete-replicasets', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2417,14 +2459,14 @@ function deleteReplicaSet(name, namespace) {
       let txt = '';
       try { txt = await r.text(); } catch(e) { txt = '' + e; }
       if (!r.ok && r.status !== 207) {
-        return showToast('Delete başarısız: ' + txt, 'danger');
+        return showToast('Delete başarısız: ' + txt, 'error');
       }
       let json = {};
       try { json = JSON.parse(txt || '{}'); } catch(e) { json = { deleted: [], errors: [{ error: txt }] }; }
       const deleted = json.deleted || [];
       const errors = json.errors || [];
       if (deleted.length > 0) {
-        showToast(`ReplicaSet silindi: ${name} (ns: ${namespace})`, 'success');
+        showToast('ReplicaSet silindi: ' + name + ' (ns: ' + namespace + ')', 'success');
       }
       if (errors.length > 0) {
         console.warn('Delete errors:', errors);
@@ -2434,9 +2476,9 @@ function deleteReplicaSet(name, namespace) {
       if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
       if (typeof loadOverviewData === 'function') loadOverviewData();
     } catch (e) {
-      showToast('Delete isteği başarısız: ' + e, 'danger');
+      showToast('Delete isteği başarısız: ' + e, 'error');
     }
-  });
+  }});
 }
 
 function deleteJob(name, namespace) {
@@ -2476,11 +2518,86 @@ function updatePodsPieChart(pods, containerId) {
 function updateDeploymentsPieChart(deployments, containerId) {
   const ready = deployments.filter(d => d.ready_replicas > 0).length;
   const notReady = deployments.length - ready;
-  
+
   createPieChart(containerId, 'Deployments', [
     { name: 'Ready', y: ready, color: '#4CAF50' },
     { name: 'Not Ready', y: notReady, color: '#FF9800' }
   ]);
+}
+
+// ---- Tab bazli CSV export fonksiyonlari ----
+
+function exportWorkloadsPods() {
+  if (!lastPodsData.length) { showToast('Henuz veri yuklenmedi', 'warning'); return; }
+  const headers = ['Namespace', 'Ad', 'Durum', 'Hazir', 'Yeniden Baslatma', 'Yas'];
+  const rows = lastPodsData.map(function(pod) {
+    return [pod.namespace, pod.name, pod.status, pod.ready, pod.restarts, calculateAge(pod.creation_timestamp)];
+  });
+  exportToCsv('pods_export.csv', headers, rows);
+  showToast('CSV indirildi', 'success');
+}
+
+function exportWorkloadsDeployments() {
+  if (!lastDeploymentsData.length) { showToast('Henuz veri yuklenmedi', 'warning'); return; }
+  const headers = ['Namespace', 'Ad', 'Hazir', 'Guncel', 'Kullanilabilir', 'Yas'];
+  const rows = lastDeploymentsData.map(function(dep) {
+    const ready_replicas = (dep.ready_replicas !== undefined && dep.ready_replicas !== null) ? dep.ready_replicas : 0;
+    const replicas = (dep.replicas !== undefined && dep.replicas !== null) ? dep.replicas : 0;
+    return [dep.namespace, dep.name, ready_replicas + '/' + replicas, dep.updated_replicas, dep.available_replicas, calculateAge(dep.creation_timestamp)];
+  });
+  exportToCsv('deployments_export.csv', headers, rows);
+  showToast('CSV indirildi', 'success');
+}
+
+function exportWorkloadsDaemonSets() {
+  if (!lastDaemonSetsData.length) { showToast('Henuz veri yuklenmedi', 'warning'); return; }
+  const headers = ['Namespace', 'Ad', 'Hazir', 'Mevcut', 'Istenen', 'Yas'];
+  const rows = lastDaemonSetsData.map(function(ds) {
+    return [ds.namespace, ds.name, ds.ready, ds.current, ds.desired, calculateAge(ds.creation_timestamp)];
+  });
+  exportToCsv('daemonsets_export.csv', headers, rows);
+  showToast('CSV indirildi', 'success');
+}
+
+function exportWorkloadsStatefulSets() {
+  if (!lastStatefulSetsData.length) { showToast('Henuz veri yuklenmedi', 'warning'); return; }
+  const headers = ['Namespace', 'Ad', 'Hazir', 'Replika', 'Yas'];
+  const rows = lastStatefulSetsData.map(function(ss) {
+    return [ss.namespace, ss.name, ss.ready, ss.replicas, calculateAge(ss.creation_timestamp)];
+  });
+  exportToCsv('statefulsets_export.csv', headers, rows);
+  showToast('CSV indirildi', 'success');
+}
+
+function exportWorkloadsReplicaSets() {
+  if (!lastReplicaSetsData.length) { showToast('Henuz veri yuklenmedi', 'warning'); return; }
+  const headers = ['Namespace', 'Ad', 'Hazir', 'Istenen', 'Yas'];
+  const rows = lastReplicaSetsData.map(function(rs) {
+    return [rs.namespace, rs.name, rs.ready, rs.desired, calculateAge(rs.creation_timestamp)];
+  });
+  exportToCsv('replicasets_export.csv', headers, rows);
+  showToast('CSV indirildi', 'success');
+}
+
+function exportWorkloadsJobs() {
+  if (!lastJobsData.length) { showToast('Henuz veri yuklenmedi', 'warning'); return; }
+  const headers = ['Namespace', 'Ad', 'Basarili', 'Basarisiz', 'Tamamlanma', 'Yas'];
+  const rows = lastJobsData.map(function(job) {
+    return [job.namespace, job.name, job.succeeded, job.failed, job.completions || '', calculateAge(job.creation_timestamp)];
+  });
+  exportToCsv('jobs_export.csv', headers, rows);
+  showToast('CSV indirildi', 'success');
+}
+
+function exportWorkloadsCronJobs() {
+  if (!lastCronJobsData.length) { showToast('Henuz veri yuklenmedi', 'warning'); return; }
+  const headers = ['Namespace', 'Ad', 'Program', 'Askida', 'Aktif', 'Son Calistirma', 'Yas'];
+  const rows = lastCronJobsData.map(function(cj) {
+    const lastSchedule = cj.last_schedule_time ? new Date(cj.last_schedule_time).toLocaleString('tr-TR') : '';
+    return [cj.namespace, cj.name, cj.schedule, cj.suspended ? 'Evet' : 'Hayir', cj.active || 0, lastSchedule, calculateAge(cj.creation_timestamp)];
+  });
+  exportToCsv('cronjobs_export.csv', headers, rows);
+  showToast('CSV indirildi', 'success');
 }
 
 </script>

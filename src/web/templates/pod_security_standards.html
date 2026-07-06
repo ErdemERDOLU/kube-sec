@@ -270,16 +270,6 @@
     // pssFilterState[col] = selected filter value string
     const pssFilterState = ['', '', '', '', ''];
 
-    /* -------------------------------------------------------
-       Utility helpers
-    ------------------------------------------------------- */
-    function escapeHtml(s) {
-        if (s == null) return '';
-        return String(s).replace(/[&<>"'`]/g, function (m) {
-            return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' })[m];
-        });
-    }
-
     function showLoadingState(elementId) {
         const el = document.getElementById(elementId);
         if (el) {

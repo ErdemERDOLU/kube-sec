@@ -834,87 +834,6 @@ window.__showDebugMessage = window.__showDebugMessage || function(msg, timeout =
   } catch (e) { console.debug('debugMessage error', e); }
 };
 
-function showToast(message, type = 'success') {
-  // Create toast container if it doesn't exist
-  let toastContainer = document.querySelector('.toast-container');
-  if (!toastContainer) {
-    toastContainer = document.createElement('div');
-    toastContainer.className = 'toast-container';
-    document.body.appendChild(toastContainer);
-  }
-  
-  // Create toast element
-  const toastId = 'toast-' + Date.now();
-  const toastHtml = `
-    <div class="toast ${type}" id="${toastId}" role="alert" aria-live="assertive" aria-atomic="true">
-      <div class="toast-header">
-        <strong class="me-auto">${type === 'success' ? 'Başarılı' : 'Hata'}</strong>
-        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-      </div>
-      <div class="toast-body">
-        ${message}
-      </div>
-    </div>
-  `;
-  
-  toastContainer.insertAdjacentHTML('beforeend', toastHtml);
-  
-  // Initialize and show toast
-  const toastElement = document.getElementById(toastId);
-  const toast = new bootstrap.Toast(toastElement, {
-    autohide: true,
-    delay: 4000
-  });
-  
-  // Remove toast element after it's hidden
-  toastElement.addEventListener('hidden.bs.toast', function() {
-    toastElement.remove();
-  });
-  
-  toast.show();
-}
-
-// Generic confirmation modal helper
-function openConfirmModal({ title = 'Onay', message = 'Emin misiniz?', confirmText = 'Onayla', confirmBtnClass = 'btn-danger', onConfirm }) {
-  const id = 'confirmModal-' + Date.now();
-  const html = `
-    <div class="modal fade" id="${id}" tabindex="-1">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">${title}</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <p class="mb-0">${message}</p>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-            <button type="button" class="btn ${confirmBtnClass}" id="${id}-confirmBtn">${confirmText}</button>
-          </div>
-        </div>
-      </div>
-    </div>`;
-  document.body.insertAdjacentHTML('beforeend', html);
-  const el = document.getElementById(id);
-  const modal = new bootstrap.Modal(el);
-  const btn = el.querySelector('#' + id + '-confirmBtn');
-  el.addEventListener('hidden.bs.modal', () => { try { modal.dispose(); el.remove(); } catch(_){} });
-  btn.addEventListener('click', async () => {
-    const original = btn.textContent;
-    btn.disabled = true; btn.textContent = 'İşleniyor...';
-    try {
-      if (onConfirm) await onConfirm();
-      modal.hide();
-    } catch (e) {
-      // keep modal open; errors should be surfaced by onConfirm via showToast
-      console.debug('confirmModal onConfirm error', e);
-    } finally {
-      btn.disabled = false; btn.textContent = original;
-    }
-  });
-  modal.show();
-}
 
 window.showConfigMap = function(name, namespace) {
   console.debug('showConfigMap called:', name, namespace);
@@ -2700,19 +2619,6 @@ function openPcEditModal(name) {
       modal.show();
     })
     .catch(e => showToast('PriorityClass getirilemedi: ' + e.message, 'error'));
-}
-
-function calculateAge(timestamp) {
-  const now = new Date();
-  const created = new Date(timestamp);
-  const diffMs = now - created;
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-  
-  if (diffDays > 0) return `${diffDays}d`;
-  if (diffHours > 0) return `${diffHours}h`;
-  return `${diffMinutes}m`;
 }
 
 function refreshAllData() {

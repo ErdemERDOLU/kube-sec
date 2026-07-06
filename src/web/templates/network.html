@@ -59,6 +59,12 @@
                 <span class="badge bg-success ms-2" id="networkPoliciesBadge">0</span>
               </button>
             </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link rounded-pill" id="netpol-coverage-tab" data-bs-toggle="pill" data-bs-target="#netpol-coverage" type="button" role="tab">
+                <i class="fas fa-chart-pie me-2"></i>{{ t('netpol.tab_title') }}
+                <span class="badge bg-danger ms-2" id="netpolCoverageBadge" style="display:none;">0</span>
+              </button>
+            </li>
           </ul>
         </div>
 
@@ -202,6 +208,86 @@
                 </div>
               </div>
             </div>
+
+            <!-- Policy Coverage tab - 6th tab (NetworkPolicy kapsam analizi) -->
+            <div class="tab-pane fade" id="netpol-coverage" role="tabpanel" aria-labelledby="netpol-coverage-tab">
+
+              <!-- Loading state: spinner görünür, içerik gizli -->
+              <div id="netpolLoadingDiv" class="text-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="text-muted" id="netpolLoadingMsg">{{ t('netpol.loading') }}</p>
+              </div>
+
+              <!-- Ana içerik: veri yüklenince gösterilir -->
+              <div id="netpolMainContent" class="d-none">
+
+                <!-- Analiz başlığı -->
+                <div class="mb-4">
+                  <h5 class="fw-bold mb-1">{{ t('netpol.coverage_title') }}</h5>
+                  <p class="text-muted mb-0 small">{{ t('netpol.coverage_subtitle') }}</p>
+                </div>
+
+                <!-- Disclaimer notu -->
+                <div class="alert alert-info d-flex align-items-start py-2 mb-4" role="note">
+                  <i class="fas fa-info-circle me-2 mt-1 flex-shrink-0" aria-hidden="true"></i>
+                  <small>{{ t('netpol.disclaimer') }}</small>
+                </div>
+
+                <!-- Özet kartlar (JS tarafından doldurulur) -->
+                <div class="row g-3 mb-4" id="netpolSummaryCards"></div>
+
+                <!-- Filtre / aksiyon kontrolleri -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
+                  <div class="filter-controls d-flex align-items-center gap-3 flex-wrap">
+                    <div class="input-group" style="width: 250px;">
+                      <span class="input-group-text bg-light border-end-0">
+                        <i class="fas fa-search text-muted"></i>
+                      </span>
+                      <input type="text" class="form-control border-start-0" id="netpolNsSearch"
+                             placeholder="{{ t('netpol.search_placeholder') }}"
+                             aria-label="{{ t('netpol.search_placeholder') }}">
+                    </div>
+                    <div class="form-check form-switch mb-0">
+                      <input class="form-check-input" type="checkbox" id="netpolHideSystemNs" checked>
+                      <label class="form-check-label fw-medium" for="netpolHideSystemNs">
+                        {{ t('netpol.hide_system_ns') }}
+                      </label>
+                    </div>
+                  </div>
+                  <div class="d-flex gap-2 mt-2 mt-md-0">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="loadNetpolCoverage()" type="button">
+                      <i class="fas fa-sync-alt me-1"></i>{{ t('netpol.refresh') }}
+                    </button>
+                    <button class="btn btn-outline-success btn-sm" onclick="exportNetpolCsv()" type="button">
+                      <i class="fas fa-download me-1"></i>{{ t('netpol.export_csv') }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Namespace tablosu -->
+                <h6 class="fw-bold mb-3">{{ t('netpol.ns_table_title') }}</h6>
+                <div class="table-responsive">
+                  <table class="table table-hover align-middle" id="netpolNsTable">
+                    <thead class="table-light">
+                      <tr>
+                        <th scope="col">{{ t('netpol.col_namespace') }}</th>
+                        <th scope="col" class="text-center">{{ t('netpol.col_policy_count') }}</th>
+                        <th scope="col" class="text-center">{{ t('netpol.col_total_pods') }}</th>
+                        <th scope="col" class="text-center">{{ t('netpol.col_covered_pods') }}</th>
+                        <th scope="col" class="text-center">{{ t('netpol.col_uncovered_pods') }}</th>
+                        <th scope="col" class="text-center">{{ t('netpol.col_status') }}</th>
+                        <th scope="col"></th>
+                      </tr>
+                    </thead>
+                    <tbody id="netpolNsTableBody"></tbody>
+                  </table>
+                  <p class="text-muted text-center py-3 d-none" id="netpolNoData">{{ t('netpol.no_data') }}</p>
+                </div>
+
+              </div><!-- /netpolMainContent -->
+            </div><!-- /netpol-coverage tab-pane -->
           </div>
         </div>
       </div>
@@ -382,6 +468,43 @@
       width: 100% !important;
     }
   }
+
+  /* Policy Coverage (6th tab) */
+  .coverage-card {
+    border: none;
+    border-radius: 1rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+  }
+
+  .coverage-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
+  }
+
+  .coverage-card .coverage-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+
+  .coverage-card .coverage-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.85;
+    margin-top: 0.25rem;
+  }
+
+  /* Korumasız namespace satırı kırmızı arka plan (AC-3) */
+  #netpolNsTable tbody tr.ns-unprotected {
+    background-color: rgba(220, 53, 69, 0.07);
+  }
+
+  #netpolNsTable tbody tr.ns-unprotected:hover {
+    background-color: rgba(220, 53, 69, 0.14);
+  }
 </style>
 
 <script>
@@ -487,7 +610,7 @@
       filterAndDisplayNetworkPolicies();
     }).catch(error => {
       console.error('Error loading network data:', error);
-      showError('Failed to load network data');
+      showToast('Failed to load network data', 'error');
     });
   }
 
@@ -759,7 +882,7 @@
   }
 
   function deleteEndpoint(name, namespace) {
-    openConfirmModal('Endpoint Sil', `"${name}" endpoint kaynağını silmek istediğinize emin misiniz?`, async () => {
+    openConfirmModal({ title: 'Endpoint Sil', message: '"' + name + '" endpoint kaynağını silmek istediğinize emin misiniz?', onConfirm: async () => {
       try {
         const r = await fetch('/k8s-explorer/delete', {
           method: 'DELETE',
@@ -773,7 +896,7 @@
       } catch (e) {
         showToast('Endpoint silinemedi: ' + e.message, 'error');
       }
-    });
+    }});
   }
 
   function filterAndDisplayServices() {
@@ -928,7 +1051,7 @@
   }
 
   function deleteService(name, namespace) {
-    openConfirmModal('Servisi Sil', `"${name}" servisini silmek istediğinize emin misiniz?`, async () => {
+    openConfirmModal({ title: 'Servisi Sil', message: '"' + name + '" servisini silmek istediğinize emin misiniz?', onConfirm: async () => {
       try {
         const r = await fetch('/k8s-explorer/delete', {
           method: 'DELETE',
@@ -942,66 +1065,9 @@
       } catch (e) {
         showToast('Service silinemedi: ' + e.message, 'error');
       }
-    });
+    }});
   }
 
-  function openConfirmModal(title, message, onConfirm) {
-    const id = 'confirmModalGeneric';
-    const existing = document.getElementById(id);
-    if (existing) existing.remove();
-    const html = `
-      <div class="modal fade" id="${id}" tabindex="-1">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">${title}</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-              <p>${message}</p>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-              <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Sil</button>
-            </div>
-          </div>
-        </div>
-      </div>`;
-    document.body.insertAdjacentHTML('beforeend', html);
-    const el = document.getElementById(id);
-    const modal = new bootstrap.Modal(el);
-    el.querySelector('#confirmDeleteBtn').addEventListener('click', async () => {
-      try { await onConfirm(); } finally { modal.hide(); }
-    });
-    modal.show();
-  }
-
-  function showToast(message, type = 'success') {
-    const bg = type === 'error' ? 'bg-danger' : (type === 'warning' ? 'bg-warning text-dark' : 'bg-success');
-    const toast = `
-      <div class="toast align-items-center text-white ${bg} border-0" role="alert" aria-live="assertive" aria-atomic="true">
-        <div class="d-flex">
-          <div class="toast-body">${message}</div>
-          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-        </div>
-      </div>`;
-    let container = document.querySelector('.toast-container');
-    if (!container) {
-      container = document.createElement('div');
-      container.className = 'toast-container position-fixed top-0 end-0 p-3';
-      document.body.appendChild(container);
-    }
-    container.insertAdjacentHTML('beforeend', toast);
-    const el = container.lastElementChild;
-    new bootstrap.Toast(el, { delay: 3500 }).show();
-  }
-
-  function escapeHtml(str) {
-    return String(str)
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;');
-  }
 
   function displayEndpoints(endpoints) {
     const container = document.getElementById('endpointsGrid');
@@ -1088,38 +1154,348 @@
     }
   }
 
-  function timeAgo(timestamp) {
-    if (!timestamp) return '-';
-    const now = new Date();
-    const time = new Date(timestamp);
-    const diffInSeconds = Math.floor((now - time) / 1000);
-    
-    if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    return `${Math.floor(diffInSeconds / 86400)}d ago`;
+  // =====================================================================
+  // Policy Coverage - 6. Tab (NetworkPolicy kapsam analizi)
+  // =====================================================================
+
+  // I18N sabitleri: Jinja2 sunucu tarafında işler, tarayıcıya hazır string olarak gelir.
+  const netpolI18n = {
+    loading:         {{ t('netpol.loading') | tojson }},
+    error:           {{ t('netpol.error') | tojson }},
+    preparing:       {{ t('netpol.preparing') | tojson }},
+    no_data:         {{ t('netpol.no_data') | tojson }},
+    protected_lbl:   {{ t('netpol.status_protected') | tojson }},
+    partial_lbl:     {{ t('netpol.status_partial') | tojson }},
+    unprotected_lbl: {{ t('netpol.status_unprotected') | tojson }},
+    pod_title:       {{ t('netpol.pod_detail_title') | tojson }},
+    col_pod_name:    {{ t('netpol.col_pod_name') | tojson }},
+    col_pod_labels:  {{ t('netpol.col_pod_labels') | tojson }},
+    modal_close:     {{ t('netpol.modal_close') | tojson }},
+    ns_coverage:     {{ t('netpol.ns_coverage_pct') | tojson }},
+    pod_coverage:    {{ t('netpol.pod_coverage_pct') | tojson }},
+    uncovered_ns:    {{ t('netpol.uncovered_ns') | tojson }},
+    uncovered_pods:  {{ t('netpol.uncovered_pods') | tojson }},
+    total_ns:          {{ t('netpol.total_ns') | tojson }},
+    covered_ns:        {{ t('netpol.covered_ns') | tojson }},
+    total_pods:        {{ t('netpol.total_pods') | tojson }},
+    covered_pods:      {{ t('netpol.covered_pods') | tojson }},
+    col_policy_count:  {{ t('netpol.col_policy_count') | tojson }}
+  };
+
+  let netpolCoverageData = null; // Son başarılı fetch'ten gelen namespaces dizisi
+  let netpolLoaded = false;      // İlk yüklemenin tamamlandığını izler (lazy load)
+  const SYSTEM_NAMESPACES = ['kube-system', 'kube-public', 'kube-node-lease'];
+
+  // Tab gösterildiğinde ve filtre olaylarında bağlantılar
+  document.addEventListener('DOMContentLoaded', function () {
+    const coverageTabBtn = document.getElementById('netpol-coverage-tab');
+    if (coverageTabBtn) {
+      // Lazy load: yalnızca tab ilk kez açıldığında veri çekilir
+      coverageTabBtn.addEventListener('shown.bs.tab', function () {
+        if (!netpolLoaded) {
+          loadNetpolCoverage();
+        }
+      });
+    }
+    // Arama kutusu ve toggle için anlık filtre
+    document.getElementById('netpolNsSearch')?.addEventListener('input', renderNetpolNsTable);
+    document.getElementById('netpolHideSystemNs')?.addEventListener('change', renderNetpolNsTable);
+  });
+
+  async function loadNetpolCoverage() {
+    const loadingDiv = document.getElementById('netpolLoadingDiv');
+    const mainContent = document.getElementById('netpolMainContent');
+    const loadingMsg  = document.getElementById('netpolLoadingMsg');
+
+    // Yükleme durumunu göster
+    if (loadingDiv)  loadingDiv.classList.remove('d-none');
+    if (mainContent) mainContent.classList.add('d-none');
+    if (loadingMsg)  loadingMsg.textContent = netpolI18n.loading;
+
+    try {
+      const r = await fetch('/k8s-explorer/netpol-coverage-summary');
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+
+      // Cache henüz hazır değil → preparing mesajı + 3 sn sonra yeniden dene
+      if (data.loading) {
+        if (loadingMsg) loadingMsg.textContent = netpolI18n.preparing;
+        setTimeout(loadNetpolCoverage, 3000);
+        return;
+      }
+
+      netpolCoverageData = data.namespaces || [];
+      netpolLoaded = true;
+
+      // Özet kartları güncelle
+      renderNetpolSummaryCards(data.cluster_summary || {});
+
+      // Tab badge'ini güncelle (AC-15)
+      const badge = document.getElementById('netpolCoverageBadge');
+      if (badge) {
+        const uncov = (data.cluster_summary || {}).uncovered_namespaces || 0;
+        badge.textContent = uncov;
+        badge.style.display = uncov > 0 ? '' : 'none';
+      }
+
+      // Tablo render
+      renderNetpolNsTable();
+
+      // İçeriği göster
+      if (loadingDiv)  loadingDiv.classList.add('d-none');
+      if (mainContent) mainContent.classList.remove('d-none');
+
+    } catch (e) {
+      if (loadingMsg) loadingMsg.textContent = netpolI18n.error;
+      console.error('netpol-coverage fetch hatası', e);
+      showToast(netpolI18n.error, 'error');
+    }
   }
 
-  function showError(message) {
-    const toast = `
-      <div class="toast align-items-center text-white bg-danger border-0" role="alert">
-        <div class="d-flex">
-          <div class="toast-body">${message}</div>
-          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+  function renderNetpolSummaryCards(summary) {
+    const container = document.getElementById('netpolSummaryCards');
+    if (!container) return;
+
+    const nsPct      = parseFloat(summary.namespace_coverage_pct || 0).toFixed(1);
+    const podPct     = parseFloat(summary.pod_coverage_pct || 0).toFixed(1);
+    const uncovNs    = summary.uncovered_namespaces || 0;
+    const uncovPods  = summary.uncovered_pods || 0;
+
+    const nsPctColor  = nsPct  >= 80 ? 'success' : (nsPct  >= 50 ? 'warning' : 'danger');
+    const podPctColor = podPct >= 80 ? 'success' : (podPct >= 50 ? 'warning' : 'danger');
+
+    const totalNs      = summary.total_namespaces   || 0;
+    const coveredNs    = summary.covered_namespaces  || 0;
+    const totalPods    = summary.total_pods          || 0;
+    const coveredPods  = summary.covered_pods        || 0;
+
+    container.innerHTML = `
+      <div class="col-6 col-md-3">
+        <div class="coverage-card card text-white bg-${nsPctColor}">
+          <div class="card-body text-center">
+            <div class="coverage-value">${nsPct}%</div>
+            <div class="coverage-label">${escapeHtml(netpolI18n.ns_coverage)}</div>
+            <div class="mt-1 small opacity-75">${coveredNs} ${escapeHtml(netpolI18n.covered_ns)} / ${totalNs} ${escapeHtml(netpolI18n.total_ns)}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="coverage-card card text-white bg-${podPctColor}">
+          <div class="card-body text-center">
+            <div class="coverage-value">${podPct}%</div>
+            <div class="coverage-label">${escapeHtml(netpolI18n.pod_coverage)}</div>
+            <div class="mt-1 small opacity-75">${coveredPods} ${escapeHtml(netpolI18n.covered_pods)} / ${totalPods} ${escapeHtml(netpolI18n.total_pods)}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="coverage-card card text-white ${uncovNs > 0 ? 'bg-danger' : 'bg-success'}">
+          <div class="card-body text-center">
+            <div class="coverage-value">${uncovNs}</div>
+            <div class="coverage-label">${escapeHtml(netpolI18n.uncovered_ns)}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="coverage-card card text-white ${uncovPods > 0 ? 'bg-danger' : 'bg-success'}">
+          <div class="card-body text-center">
+            <div class="coverage-value">${uncovPods}</div>
+            <div class="coverage-label">${escapeHtml(netpolI18n.uncovered_pods)}</div>
+          </div>
         </div>
       </div>
     `;
-    
-    let container = document.querySelector('.toast-container');
-    if (!container) {
-      container = document.createElement('div');
-      container.className = 'toast-container position-fixed top-0 end-0 p-3';
-      document.body.appendChild(container);
+  }
+
+  function renderNetpolNsTable() {
+    if (!netpolCoverageData) return;
+
+    const searchTerm = (document.getElementById('netpolNsSearch')?.value || '').toLowerCase().trim();
+    const hideSystem  = document.getElementById('netpolHideSystemNs')?.checked ?? true;
+
+    const rows = netpolCoverageData.filter(ns => {
+      if (hideSystem && SYSTEM_NAMESPACES.includes(ns.name)) return false;
+      if (searchTerm && !ns.name.toLowerCase().includes(searchTerm)) return false;
+      return true;
+    });
+
+    const tbody  = document.getElementById('netpolNsTableBody');
+    const noData = document.getElementById('netpolNoData');
+    const table  = document.getElementById('netpolNsTable');
+    if (!tbody) return;
+
+    if (rows.length === 0) {
+      tbody.innerHTML = '';
+      if (noData) noData.classList.remove('d-none');
+      if (table)  table.classList.add('d-none');
+      return;
     }
-    
-    container.insertAdjacentHTML('beforeend', toast);
-    const toastElement = container.lastElementChild;
-    new bootstrap.Toast(toastElement).show();
+
+    if (noData) noData.classList.add('d-none');
+    if (table)  table.classList.remove('d-none');
+
+    tbody.innerHTML = rows.map(ns => {
+      const isUnprotected = ns.status === 'unprotected';
+      const isPartial     = ns.status === 'partial';
+      const rowClass      = isUnprotected ? 'ns-unprotected' : '';
+
+      const statusBadge = isUnprotected
+        ? `<span class="badge bg-danger">${escapeHtml(netpolI18n.unprotected_lbl)}</span>`
+        : (isPartial
+            ? `<span class="badge bg-warning text-dark">${escapeHtml(netpolI18n.partial_lbl)}</span>`
+            : `<span class="badge bg-success">${escapeHtml(netpolI18n.protected_lbl)}</span>`);
+
+      // Detay butonu: sadece unprotected veya partial namespace'lerde gösterilir (AC-12)
+      const detailBtn = (isUnprotected || isPartial)
+        ? `<button class="btn btn-sm btn-outline-danger" type="button"
+               onclick="showUnprotectedPods('${escapeHtml(ns.name)}')"
+               title="${escapeHtml(netpolI18n.pod_title)}"
+               aria-label="${escapeHtml(netpolI18n.pod_title)}">
+             <i class="fas fa-eye" aria-hidden="true"></i>
+           </button>`
+        : '';
+
+      const warningIcon = isUnprotected
+        ? ' <i class="fas fa-exclamation-triangle text-danger ms-1 small" aria-hidden="true"></i>'
+        : '';
+
+      return `
+        <tr class="${rowClass}">
+          <td class="fw-medium">${escapeHtml(ns.name)}${warningIcon}</td>
+          <td class="text-center">${ns.policy_count}</td>
+          <td class="text-center">${ns.total_pods}</td>
+          <td class="text-center">${ns.covered_pods}</td>
+          <td class="text-center${isUnprotected ? ' text-danger fw-bold' : ''}">${ns.uncovered_pods}</td>
+          <td class="text-center">${statusBadge}</td>
+          <td class="text-end">${detailBtn}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // Korumasız pod listesini modal'da göster (AC-12)
+  async function showUnprotectedPods(namespace) {
+    try {
+      const r = await fetch(`/k8s-explorer/netpol-coverage-ns-detail?namespace=${encodeURIComponent(namespace)}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+      if (data.error) throw new Error(data.error);
+
+      const pods    = data.unprotected_pods || [];
+      const modalId = 'netpolPodDetailModal';
+      const existing = document.getElementById(modalId);
+      if (existing) existing.remove();
+
+      let podsHtml;
+      if (pods.length === 0) {
+        podsHtml = `<p class="text-muted">${escapeHtml(netpolI18n.no_data)}</p>`;
+      } else {
+        const podRows = pods.map(pod => {
+          const labels = Object.entries(pod.labels || {})
+            .map(([k, v]) => `<span class="badge bg-secondary me-1">${escapeHtml(k)}=${escapeHtml(v)}</span>`)
+            .join('');
+          return `<tr>
+            <td class="font-monospace small">${escapeHtml(pod.name)}</td>
+            <td>${labels || '-'}</td>
+          </tr>`;
+        }).join('');
+
+        podsHtml = `
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <thead class="table-light">
+                <tr>
+                  <th>${escapeHtml(netpolI18n.col_pod_name)}</th>
+                  <th>${escapeHtml(netpolI18n.col_pod_labels)}</th>
+                </tr>
+              </thead>
+              <tbody>${podRows}</tbody>
+            </table>
+          </div>`;
+      }
+
+      const policies    = data.policies || [];
+      const policiesInfo = policies.length > 0
+        ? `<p class="text-muted small mb-2">
+             <i class="fas fa-shield-alt me-1"></i>${data.policy_count} ${escapeHtml(netpolI18n.col_policy_count)}:
+             ${policies.map(p => `<strong>${escapeHtml(p.name)}</strong> (${escapeHtml(p.pod_selector_summary)})`).join(', ')}
+           </p>`
+        : '';
+
+      const modal = `
+        <div class="modal fade" id="${modalId}" tabindex="-1"
+             aria-labelledby="${modalId}Label" aria-modal="true" role="dialog">
+          <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="${modalId}Label">
+                  <i class="fas fa-exclamation-triangle text-danger me-2" aria-hidden="true"></i>${escapeHtml(netpolI18n.pod_title)}:
+                  <span class="font-monospace">${escapeHtml(namespace)}</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                ${policiesInfo}
+                <div class="mb-3">
+                  <span class="badge bg-secondary me-1">${escapeHtml(netpolI18n.total_pods)}: ${data.total_pods}</span>
+                  <span class="badge bg-success me-1">${escapeHtml(netpolI18n.covered_pods)}: ${data.covered_pods}</span>
+                  <span class="badge bg-danger">${escapeHtml(netpolI18n.uncovered_pods)}: ${data.uncovered_pods}</span>
+                </div>
+                ${podsHtml}
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                  ${escapeHtml(netpolI18n.modal_close)}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+
+      document.body.insertAdjacentHTML('beforeend', modal);
+      new bootstrap.Modal(document.getElementById(modalId)).show();
+
+    } catch (e) {
+      showToast(netpolI18n.error + ': ' + e.message, 'error');
+      console.error('showUnprotectedPods hatası', e);
+    }
+  }
+
+  // CSV dışa aktarma (AC-14): mevcut filtre/toggle durumunu yansıtır
+  function exportNetpolCsv() {
+    if (!netpolCoverageData) return;
+
+    const hideSystem = document.getElementById('netpolHideSystemNs')?.checked ?? true;
+    const searchTerm = (document.getElementById('netpolNsSearch')?.value || '').toLowerCase().trim();
+
+    const filtered = netpolCoverageData.filter(ns => {
+      if (hideSystem && SYSTEM_NAMESPACES.includes(ns.name)) return false;
+      if (searchTerm && !ns.name.toLowerCase().includes(searchTerm)) return false;
+      return true;
+    });
+
+    const header = ['namespace', 'policy_count', 'total_pods', 'covered_pods', 'uncovered_pods', 'status'];
+    const csvRows = [header.join(',')];
+    filtered.forEach(ns => {
+      csvRows.push([
+        `"${ns.name.replace(/"/g, '""')}"`,
+        ns.policy_count,
+        ns.total_pods,
+        ns.covered_pods,
+        ns.uncovered_pods,
+        `"${ns.status}"`
+      ].join(','));
+    });
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'netpol-coverage.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 </script>
 {% endblock %}

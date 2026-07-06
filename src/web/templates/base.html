@@ -674,8 +674,28 @@
                 const titleEl = document.getElementById('clusterHealthTitle');
                 const msgEl = document.getElementById('clusterHealthMessage');
                 if (!toastEl || !titleEl || !msgEl) return;
+                toastEl.classList.remove('text-bg-warning');
+                toastEl.classList.add('text-bg-danger');
                 titleEl.textContent = `Kubernetes cluster'a bağlanılamadı${contextName ? ` (${contextName})` : ''}`;
                 msgEl.textContent = error ? String(error) : `30 saniye içinde bu cluster'a bağlanamadı.`;
+                toastEl.style.display = 'block';
+                if (!toastInstance) toastInstance = bootstrap.Toast.getOrCreateInstance(toastEl, { autohide: false });
+                toastInstance.show();
+            }
+
+            function showClusterWarning(contextName, error) {
+                const toastEl = document.getElementById('clusterHealthToast');
+                const titleEl = document.getElementById('clusterHealthTitle');
+                const msgEl = document.getElementById('clusterHealthMessage');
+                if (!toastEl || !titleEl || !msgEl) return;
+                toastEl.classList.remove('text-bg-danger');
+                toastEl.classList.add('text-bg-warning');
+                const locale = window.locale || 'tr';
+                const i18n = window.i18n || {};
+                const checkingTitle = (i18n['error.cluster_checking'] && i18n['error.cluster_checking'][locale]) || 'Kubernetes bağlantısı kontrol ediliyor';
+                const checkingMsg = (i18n['error.cluster_checking_msg'] && i18n['error.cluster_checking_msg'][locale]) || "Cluster'a henüz bağlanılamadı, kontrol devam ediyor...";
+                titleEl.textContent = checkingTitle + (contextName ? ` (${contextName})` : '');
+                msgEl.textContent = checkingMsg + (error ? ` Son hata: ${error}` : '');
                 toastEl.style.display = 'block';
                 if (!toastInstance) toastInstance = bootstrap.Toast.getOrCreateInstance(toastEl, { autohide: false });
                 toastInstance.show();
@@ -747,6 +767,17 @@
                             }
                         } catch (e) { ctxName = null; }
                         showClusterAlert(ctxName, error);
+                    } else {
+                        // Intermediate warning: ilk hata anından itibaren sari toast goster
+                        let ctxName = null;
+                        try {
+                            if (context) {
+                                if (typeof context === 'string') ctxName = context;
+                                else if (context.name) ctxName = context.name;
+                                else ctxName = JSON.stringify(context);
+                            }
+                        } catch (e) { ctxName = null; }
+                        showClusterWarning(ctxName, error);
                     }
                 }
             }
@@ -785,6 +816,7 @@
         };
     </script>
 
+    <script src="{{ url_for('static', filename='js/common.js') }}"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

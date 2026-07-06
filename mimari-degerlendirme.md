@@ -20,7 +20,7 @@ Kube-Sec, mevcut haliyle kullanıcıya tarayıcı sekmesi açan bir Flask sunucu
 |---|---|---|
 | Aşama 1 — Üretim Dışı Değerlerin Temizlenmesi | ✅ Tamamlandı (2026-07-05) | `2994474` |
 | Aşama 2 — CDN Bağımlılıklarının Yerelleştirilmesi | ✅ Tamamlandı (2026-07-05) | `eb20a66` |
-| Aşama 3 — Native Pencere (pywebview Entegrasyonu) | ⏳ Bekliyor | — |
+| Aşama 3 — Native Pencere (pywebview Entegrasyonu) | ✅ Tamamlandı (2026-07-06, `USE_PYWEBVIEW=1` feature flag ile — gerçek pencere açılışı GUI'siz ortamda test edilemedi, paketlenmiş .app üzerinde manuel doğrulama gerekiyor) | `a69fe59` |
 | Aşama 4 — Blueprint Refactor (app.py Parçalanması) | ⏳ Bekliyor | — |
 | Aşama 5 — Arka Plan İş Parçacıklarının Sağlamlaştırılması ve Güncelleme Kontrolü | ⏳ Bekliyor | — |
 

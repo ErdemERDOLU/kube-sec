@@ -172,6 +172,10 @@ from web.background import (
 from web.blueprints.kubeconfigs import bp_kubeconfigs
 app.register_blueprint(bp_kubeconfigs)
 
+# ---- Blueprint: workloads (sayfa route'ları: /workloads, /config, /network, /storage, /nodes, /access-control, /configuration, /mesh, /mesh-data) ----
+from web.blueprints.workloads import bp_workloads
+app.register_blueprint(bp_workloads)
+
 @app.route('/k8s-explorer/app-health')
 def app_health():
     """Kubeconfig gerektirmeyen basit uygulama canlılık kontrolü.
@@ -207,11 +211,6 @@ def set_locale():
     # 180 days
     resp.set_cookie('lang', lang, max_age=60*60*24*180, httponly=False, samesite='Lax')
     return resp
-
-@app.route('/configuration')
-def configuration_page():
-    return render_template('configuration.html')
-
 
 # HPA summary endpoint
 @app.route('/k8s-explorer/hpa-summary')
@@ -2986,25 +2985,6 @@ def configmap_secrets_data():
     except Exception as e:
         return jsonify({'error': str(e), 'suspects': []}), 500
 
-# Workloads page
-@app.route('/workloads')
-def workloads_page():
-    return render_template('workloads.html')
-
-@app.route('/config')
-def config_page():
-    return render_template('config.html')
-
-# Network page (Services, Endpoints, Ingress, Ingress Classes, Network Policies)
-@app.route('/network')
-def network_page():
-    return render_template('network.html')
-
-# Storage page (PVC, PV, StorageClasses)
-@app.route('/storage')
-def storage_page():
-    return render_template('storage.html')
-
 @app.route('/k8s-explorer/configmaps-summary')
 def configmaps_summary():
     try:
@@ -3370,11 +3350,6 @@ def k8s_explorer_node_drain():
     except Exception as e:
         return {"logs": [str(e)]}, 500
     
-# --- Node'lar sayfası ve API ---
-@app.route('/nodes')
-def nodes_page():
-    return render_template('nodes.html')
-
 @app.route('/k8s-explorer/nodes')
 def k8s_explorer_nodes():
     try:
@@ -3905,11 +3880,6 @@ def storage_classes_summary():
         return jsonify({'storage_classes': result})
     except Exception as e:
         return jsonify({'storage_classes': [], 'error': str(e)})
-
-# --- Access Control (RBAC) ---
-@app.route('/access-control')
-def access_control_page():
-    return render_template('access_control.html')
 
 @app.route('/k8s-explorer/rbac-summary')
 def rbac_summary():
@@ -4854,103 +4824,6 @@ def exec_events_page():
 def index():
     return render_template('index.html')
 
-# Service mesh ve pod iletişimi sayfası
-
-@app.route('/mesh')
-def mesh():
-    return render_template('mesh.html')
-
-# Pod iletişim verisi (basit: hangi pod hangi servise bağlı)
-@app.route('/mesh-data')
-def mesh_data():
-    """
-    Service Mesh Data
-    ---
-    get:
-      description: Get mesh data (services, pods, links)
-      responses:
-        200:
-          description: Mesh data
-          content:
-            application/json:
-              schema:
-                type: object
-    """
-    try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
-        kube_client = type('KubeClient', (), {})()
-        kube_client.core_v1 = client.CoreV1Api()
-        kube_client.apps_v1 = client.AppsV1Api()
-    except Exception as e:
-        return jsonify({'error': str(e)})
-    mesh = []
-    pod_links = []
-    pod_to_service_links = []
-    namespaces = [ns.metadata.name for ns in kube_client.core_v1.list_namespace().items]
-    all_services = {}
-    for ns in namespaces:
-        services = kube_client.core_v1.list_namespaced_service(ns).items
-        for svc in services:
-            all_services[f"{ns}:{svc.metadata.name}"] = {
-                'ip': svc.spec.cluster_ip,
-                'dns': f"{svc.metadata.name}.{ns}.svc.cluster.local"
-            }
-    for ns in namespaces:
-        pods = kube_client.core_v1.list_namespaced_pod(ns).items
-        services = kube_client.core_v1.list_namespaced_service(ns).items
-        pod_ip_map = {pod.metadata.name: pod.status.pod_ip for pod in pods}
-        # Service selector ile eşleşen podları bul
-        for svc in services:
-            selector = getattr(svc.spec, 'selector', None)
-            if not selector:
-                continue
-            matched_pods = []
-            matched_pod_ips = []
-            for pod in pods:
-                labels = pod.metadata.labels or {}
-                if all(labels.get(k) == v for k, v in selector.items()):
-                    matched_pods.append(pod.metadata.name)
-                    matched_pod_ips.append(pod.status.pod_ip)
-            # Podlar arası bağlantı (aynı servise bağlı podlar birbirine konuşabilir)
-            for i in range(len(matched_pods)):
-                for j in range(i+1, len(matched_pods)):
-                    pod_links.append({
-                        'namespace': ns,
-                        'source': matched_pods[i],
-                        'target': matched_pods[j]
-                    })
-            mesh.append({
-                'namespace': ns,
-                'service': svc.metadata.name,
-                'service_ip': svc.spec.cluster_ip,
-                'pods': matched_pods,
-                'pod_ips': matched_pod_ips
-            })
-        # Pod'dan başka servise bağlantı (env var içinde başka servisin ip/dns varsa)
-        for pod in pods:
-            envs = []
-            for c in getattr(pod.spec, 'containers', []):
-                envs += getattr(c, 'env', []) or []
-            for env in envs:
-                val = (getattr(env, 'value', '') or '').lower()
-                for svc_key, svc_info in all_services.items():
-                    if svc_info['ip'] and svc_info['ip'] in val:
-                        pod_to_service_links.append({
-                            'namespace': ns,
-                            'pod': pod.metadata.name,
-                            'target_service': svc_key
-                        })
-                    elif svc_info['dns'] and svc_info['dns'] in val:
-                        pod_to_service_links.append({
-                            'namespace': ns,
-                            'pod': pod.metadata.name,
-                            'target_service': svc_key
-                        })
-    return jsonify({'mesh': mesh, 'pod_links': pod_links, 'pod_to_service_links': pod_to_service_links})
 
 
 @app.route('/vulnerabilities')

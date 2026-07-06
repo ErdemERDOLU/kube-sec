@@ -6,7 +6,8 @@ PyInstaller ile paketlendiğinde:
  - Flask uygulamasını uygun template/static yollarıyla başlatır
  - Port 8080 doluysa otomatik bir sonraki boş portu bulur
  - İlk açılışta varsayılan tarayıcıyı açar (devre dışı bırakmak için NO_AUTO_BROWSER=1)
- - USE_PYWEBVIEW=1 ile native pywebview penceresi açılır (tarayıcı yerine)
+ - Paketlenmiş modda (frozen) varsayılan olarak native pywebview penceresi açılır
+ - USE_PYWEBVIEW=0 ile tarayıcı moduna dönülebilir; geliştirme modunda varsayılan tarayıcıdır
 """
 from __future__ import annotations
 import os, sys, socket, time, threading, webbrowser
@@ -94,7 +95,7 @@ def main():
     url = f"http://{host}:{port}"
     debug = not getattr(sys, 'frozen', False)
 
-    use_pywebview = os.environ.get('USE_PYWEBVIEW', '').strip() == '1'
+    use_pywebview = os.environ.get('USE_PYWEBVIEW', '1' if getattr(sys, 'frozen', False) else '0').strip() == '1'
 
     if use_pywebview:
         _start_with_pywebview(url, host, port, debug)

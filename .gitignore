@@ -39,6 +39,7 @@ dist/
 build/
 *.dmg
 *.app/
+*.spec
 
 # IDE / OS
 .DS_Store

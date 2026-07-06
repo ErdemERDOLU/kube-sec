@@ -1,29 +1,45 @@
 #!/usr/bin/env pwsh
-# Builds a single-file Windows exe using PyInstaller
-# Run this on Windows with an activated Python venv that has the project's requirements installed
-# Usage (Windows PowerShell): .\build-windows.ps1
-# Usage (Linux/WSL with PowerShell Core): pwsh ./build-windows.ps1
+# =============================================================================
+# Kube-Sec Windows Build Script
+# =============================================================================
+# Açıklama : PyInstaller ile Kube-Sec'i Windows masaüstü uygulaması olarak
+#            paketler. Giriş noktası launcher.py'dir; pywebview native pencere
+#            desteği, otomatik port bulma ve 127.0.0.1 bind davranışı dahildir.
+#            macOS build_macos_app.sh ile tutarlı --add-data yolları ve
+#            PyInstaller seçenekleri kullanılır.
+#
+# Kullanım  :
+#   Windows PowerShell  : .\build-windows.ps1
+#   macOS/Linux (pwsh)  : pwsh ./build-windows.ps1
+#
+# Gereksinimler:
+#   - Python 3.9+ (PATH'te python, python3 veya py olarak erişilebilir)
+#   - Proje bağımlılıkları (requirements.txt) kurulu veya venv oluşturulacak
+#
+# NOT: PyInstaller cross-compile desteklemez. Windows .exe üretimi ve testi
+#      gerçek bir Windows ortamında (veya Windows VM) yapılmalıdır.
+# =============================================================================
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# Ensure running in repo root
+# Repo kökünde çalıştığımızdan emin ol
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
 
-# Ensure $IsWindows exists in both Windows PowerShell and PowerShell Core
+# $IsWindows değişkenini hem Windows PowerShell hem PowerShell Core'da garantile
 if (-not (Get-Variable -Name IsWindows -Scope Script -ErrorAction SilentlyContinue)) {
     try {
-        # Prefer RuntimeInformation when available
-        $IsWindows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
+        $IsWindows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform(
+            [System.Runtime.InteropServices.OSPlatform]::Windows
+        )
     } catch {
-        # Fallback to environment variable which exists on Windows
         $IsWindows = ($env:OS -eq 'Windows_NT')
     }
 }
 
-# Detect python executable (try python, python3, py)
-$pythonCandidates = @('python','python3','py')
+# Python yorumlayıcısını bul (python, python3, py sırasıyla dene)
+$pythonCandidates = @('python', 'python3', 'py')
 $PythonCmd = $null
 foreach ($p in $pythonCandidates) {
     if (Get-Command $p -ErrorAction SilentlyContinue) {
@@ -32,19 +48,17 @@ foreach ($p in $pythonCandidates) {
     }
 }
 if (-not $PythonCmd) {
-    Write-Error "Python 3 is not found in PATH. Please install Python 3 and ensure 'python' or 'python3' is available in PATH."
-    Write-Host "On Ubuntu/WLS you can run: sudo apt update && sudo apt install -y python3 python3-venv python3-pip"
+    Write-Error "Python 3 PATH'te bulunamadı. Lütfen Python 3 kurun ve 'python' ya da 'python3' PATH'te erişilebilir olsun."
     exit 1
 }
+Write-Host "Python yorumlayıcısı: $PythonCmd"
 
-Write-Host "Using Python executable: $PythonCmd"
-
-# Create venv and install deps (optional)
+# Virtual environment oluştur ve etkinleştir
 if (-not (Test-Path .venv)) {
+    Write-Host "Virtual environment oluşturuluyor..."
     & $PythonCmd -m venv .venv
 }
 
-# Activate venv using the appropriate script for PowerShell
 if ($IsWindows) {
     $activate = Join-Path -Path ".venv" -ChildPath "Scripts\Activate.ps1"
 } else {
@@ -54,39 +68,161 @@ if ($IsWindows) {
 if (Test-Path $activate) {
     . $activate
 } else {
-    Write-Host "Warning: Activation script not found: $activate - continuing without venv activation" -ForegroundColor Yellow
+    Write-Host "Uyarı: venv etkinleştirme betiği bulunamadı: $activate — venv etkinleştirmesi atlanıyor." -ForegroundColor Yellow
 }
 
-Write-Host "Installing Python dependencies..."
-& $PythonCmd -m pip install --upgrade pip
-& $PythonCmd -m pip install -r requirements.txt
-& $PythonCmd -m pip install pyinstaller
+# Bağımlılıkları kur
+Write-Host "Python bağımlılıkları kuruluyor..."
+& $PythonCmd -m pip install --upgrade pip --quiet
+& $PythonCmd -m pip install -r requirements.txt --quiet
+& $PythonCmd -m pip install pyinstaller --quiet
 
-# Cleanup previous builds
-if (Test-Path dist) { Remove-Item -Recurse -Force dist }
-if (Test-Path build) { Remove-Item -Recurse -Force build }
-if (Test-Path kube-sec.spec) { Remove-Item -Force kube-sec.spec }
+# VERSION dosyasından versiyon oku
+$versionFile = Join-Path $root "VERSION"
+if (Test-Path $versionFile) {
+    $appVersion = (Get-Content $versionFile -Raw).Trim()
+} else {
+    $appVersion = "1.0.0"
+    Write-Host "Uyarı: VERSION dosyası bulunamadı, varsayılan '1.0.0' kullanılıyor." -ForegroundColor Yellow
+}
+Write-Host "Uygulama versiyonu: $appVersion"
 
-Write-Host "Running PyInstaller..."
-# Use platform-appropriate separator for add-data (Windows uses ';', Linux/WSL uses ':')
+# Versiyon parçalarını ayır (PyInstaller version-file için dördüzlü gerekiyor)
+$vParts = $appVersion -split '\.'
+$vMajor = if ($vParts.Count -ge 1) { [int]$vParts[0] } else { 1 }
+$vMinor = if ($vParts.Count -ge 2) { [int]$vParts[1] } else { 0 }
+$vPatch = if ($vParts.Count -ge 3) { [int]$vParts[2] } else { 0 }
+$vBuild = 0
+
+# Windows VSVersionInfo şablonunu dinamik oluştur
+$versionInfoPath = Join-Path $root "build_version_info.txt"
+$versionInfoContent = @"
+# Kube-Sec Windows Versiyon Bilgisi
+# PyInstaller tarafından --version-file parametresiyle kullanılır.
+# Bu dosya build sırasında otomatik üretilir; elle düzenleme.
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=($vMajor, $vMinor, $vPatch, $vBuild),
+    prodvers=($vMajor, $vMinor, $vPatch, $vBuild),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo(
+      [
+        StringTable(
+          u'040904B0',
+          [StringStruct(u'CompanyName', u'Kube-Sec'),
+           StringStruct(u'FileDescription', u'Kube-Sec Kubernetes Guvenlik Panosu'),
+           StringStruct(u'FileVersion', u'$appVersion'),
+           StringStruct(u'InternalName', u'Kube-Sec'),
+           StringStruct(u'LegalCopyright', u'Kube-Sec Contributors'),
+           StringStruct(u'OriginalFilename', u'Kube-Sec.exe'),
+           StringStruct(u'ProductName', u'Kube-Sec'),
+           StringStruct(u'ProductVersion', u'$appVersion')])
+      ]
+    ),
+    VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
+  ]
+)
+"@
+
+Set-Content -Path $versionInfoPath -Value $versionInfoContent -Encoding UTF8
+Write-Host "Versiyon bilgisi dosyası oluşturuldu: $versionInfoPath"
+
+# Önceki build çıktılarını temizle
+Write-Host "Önceki build kalıntıları temizleniyor..."
+if (Test-Path dist)                   { Remove-Item -Recurse -Force dist }
+if (Test-Path build)                  { Remove-Item -Recurse -Force build }
+if (Test-Path "Kube-Sec.spec")        { Remove-Item -Force "Kube-Sec.spec" }
+
+# Platform ayırıcısını belirle (Windows: ';', diğer: ':')
 $sep = if ($IsWindows) { ';' } else { ':' }
+
+# --add-data eşlemeleri (build_macos_app.sh satır 109-113 ile aynı mantık)
 $addDataList = @(
-    "src/web/templates${sep}templates",
-    "src/web/static${sep}static",
-    "public${sep}public"
+    "src/web/templates${sep}web/templates",
+    "src/web/static${sep}web/static",
+    "src${sep}src",
+    "styles${sep}styles",
+    "yaml${sep}yaml"
 )
 
-# Build argument array for PyInstaller
-$pyArgs = @('--onefile','--noconfirm','--name','kube-sec')
-foreach ($d in $addDataList) { $pyArgs += "--add-data=$d" }
-$pyArgs += 'src/main.py'
+# PyInstaller argüman dizisini oluştur
+$pyArgs = @(
+    '--onedir',
+    '--noconfirm',
+    '--windowed',
+    '--name', 'Kube-Sec',
+    '--paths', 'src',
+    '--hidden-import', 'webview',
+    '--hidden-import', 'webview.util',
+    '--hidden-import', 'webview.platforms.edgechromium',
+    '--hidden-import', 'webview.platforms.mshtml',
+    '--version-file', $versionInfoPath
+)
 
-# Run PyInstaller through the detected Python interpreter to avoid relying on a PATH entry
+foreach ($d in $addDataList) {
+    $pyArgs += "--add-data=$d"
+}
+
+# İkon dosyası varsa ekle
+$iconPath = Join-Path $root "icon.ico"
+if (Test-Path $iconPath) {
+    $pyArgs += "--icon=$iconPath"
+} else {
+    Write-Host "Uyarı: icon.ico bulunamadı; ikon eklenmeden paketlenecek." -ForegroundColor Yellow
+}
+
+# Giriş noktası: launcher.py
+$pyArgs += 'launcher.py'
+
+Write-Host "PyInstaller çalıştırılıyor..."
+Write-Host "Argümanlar: $($pyArgs -join ' ')"
 & $PythonCmd -m PyInstaller @pyArgs
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "PyInstaller failed with exit code $LASTEXITCODE"
+    Write-Error "PyInstaller $LASTEXITCODE çıkış kodu ile başarısız oldu."
     exit $LASTEXITCODE
 }
 
-Write-Host "Build complete. Output executable: dist\kube-sec.exe" -ForegroundColor Green
+# Geçici versiyon dosyasını temizle
+Remove-Item -Force $versionInfoPath -ErrorAction SilentlyContinue
+
+# -----------------------------------------------------------------------
+# Opsiyonel: Windows Code Signing
+# SIGN_CERT veya SIGN_IDENTITY ortam değişkeni verilmişse signtool çalıştır.
+# Gerçek imzalama için geçerli bir kod imzalama sertifikası gereklidir.
+# -----------------------------------------------------------------------
+$signCert = $env:SIGN_CERT
+$signIdentity = $env:SIGN_IDENTITY
+$exePath = Join-Path $root "dist\Kube-Sec\Kube-Sec.exe"
+
+if (($signCert -or $signIdentity) -and (Test-Path $exePath)) {
+    Write-Host "Kod imzalama uygulanıyor..." -ForegroundColor Cyan
+    $signtool = Get-Command signtool.exe -ErrorAction SilentlyContinue
+    if ($signtool) {
+        if ($signCert) {
+            & signtool.exe sign /f $signCert /fd SHA256 /t http://timestamp.digicert.com $exePath
+        } elseif ($signIdentity) {
+            & signtool.exe sign /n $signIdentity /fd SHA256 /t http://timestamp.digicert.com $exePath
+        }
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Uyarı: Kod imzalama başarısız oldu (çıkış kodu: $LASTEXITCODE). Build devam ediyor." -ForegroundColor Yellow
+        } else {
+            Write-Host "Kod imzalama başarılı." -ForegroundColor Green
+        }
+    } else {
+        Write-Host "Uyarı: signtool.exe bulunamadı. Kod imzalama atlandı." -ForegroundColor Yellow
+    }
+} elseif ($signCert -or $signIdentity) {
+    Write-Host "Uyarı: Kod imzalama istenildi ancak çıktı exe bulunamadı: $exePath" -ForegroundColor Yellow
+}
+
+Write-Host ""
+Write-Host "Build tamamlandı! Çıktı: dist\Kube-Sec\Kube-Sec.exe" -ForegroundColor Green
+Write-Host "Versiyon: $appVersion" -ForegroundColor Green

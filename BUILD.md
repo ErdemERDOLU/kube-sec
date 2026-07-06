@@ -490,6 +490,27 @@ APP_ICON=public/logo.png make build-macos
 **Windows:** `icon.ico` dosyasının repo kökünde bulunduğundan emin olun. Dosya yoksa
 `build-windows.ps1` uyarı göstererek ikonsuz devam eder.
 
+**`icon.ico`'yu yeniden üretmek isterseniz** (marka ikonu değiştiğinde): Proje Pillow/ImageMagick
+bağımlılığı eklemediği için `icon.ico`, `sips` (kaynak PNG'den 16/32/48/256 piksel boyutlarında ara
+PNG'ler üretir) ve Python'un stdlib `struct` modülü (bu PNG'leri PNG-compressed ICO container'ına
+paketler) ile üretilir:
+```bash
+for sz in 16 32 48 256; do sips -z $sz $sz public/kube-sec-logo.png --out /tmp/icon_$sz.png; done
+python3 -c "
+import struct
+sizes = [16, 32, 48, 256]
+datas = [open(f'/tmp/icon_{s}.png','rb').read() for s in sizes]
+offset = 6 + 16*len(sizes)
+entries = b''
+for s, d in zip(sizes, datas):
+    entries += struct.pack('<BBBBHHII', s if s < 256 else 0, s if s < 256 else 0, 0, 0, 1, 32, len(d), offset)
+    offset += len(d)
+with open('icon.ico','wb') as f:
+    f.write(struct.pack('<HHH', 0, 1, len(sizes)) + entries + b''.join(datas))
+"
+```
+Kaynak PNG'yi (`public/kube-sec-logo.png`) değiştirip bu komutu tekrar çalıştırmanız yeterlidir.
+
 ### macOS'ta uygulama ilk açılışta engelleniyor (Gatekeeper)
 
 Apple'ın Gatekeeper mekanizması imzasız veya notarize edilmemiş uygulamaları engeller.

@@ -28,7 +28,9 @@ $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
 
 # $IsWindows değişkenini hem Windows PowerShell hem PowerShell Core'da garantile
-if (-not (Get-Variable -Name IsWindows -Scope Script -ErrorAction SilentlyContinue)) {
+# (PowerShell Core 6+'da $IsWindows Global scope'ta otomatik tanımlıdır; Windows
+# PowerShell 5.1'de hiç yoktur -- bu yüzden -Scope belirtmeden arıyoruz.)
+if (-not (Get-Variable -Name IsWindows -ErrorAction SilentlyContinue)) {
     try {
         $IsWindows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform(
             [System.Runtime.InteropServices.OSPlatform]::Windows
@@ -200,7 +202,7 @@ Remove-Item -Force $versionInfoPath -ErrorAction SilentlyContinue
 # -----------------------------------------------------------------------
 $signCert = $env:SIGN_CERT
 $signIdentity = $env:SIGN_IDENTITY
-$exePath = Join-Path $root "dist\Kube-Sec\Kube-Sec.exe"
+$exePath = Join-Path $root (Join-Path "dist" (Join-Path "Kube-Sec" "Kube-Sec.exe"))
 
 if (($signCert -or $signIdentity) -and (Test-Path $exePath)) {
     Write-Host "Kod imzalama uygulanıyor..." -ForegroundColor Cyan

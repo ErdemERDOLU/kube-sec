@@ -48,7 +48,7 @@ def _open_browser(url: str):
 
 def _run_flask_server(host: str, port: int, debug: bool):
     """Flask sunucusunu çalıştır. pywebview modunda ayrı thread'den çağrılır."""
-    app.run(host=host, port=port, debug=debug)
+    app.run(host=host, port=port, debug=debug, use_reloader=False)
 
 def _wait_for_server(host: str, port: int, timeout: float = 5.0):
     """Flask sunucusunun hazır olmasını bekle."""

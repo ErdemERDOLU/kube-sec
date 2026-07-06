@@ -6,3 +6,4 @@ requests==2.32.3
 pytest==6.2.5
 flask-cors
 flasgger==0.9.7.1
+pywebview==6.2.1

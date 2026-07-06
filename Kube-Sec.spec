@@ -6,7 +6,11 @@ a = Analysis(
     pathex=['src'],
     binaries=[],
     datas=[('src/web/templates', 'web/templates'), ('src/web/static', 'web/static'), ('src', 'src'), ('styles', 'styles'), ('yaml', 'yaml')],
-    hiddenimports=[],
+    hiddenimports=[
+        'webview',
+        'webview.platforms.cocoa',
+        'webview.util',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

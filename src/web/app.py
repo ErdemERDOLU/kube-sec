@@ -303,6 +303,8 @@ I18N = {
     'cache.error_stale_data': {'tr': 'gosterilen veri eski olabilir.', 'en': 'displayed data may be outdated.'},
     'cache.just_now': {'tr': 'az once', 'en': 'just now'},
     'cache.live_data': {'tr': 'Canli veri', 'en': 'Live data'},
+    # YAML Linter
+    'yaml_linter.empty_content': {'tr': 'YAML içeriği boş', 'en': 'YAML content is empty'},
 }
 
 def translate(key: str, lang: str) -> str:
@@ -2604,19 +2606,207 @@ def k8s_explorer_describe():
 @app.route('/yaml-linter')
 def yaml_linter_page():
     return render_template('yaml_linter.html')
-# YAML Linter API
+# YAML Linter API — yardımcı sabitler ve fonksiyonlar
+# Kural #4 ve #5 için container taraması yapılan Kubernetes workload kind'ları
+_YAML_LINTER_WORKLOAD_KINDS = frozenset({
+    'Deployment', 'StatefulSet', 'DaemonSet', 'Job', 'CronJob', 'ReplicaSet'
+})
+
+
+def _yaml_lint_check_image_latest(image):
+    """
+    Image tag kontrolü: :latest veya tag'siz imajları tespit eder.
+
+    :param image: Container image string (örn. "nginx:latest", "nginx", "nginx:1.19")
+    :returns: True — imaj üretime uygun değil; False — imaj kabul edilebilir
+    """
+    if not image or not isinstance(image, str):
+        return False
+    # Digest referansları güvenlidir, atla
+    if '@sha256:' in image:
+        return False
+    if image.endswith(':latest'):
+        return True
+    # Hiç ":" içermiyorsa tag verilmemiş demektir -> latest davranışı
+    if ':' not in image:
+        return True
+    return False
+
+
+def _yaml_lint_document(doc, doc_index):
+    """
+    Tek bir parse edilmiş YAML belgesi üzerinde 5 MVP Kubernetes best practice kuralını çalıştırır.
+
+    Kurallar:
+      1. missing-api-version  — apiVersion alanı eksik/boş
+      2. missing-kind         — kind alanı eksik/boş
+      3. missing-metadata-name — metadata.name alanı eksik/boş
+      4. image-latest-tag     — :latest veya tag'siz container imajı
+      5. missing-resource-limits — resources.limits tanımlı değil veya boş dict
+
+    :param doc: yaml.safe_load_all() ile parse edilen belge nesnesi
+    :param doc_index: Belge sırası (0-tabanlı, path mesajları için)
+    :returns: warnings listesi; her öğe {rule, severity, message, path} şeklinde
+    """
+    warnings = []
+    if not isinstance(doc, dict):
+        return warnings
+
+    # Kural 1: missing-api-version
+    if not doc.get('apiVersion'):
+        warnings.append({
+            'rule': 'missing-api-version',
+            'severity': 'error',
+            'message': 'apiVersion alanı eksik veya boş.',
+            'path': 'apiVersion',
+        })
+
+    # Kural 2: missing-kind
+    kind = doc.get('kind')
+    if not kind:
+        warnings.append({
+            'rule': 'missing-kind',
+            'severity': 'error',
+            'message': 'kind alanı eksik veya boş.',
+            'path': 'kind',
+        })
+
+    # Kural 3: missing-metadata-name
+    metadata = doc.get('metadata')
+    if not isinstance(metadata, dict) or not metadata.get('name'):
+        warnings.append({
+            'rule': 'missing-metadata-name',
+            'severity': 'error',
+            'message': 'metadata.name alanı eksik veya boş.',
+            'path': 'metadata.name',
+        })
+
+    # Kural 4 ve 5: container taraması — yalnızca desteklenen kind'lar için
+    containers = None
+    base_path = None
+    if kind in _YAML_LINTER_WORKLOAD_KINDS:
+        # Deployment, StatefulSet, DaemonSet, Job, CronJob, ReplicaSet
+        spec = doc.get('spec') or {}
+        template = spec.get('template') or {}
+        tspec = template.get('spec') or {}
+        containers = tspec.get('containers') or []
+        base_path = 'spec.template.spec.containers'
+    elif kind == 'Pod':
+        spec = doc.get('spec') or {}
+        containers = spec.get('containers') or []
+        base_path = 'spec.containers'
+    # Diğer kind'lar (Service, ConfigMap, vb.) için container taraması yapılmaz
+
+    if containers is not None:
+        for idx, container in enumerate(containers):
+            if not isinstance(container, dict):
+                continue
+            container_name = container.get('name', str(idx))
+            image = container.get('image', '')
+
+            # Kural 4: image-latest-tag
+            if _yaml_lint_check_image_latest(image):
+                warnings.append({
+                    'rule': 'image-latest-tag',
+                    'severity': 'warning',
+                    'message': (
+                        f"Container '{container_name}' imajı '{image}' kullanıyor"
+                        f" -- üretim ortamlarında sabit tag kullanın."
+                    ),
+                    'path': f'{base_path}[{idx}].image',
+                })
+
+            # Kural 5: missing-resource-limits
+            resources = container.get('resources')
+            limits = None
+            if isinstance(resources, dict):
+                limits = resources.get('limits')
+            # Eksik veya boş dict her ikisi de uyarı üretir
+            if not limits:
+                warnings.append({
+                    'rule': 'missing-resource-limits',
+                    'severity': 'warning',
+                    'message': f"Container '{container_name}' için resources.limits tanımlanmamış.",
+                    'path': f'{base_path}[{idx}].resources.limits',
+                })
+
+    return warnings
+
+
 @app.route('/yaml-lint-api', methods=['POST'])
 def yaml_lint_api():
+    """
+    YAML Linter API — multi-document YAML syntax kontrolü ve K8s best practice denetimi.
+
+    POST /yaml-lint-api
+    Content-Type: application/json
+    Body: { "yaml": "<yaml içeriği>" }
+
+    Response (boş içerik):
+        { ok: false, error: str, line: null, column: null, documents: 0, warnings: [] }
+    Response (syntax hatası):
+        { ok: false, error: str, line: int|null, column: int|null, documents: int, warnings: [] }
+    Response (başarılı, uyarısız):
+        { ok: true, documents: int, warnings: [] }
+    Response (başarılı, uyarılı):
+        { ok: true, documents: int, warnings: [{rule, severity, message, path}, ...] }
+    """
     try:
         data = request.get_json(force=True)
         yaml_str = data.get('yaml', '')
+
+        # Boş içerik kontrolü
         if not yaml_str.strip():
-            return jsonify({'ok': False, 'error': 'YAML içeriği boş'}), 200
+            return jsonify({
+                'ok': False,
+                'error': 'YAML içeriği boş',
+                'line': None,
+                'column': None,
+                'documents': 0,
+                'warnings': [],
+            }), 200
+
+        # Multi-document desteği: generator'u teker teker tüket, ilk syntax hatasında dur
+        # list() kullanmak yerine for-döngüsü ile tüketilir; böylece ilk hata anında
+        # parsed_docs o ana kadar başarılı okunan belgeleri içerir (Risk #2 uyarınca).
+        parsed_docs = []
         try:
-            yaml.safe_load(yaml_str)
+            for doc in yaml.safe_load_all(yaml_str):
+                parsed_docs.append(doc)
         except yaml.YAMLError as e:
-            return jsonify({'ok': False, 'error': str(e)}), 200
-        return jsonify({'ok': True}), 200
+            # PyYAML'ın MarkedYAMLError alt sınıfında problem_mark mevcuttur (0-indexed).
+            # Diğer YAMLError türlerinde problem_mark olmayabilir; bu durumda null döner.
+            line = None
+            column = None
+            if hasattr(e, 'problem_mark') and e.problem_mark is not None:
+                line = e.problem_mark.line + 1      # 0-indexed -> 1-indexed
+                column = e.problem_mark.column + 1  # 0-indexed -> 1-indexed
+            # e.problem kısa hata metnini verir (örn. "mapping values are not allowed here")
+            error_msg = (
+                e.problem
+                if hasattr(e, 'problem') and e.problem
+                else str(e)
+            )
+            return jsonify({
+                'ok': False,
+                'error': error_msg,
+                'line': line,
+                'column': column,
+                'documents': len(parsed_docs),
+                'warnings': [],
+            }), 200
+
+        # Syntax başarılı: her belge üzerinde best practice kurallarını çalıştır
+        all_warnings = []
+        for idx, doc in enumerate(parsed_docs):
+            all_warnings.extend(_yaml_lint_document(doc, idx))
+
+        return jsonify({
+            'ok': True,
+            'documents': len(parsed_docs),
+            'warnings': all_warnings,
+        }), 200
+
     except Exception as e:
         return jsonify({'ok': False, 'error': str(e)}), 500
 

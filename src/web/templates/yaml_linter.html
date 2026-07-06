@@ -1,33 +1,494 @@
 {% extends "base.html" %}
 {% block title %}YAML Linter{% endblock %}
 {% block content %}
-<h2>YAML Linter</h2>
-<p>YAML dosyanızı aşağıya yapıştırın ve "Lint Et" butonuna tıklayın. Hatalar anında gösterilecektir.</p>
-<div class="mb-3">
-  <textarea id="yaml-input" class="form-control" rows="12" placeholder="YAML içeriğini buraya yapıştırın..."></textarea>
+<div class="container-fluid">
+
+  <!-- Sayfa Başlığı -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-file-code text-primary me-2"></i>
+            YAML Linter
+          </h1>
+          <p class="text-muted mb-0">Kubernetes manifest dosyalarınızı syntax ve best practice açısından kontrol edin</p>
+        </div>
+        <div class="text-end">
+          <button id="clear-btn" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-trash-alt me-1"></i>Temizle
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Sol sütun: editör alanı -->
+    <div class="col-lg-7 mb-4">
+      <div class="card shadow">
+        <div class="card-header py-3" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color:#fff;">
+          <h6 class="m-0 font-weight-bold text-white">
+            <i class="fas fa-edit me-2"></i>YAML İçeriği
+          </h6>
+        </div>
+        <div class="card-body">
+
+          <!-- Dosya seçici -->
+          <div class="mb-3 d-flex align-items-center gap-2 flex-wrap">
+            <label class="btn btn-outline-primary btn-sm mb-0" for="file-input" style="cursor:pointer;">
+              <i class="fas fa-folder-open me-1"></i>Dosya Seç (.yaml / .yml)
+            </label>
+            <input type="file" id="file-input" accept=".yaml,.yml" class="d-none">
+            <span class="text-muted small" id="file-name-label">Dosya seçilmedi</span>
+          </div>
+
+          <!-- Drag-drop + textarea sarmalayıcı -->
+          <div id="editor-wrapper" class="position-relative mb-3">
+            <!-- Satır numaraları -->
+            <div id="line-numbers"
+                 aria-hidden="true"
+                 style="
+                   position:absolute; left:0; top:0; bottom:0;
+                   width:40px;
+                   background:#f1f5f9;
+                   border-right:1px solid #dee2e6;
+                   border-radius:4px 0 0 4px;
+                   overflow:hidden;
+                   text-align:right;
+                   padding:6px 4px 6px 0;
+                   font-family:monospace;
+                   font-size:13px;
+                   line-height:1.5;
+                   color:#94a3b8;
+                   user-select:none;
+                   pointer-events:none;
+                   z-index:1;
+                 ">1</div>
+
+            <!-- Drag-over overlay -->
+            <div id="drop-overlay"
+                 style="
+                   display:none;
+                   position:absolute; inset:0;
+                   background:rgba(37,99,235,0.12);
+                   border:2px dashed #2563eb;
+                   border-radius:4px;
+                   z-index:5;
+                   align-items:center;
+                   justify-content:center;
+                   font-size:1.1rem;
+                   font-weight:600;
+                   color:#2563eb;
+                   pointer-events:none;
+                 ">
+              <span><i class="fas fa-file-import me-2"></i>Dosyayı bırakın</span>
+            </div>
+
+            <textarea id="yaml-input"
+                      class="form-control font-monospace"
+                      rows="20"
+                      placeholder="YAML içeriğini buraya yapıştırın veya dosya sürükleyip bırakın..."
+                      spellcheck="false"
+                      style="
+                        resize:vertical;
+                        padding-left:48px;
+                        font-size:13px;
+                        line-height:1.5;
+                        border-radius:4px;
+                        transition: border-color 0.15s, box-shadow 0.15s;
+                      "></textarea>
+          </div>
+
+          <!-- Butonlar -->
+          <div class="d-flex gap-2">
+            <button id="lint-btn" class="btn btn-primary">
+              <i class="fas fa-check-circle me-1"></i>Lint Et
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sağ sütun: sonuç paneli -->
+    <div class="col-lg-5 mb-4">
+      <div class="card shadow">
+        <div class="card-header py-3" style="background: linear-gradient(135deg, #475569 0%, #334155 100%); color:#fff;">
+          <h6 class="m-0 font-weight-bold text-white">
+            <i class="fas fa-clipboard-check me-2"></i>Sonuçlar
+          </h6>
+        </div>
+        <div class="card-body">
+          <div id="lint-result">
+            <p class="text-muted mb-0"><i class="fas fa-info-circle me-1"></i>Lint sonuçları burada görüntülenecek.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
-<button id="lint-btn" class="btn btn-primary">Lint Et</button>
-<div id="lint-result" class="mt-3"></div>
+
+<style>
+  /* Satır numaraları ile textarea senkronizasyonu */
+  #yaml-input::placeholder { color: #94a3b8; }
+
+  /* Drag-over aktif olduğunda textarea kenarlık rengi */
+  #yaml-input.drag-active {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.25) !important;
+  }
+
+  /* Uyarı kartları */
+  .warning-card {
+    border-left: 4px solid #d97706;
+    background: #fffbeb;
+  }
+  .error-rule-card {
+    border-left: 4px solid #dc2626;
+    background: #fff5f5;
+  }
+
+  /* Belge grubu başlığı */
+  .doc-group-header {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 4px;
+    margin-bottom: 8px;
+  }
+</style>
+
 <script>
-document.getElementById('lint-btn').onclick = function() {
-  const yaml = document.getElementById('yaml-input').value;
-  document.getElementById('lint-result').innerHTML = '<span class="text-secondary">Kontrol ediliyor...</span>';
-  fetch('/yaml-lint-api', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ yaml })
-  })
-  .then(resp => resp.json())
-  .then(data => {
-    if (data.ok) {
-      document.getElementById('lint-result').innerHTML = '<div class="alert alert-success">YAML geçerli!</div>';
-    } else {
-      document.getElementById('lint-result').innerHTML = '<div class="alert alert-danger"><b>Hata:</b> ' + data.error + '</div>';
+(function () {
+  'use strict';
+
+  // ---------------------------------------------------------------
+  // Kural ID -> Türkçe kısa açıklama (front-end yerel tablosu)
+  // Spec Risk #3: Backend message alanı zaten Türkçe; bu tablo
+  // yalnızca ek bağlam etiketi olarak kullanılır.
+  // ---------------------------------------------------------------
+  const RULE_LABELS = {
+    'missing-api-version'   : 'apiVersion eksik',
+    'missing-kind'          : 'kind eksik',
+    'missing-metadata-name' : 'metadata.name eksik',
+    'image-latest-tag'      : ':latest imaj etiketi',
+    'missing-resource-limits': 'resources.limits eksik',
+  };
+
+  const SEVERITY_BADGE = {
+    'error'   : '<span class="badge bg-danger me-1">Hata</span>',
+    'warning' : '<span class="badge bg-warning text-dark me-1">Uyarı</span>',
+  };
+
+  // ---------------------------------------------------------------
+  // DOM referansları
+  // ---------------------------------------------------------------
+  const textarea     = document.getElementById('yaml-input');
+  const lintBtn      = document.getElementById('lint-btn');
+  const clearBtn     = document.getElementById('clear-btn');
+  const fileInput    = document.getElementById('file-input');
+  const fileLabel    = document.getElementById('file-name-label');
+  const resultDiv    = document.getElementById('lint-result');
+  const lineNumbers  = document.getElementById('line-numbers');
+  const dropOverlay  = document.getElementById('drop-overlay');
+  const editorWrapper= document.getElementById('editor-wrapper');
+
+  // ---------------------------------------------------------------
+  // Satır numaraları güncelleme
+  // ---------------------------------------------------------------
+  function updateLineNumbers() {
+    const lines = textarea.value.split('\n');
+    const count = lines.length;
+    let html = '';
+    for (let i = 1; i <= count; i++) {
+      html += i + '\n';
     }
-  })
-  .catch(err => {
-    document.getElementById('lint-result').innerHTML = '<div class="alert alert-danger">API hatası: ' + err + '</div>';
+    lineNumbers.textContent = html;
+    // Textarea scroll ile senkronize et
+    lineNumbers.scrollTop = textarea.scrollTop;
+  }
+
+  textarea.addEventListener('input',  updateLineNumbers);
+  textarea.addEventListener('scroll', function () {
+    lineNumbers.scrollTop = textarea.scrollTop;
   });
-};
+  textarea.addEventListener('keydown', function () {
+    // keydown anında da güncelle (silme/yapıştırma vs.)
+    requestAnimationFrame(updateLineNumbers);
+  });
+
+  // ---------------------------------------------------------------
+  // Dosya okuma yardımcısı (FileReader)
+  // ---------------------------------------------------------------
+  const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1 MB
+
+  function readFileIntoTextarea(file) {
+    if (!file) return;
+
+    // Uzantı kontrolü
+    const name = file.name.toLowerCase();
+    if (!name.endsWith('.yaml') && !name.endsWith('.yml')) {
+      showFileSizeError('Yalnızca .yaml veya .yml uzantılı dosyalar desteklenmektedir.');
+      return;
+    }
+
+    // Boyut kontrolü (spec O3)
+    if (file.size > MAX_FILE_SIZE) {
+      showFileSizeError('Dosya boyutu 1 MB sınırını aşıyor (' + (file.size / 1024 / 1024).toFixed(2) + ' MB). Lütfen daha küçük bir dosya seçin.');
+      return;
+    }
+
+    fileLabel.textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      textarea.value = e.target.result;
+      updateLineNumbers();
+      resultDiv.innerHTML = '<p class="text-muted mb-0"><i class="fas fa-file-check me-1"></i>Dosya yüklendi: <strong>' + escapeHtml(file.name) + '</strong>. "Lint Et" butonuna basın.</p>';
+    };
+    reader.onerror = function () {
+      showFileSizeError('Dosya okunurken bir hata oluştu.');
+    };
+    reader.readAsText(file);
+  }
+
+  function showFileSizeError(msg) {
+    resultDiv.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i>' + escapeHtml(msg) + '</div>';
+    fileLabel.textContent = 'Dosya seçilmedi';
+    fileInput.value = '';
+  }
+
+  // ---------------------------------------------------------------
+  // Dosya seçici
+  // ---------------------------------------------------------------
+  fileInput.addEventListener('change', function () {
+    if (fileInput.files && fileInput.files[0]) {
+      readFileIntoTextarea(fileInput.files[0]);
+    }
+  });
+
+  // ---------------------------------------------------------------
+  // Drag-and-drop (spec K4, O2)
+  // ---------------------------------------------------------------
+  editorWrapper.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    textarea.classList.add('drag-active');
+    dropOverlay.style.display = 'flex';
+  });
+
+  editorWrapper.addEventListener('dragleave', function (e) {
+    // Wrapper dışına çıkıldığında kaldır
+    if (!editorWrapper.contains(e.relatedTarget)) {
+      textarea.classList.remove('drag-active');
+      dropOverlay.style.display = 'none';
+    }
+  });
+
+  editorWrapper.addEventListener('drop', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    textarea.classList.remove('drag-active');
+    dropOverlay.style.display = 'none';
+
+    const files = e.dataTransfer && e.dataTransfer.files;
+    if (files && files.length > 0) {
+      readFileIntoTextarea(files[0]);
+    }
+  });
+
+  // ---------------------------------------------------------------
+  // Temizle butonu (spec N3)
+  // ---------------------------------------------------------------
+  clearBtn.addEventListener('click', function () {
+    textarea.value = '';
+    fileLabel.textContent = 'Dosya seçilmedi';
+    fileInput.value = '';
+    resultDiv.innerHTML = '<p class="text-muted mb-0"><i class="fas fa-info-circle me-1"></i>Lint sonuçları burada görüntülenecek.</p>';
+    updateLineNumbers();
+    textarea.focus();
+  });
+
+  // ---------------------------------------------------------------
+  // Hata satırını textarea'da seç & scroll (spec K6)
+  // ---------------------------------------------------------------
+  function highlightErrorLine(lineNo) {
+    // lineNo: 1-indexed (backend zaten +1 yapmış)
+    if (!lineNo || lineNo < 1) return;
+    const lines = textarea.value.split('\n');
+    const zeroIdx = lineNo - 1;
+    if (zeroIdx >= lines.length) return;
+
+    // Başlangıç karakterini bul
+    let start = 0;
+    for (let i = 0; i < zeroIdx; i++) {
+      start += lines[i].length + 1; // +1 '\n'
+    }
+    const end = start + lines[zeroIdx].length;
+
+    textarea.focus();
+    textarea.setSelectionRange(start, end);
+
+    // Yaklaşık scroll (spec: "pixel-perfect olması gerekmez")
+    const totalLines = lines.length;
+    const fraction   = zeroIdx / Math.max(totalLines - 1, 1);
+    textarea.scrollTop = fraction * (textarea.scrollHeight - textarea.clientHeight);
+
+    // Satır numaraları panelini de senkronize et
+    lineNumbers.scrollTop = textarea.scrollTop;
+  }
+
+  // ---------------------------------------------------------------
+  // Sonuç render yardımcıları
+  // ---------------------------------------------------------------
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function renderSyntaxError(data) {
+    let html = '<div class="alert alert-danger mb-3">';
+    html += '<div class="fw-bold mb-1"><i class="fas fa-times-circle me-1"></i>Syntax Hatası</div>';
+
+    // Satır/sütun badge (spec K5)
+    if (data.line !== null && data.line !== undefined) {
+      html += '<span class="badge bg-danger me-2">Satır ' + data.line + ', Sütun ' + (data.column !== null && data.column !== undefined ? data.column : '—') + '</span>';
+    }
+
+    html += '<div class="mt-2" style="white-space:pre-wrap;font-family:monospace;font-size:0.875rem;">' + escapeHtml(data.error) + '</div>';
+    html += '</div>';
+
+    // Belge sayısı (her durumda göster; syntax hata öncesinde 0 olabilir)
+    if (typeof data.documents === 'number') {
+      html += renderDocCount(data.documents);
+    }
+
+    return html;
+  }
+
+  function renderDocCount(n) {
+    if (n === 0) return '';
+    const label = n === 1 ? '1 belge kontrol edildi' : (n + ' belge kontrol edildi');
+    return '<p class="text-muted small mb-2"><i class="fas fa-layer-group me-1"></i>' + label + '</p>';
+  }
+
+  function renderSuccess(data) {
+    let html = '';
+
+    // Belge sayısı (spec madde 5)
+    html += renderDocCount(data.documents || 0);
+
+    const warnings = data.warnings || [];
+
+    if (warnings.length === 0) {
+      html += '<div class="alert alert-success mb-0">';
+      html += '<i class="fas fa-check-circle me-2"></i>';
+      html += '<strong>Tüm kontroller başarılı!</strong> YAML syntax geçerli ve best practice ihlali bulunamadı.';
+      html += '</div>';
+      return html;
+    }
+
+    // Uyarılar varsa başlık
+    html += '<div class="alert alert-warning mb-3">';
+    html += '<i class="fas fa-check-circle me-1 text-success"></i> Syntax geçerli &nbsp;|&nbsp; ';
+    html += '<i class="fas fa-exclamation-triangle me-1"></i><strong>' + warnings.length + ' best practice uyarısı</strong> bulundu.';
+    html += '</div>';
+
+    // Uyarıları belge bazında grupla (spec N2)
+    const byDoc = groupByDocument(warnings);
+    const docKeys = Object.keys(byDoc).sort(function(a,b){ return Number(a)-Number(b); });
+    const multiDoc = docKeys.length > 1 || (docKeys.length === 1 && docKeys[0] !== 'null');
+
+    docKeys.forEach(function (docKey) {
+      const docWarnings = byDoc[docKey];
+
+      if (multiDoc) {
+        const docNum = docKey !== 'null' ? ('Belge ' + docKey) : 'Genel';
+        html += '<div class="doc-group-header"><i class="fas fa-file-code me-1"></i>' + docNum + '</div>';
+      }
+
+      docWarnings.forEach(function (w) {
+        const isError = w.severity === 'error';
+        const cardClass = isError ? 'error-rule-card' : 'warning-card';
+        const severityBadge = SEVERITY_BADGE[w.severity] || SEVERITY_BADGE['warning'];
+        const ruleLabel = RULE_LABELS[w.rule] || w.rule;
+
+        html += '<div class="card mb-2 ' + cardClass + '">';
+        html += '<div class="card-body py-2 px-3">';
+        html += '<div class="d-flex align-items-start gap-2 mb-1">';
+        html += severityBadge;
+        html += '<span class="badge bg-secondary me-1">' + escapeHtml(ruleLabel) + '</span>';
+        html += '<code class="small text-muted ms-auto">' + escapeHtml(w.path || '') + '</code>';
+        html += '</div>';
+        html += '<div class="small">' + escapeHtml(w.message) + '</div>';
+        html += '</div></div>';
+      });
+    });
+
+    return html;
+  }
+
+  // warnings dizisini belge index'ine göre grupla
+  // Backend uyarıları document_index ile dönebilir; yoksa hepsini tek grupta say
+  function groupByDocument(warnings) {
+    const groups = {};
+    warnings.forEach(function (w) {
+      const key = (w.document_index !== undefined && w.document_index !== null)
+                  ? String(w.document_index + 1)   // 0-indexed -> 1-indexed görüntü
+                  : 'null';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(w);
+    });
+    return groups;
+  }
+
+  // ---------------------------------------------------------------
+  // Lint Et aksiyonu
+  // ---------------------------------------------------------------
+  lintBtn.addEventListener('click', function () {
+    const yaml = textarea.value;
+    resultDiv.innerHTML = '<span class="text-secondary"><i class="fas fa-spinner fa-spin me-1"></i>Kontrol ediliyor...</span>';
+
+    fetch('/yaml-lint-api', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ yaml: yaml })
+    })
+    .then(function (resp) {
+      if (!resp.ok) {
+        return resp.json().then(function (d) { throw new Error(d.error || 'HTTP ' + resp.status); });
+      }
+      return resp.json();
+    })
+    .then(function (data) {
+      if (!data.ok) {
+        // Boş içerik veya syntax hatası
+        resultDiv.innerHTML = renderSyntaxError(data);
+
+        // Hata satırını vurgula (spec K6)
+        if (data.line !== null && data.line !== undefined) {
+          highlightErrorLine(data.line);
+        }
+      } else {
+        resultDiv.innerHTML = renderSuccess(data);
+      }
+    })
+    .catch(function (err) {
+      resultDiv.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-1"></i>API hatası: ' + escapeHtml(String(err)) + '</div>';
+    });
+  });
+
+  // ---------------------------------------------------------------
+  // İlk yükleme: satır numaralarını başlat
+  // ---------------------------------------------------------------
+  updateLineNumbers();
+
+}());
 </script>
 {% endblock %}

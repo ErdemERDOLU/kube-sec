@@ -287,13 +287,6 @@ function updateSummaryCards(rbacCount, privilegedCount, rootCount) {
     document.getElementById('root-count').textContent = rootCount;
 }
 
-// Utility: escape HTML for safe debug output
-function escapeHtml(unsafe) {
-    return unsafe.replace(/[&<>"'`]/g, function(m) {
-        return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;","`":"&#96;"})[m];
-    });
-}
-
 function showLoadingState(elementId) {
     const element = document.getElementById(elementId);
     element.innerHTML = `

@@ -47,24 +47,7 @@
   </div>
 </div>
 
-<div class="position-fixed bottom-0 end-0 p-3" style="z-index:1080">
-  <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
-    <div class="toast-header">
-      <strong class="me-auto">Bilgi</strong>
-      <small>şimdi</small>
-      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
-    </div>
-    <div class="toast-body" id="toastBody"></div>
-  </div>
-</div>
-
 <script>
-const toastEl = document.getElementById('liveToast');
-const toastBody = document.getElementById('toastBody');
-function showToast(msg){
-  toastBody.textContent = msg;
-  new bootstrap.Toast(toastEl).show();
-}
 
 async function fetchConfigs(){
   const res = await fetch('/kubeconfigs',{credentials:'include'});
@@ -96,13 +79,13 @@ function renderTable(items, active){
 async function activateCfg(name){
   const r = await fetch('/kubeconfigs/activate',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name})});
   const d = await r.json();
-  if(d.ok){showToast('Aktifleştirildi'); fetchConfigs();} else {showToast(d.error||'Hata');}
+  if(d.ok){showToast('Aktifleştirildi', 'success'); fetchConfigs();} else {showToast(d.error||'Hata', 'error');}
 }
 async function deleteCfg(name){
   if(!confirm('Silinsin mi?')) return;
   const r = await fetch('/kubeconfigs',{method:'DELETE',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name})});
   const d = await r.json();
-  if(d.ok){showToast('Silindi'); fetchConfigs();} else {showToast(d.error||'Hata');}
+  if(d.ok){showToast('Silindi', 'success'); fetchConfigs();} else {showToast(d.error||'Hata', 'error');}
 }
 
 document.getElementById('uploadForm').addEventListener('submit', async e=>{
@@ -111,7 +94,7 @@ document.getElementById('uploadForm').addEventListener('submit', async e=>{
   const payload = Object.fromEntries(fd.entries());
   const r = await fetch('/kubeconfigs',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(payload)});
   const d = await r.json();
-  if(d.ok){showToast('Yüklendi'); e.target.reset(); fetchConfigs(); } else {showToast(d.error||'Hata');}
+  if(d.ok){showToast('Yüklendi', 'success'); e.target.reset(); fetchConfigs(); } else {showToast(d.error||'Hata', 'error');}
 });
 
 document.getElementById('refreshBtn').onclick=fetchConfigs;

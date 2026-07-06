@@ -183,30 +183,6 @@
     return `<div class='col-12 text-center py-5'><i class="bi bi-inboxes text-muted" style='font-size:3rem;'></i><p class='text-muted mb-0'>No ${label} found</p></div>`;
   }
 
-  function timeAgo(ts){
-    if(!ts) return '-';
-    const now = new Date();
-    const t = new Date(ts);
-    const diff = Math.floor((now - t)/1000);
-    if (diff < 60) return diff+'s ago';
-    if (diff < 3600) return Math.floor(diff/60)+'m ago';
-    if (diff < 86400) return Math.floor(diff/3600)+'h ago';
-    return Math.floor(diff/86400)+'d ago';
-  }
-
-  function showToast(message, type='success') {
-    const bg = type === 'error' ? 'bg-danger' : (type === 'warning' ? 'bg-warning text-dark' : 'bg-success');
-    const toast = `<div class="toast align-items-center text-white ${bg} border-0" role="alert"><div class="d-flex"><div class="toast-body">${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`;
-    let container = document.querySelector('.toast-container');
-    if (!container) {
-      container = document.createElement('div');
-      container.className = 'toast-container position-fixed top-0 end-0 p-3';
-      document.body.appendChild(container);
-    }
-    container.insertAdjacentHTML('beforeend', toast);
-    new bootstrap.Toast(container.lastElementChild, { delay: 3500 }).show();
-  }
-
   // ACTIONS
   function actionButtons(kind, namespace, name){
     const nsAttr = namespace?`data-namespace="${namespace}"`:'';
@@ -259,26 +235,25 @@
   }
 
   function confirmDelete(kind, namespace, name){
-    document.getElementById('confirmDeleteText').textContent = `${kind.toUpperCase()} ${name} silinsin mi?`;
-    const modalEl = document.getElementById('confirmDeleteModal');
-    document.getElementById('confirmDeleteBtn').onclick = ()=>doDelete(kind, namespace, name);
-    new bootstrap.Modal(modalEl).show();
+    openConfirmModal({
+      title: 'Onay',
+      message: kind.toUpperCase() + ' ' + name + ' silinsin mi?',
+      confirmText: 'Sil',
+      confirmBtnClass: 'btn-danger',
+      onConfirm: () => doDelete(kind, namespace, name)
+    });
   }
 
   function doDelete(kind, namespace, name){
     const typeMap={pvc:'pvc',pv:'pv',storageclass:'storageclass'};
     const payload={ type:typeMap[kind], name:name };
     if(namespace) payload.namespace = namespace;
-    fetch('/k8s-explorer/delete',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)})
+    return fetch('/k8s-explorer/delete',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)})
       .then(r=>r.json())
       .then(j=>{
         if(j.error){ showToast('Silme hatası: '+j.error,'error'); return; }
-        showToast('Silindi'); reloadStorage(); bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal')).hide();
+        showToast('Silindi'); reloadStorage();
       }).catch(e=>showToast('Silme hatası: '+e.message,'error'));
-  }
-
-  function escapeHtml(str){
-    return (str||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
   }
 </script>
 <!-- Detail Modal -->
@@ -316,20 +291,4 @@
   </div>
  </div>
 
- <!-- Confirm Delete Modal -->
- <div class="modal fade" id="confirmDeleteModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Onay</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body"><p id="confirmDeleteText" class="mb-0"></p></div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-        <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Sil</button>
-      </div>
-    </div>
-  </div>
- </div>
 {% endblock %}

@@ -32,6 +32,7 @@
           <input id="rbacSearch" type="text" class="form-control border-start-0" placeholder="Search name..." />
         </div>
         <button class="btn btn-sm btn-outline-primary" onclick="reloadRbac()"><i class="bi bi-arrow-clockwise"></i></button>
+        <button class="btn btn-sm btn-outline-secondary" onclick="exportAccessControl()"><i class="bi bi-download me-1"></i>CSV İndir</button>
       </div>
 
       <div class="tab-content" id="rbacTabsContent">
@@ -76,17 +77,72 @@
   function openYaml(kind, namespace, name){ const map={serviceaccount:'serviceaccount',sa:'serviceaccount',role:'role',rolebinding:'rolebinding',clusterrole:'clusterrole',clusterrolebinding:'clusterrolebinding'}; const type=map[kind]; if(!type) return; const qs=new URLSearchParams({type,name}); if(namespace) qs.append('namespace',namespace); fetch('/k8s-explorer/yaml?'+qs.toString()).then(r=>{ if(!r.ok) throw new Error('YAML alınamadı'); return r.text(); }).then(txt=>{ document.getElementById('yamlEditTitle').textContent = kind.toUpperCase()+" "+name+" YAML"; document.getElementById('yamlEditTextarea').value=txt; document.getElementById('yamlEditSaveBtn').onclick=()=>saveYaml(kind, namespace, name); new bootstrap.Modal(document.getElementById('yamlEditModal')).show(); }).catch(e=>showToast(e.message,'error')); }
   function saveYaml(kind, namespace, name){ const map={serviceaccount:'serviceaccount',role:'role',rolebinding:'rolebinding',clusterrole:'clusterrole',clusterrolebinding:'clusterrolebinding'}; const body={type:map[kind], name:name, yaml: document.getElementById('yamlEditTextarea').value}; if(namespace) body.namespace=namespace; fetch('/k8s-explorer/yaml',{method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)}).then(r=>{ if(!r.ok) return r.text().then(t=>{throw new Error(t)}); return r.text(); }).then(()=>{ showToast('YAML güncellendi'); reloadRbac(); bootstrap.Modal.getInstance(document.getElementById('yamlEditModal')).hide(); }).catch(e=>showToast('Kaydetme hatası: '+e.message,'error')); }
 
-  function confirmDelete(kind, namespace, name){ document.getElementById('confirmDeleteText').textContent = `${kind.toUpperCase()} ${name} silinsin mi?`; document.getElementById('confirmDeleteBtn').onclick=()=>doDelete(kind, namespace, name); new bootstrap.Modal(document.getElementById('confirmDeleteModal')).show(); }
-  function doDelete(kind, namespace, name){ const map={serviceaccount:'serviceaccount',role:'role',rolebinding:'rolebinding',clusterrole:'clusterrole',clusterrolebinding:'clusterrolebinding'}; const body={type:map[kind], name:name}; if(namespace) body.namespace=namespace; fetch('/k8s-explorer/delete',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)}).then(r=>r.json()).then(j=>{ if(j.error){ showToast('Silme hata: '+j.error,'error'); return;} showToast('Silindi'); reloadRbac(); bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal')).hide(); }).catch(e=>showToast('Silme hata: '+e.message,'error')); }
+  function confirmDelete(kind, namespace, name){
+    openConfirmModal({
+      title: 'Onay',
+      message: kind.toUpperCase() + ' ' + name + ' silinsin mi?',
+      confirmText: 'Sil',
+      confirmBtnClass: 'btn-danger',
+      onConfirm: () => doDelete(kind, namespace, name)
+    });
+  }
+  function doDelete(kind, namespace, name){ const map={serviceaccount:'serviceaccount',role:'role',rolebinding:'rolebinding',clusterrole:'clusterrole',clusterrolebinding:'clusterrolebinding'}; const body={type:map[kind], name:name}; if(namespace) body.namespace=namespace; return fetch('/k8s-explorer/delete',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)}).then(r=>r.json()).then(j=>{ if(j.error){ showToast('Silme hata: '+j.error,'error'); return;} showToast('Silindi'); reloadRbac(); }).catch(e=>showToast('Silme hata: '+e.message,'error')); }
 
   function emptyState(label){ return `<div class='col-12 text-center py-5'><i class="bi bi-inboxes text-muted" style='font-size:3rem;'></i><p class='text-muted mb-0'>No ${label} found</p></div>`; }
-  function timeAgo(ts){ if(!ts) return '-'; const now=new Date(); const t=new Date(ts); const diff=Math.floor((now-t)/1000); if(diff<60) return diff+'s ago'; if(diff<3600) return Math.floor(diff/60)+'m ago'; if(diff<86400) return Math.floor(diff/3600)+'h ago'; return Math.floor(diff/86400)+'d ago'; }
-  function escapeHtml(str){ return (str||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
-  function showToast(message, type='success'){ const bg = type==='error'?'bg-danger':(type==='warning'?'bg-warning text-dark':'bg-success'); const toast=`<div class='toast align-items-center text-white ${bg} border-0' role='alert'><div class='d-flex'><div class='toast-body'>${message}</div><button type='button' class='btn-close btn-close-white me-2 m-auto' data-bs-dismiss='toast'></button></div></div>`; let c=document.querySelector('.toast-container'); if(!c){ c=document.createElement('div'); c.className='toast-container position-fixed top-0 end-0 p-3'; document.body.appendChild(c);} c.insertAdjacentHTML('beforeend', toast); new bootstrap.Toast(c.lastElementChild,{delay:3500}).show(); }
+
+  function exportAccessControl() {
+    // Aktif tab'i bul
+    const activePane = document.querySelector('.tab-pane.show.active');
+    if (!activePane) { showToast('Aktif tab bulunamadi', 'warning'); return; }
+    const paneId = activePane.id;
+
+    // Aktif arama filtresi
+    const term = (document.getElementById('rbacSearch').value || '').toLowerCase();
+
+    let filename, headers, data;
+
+    if (paneId === 'sas') {
+      filename = 'access_control_service_accounts_export.csv';
+      headers = ['Ad', 'Namespace', 'Secret Sayisi', 'Yas'];
+      data = rbacData.service_accounts
+        .filter(i => !term || i.name.toLowerCase().includes(term))
+        .map(i => [i.name, i.namespace, i.secrets, timeAgo(i.age)]);
+    } else if (paneId === 'roles') {
+      filename = 'access_control_roles_export.csv';
+      headers = ['Ad', 'Namespace', 'Kural Sayisi', 'Yas'];
+      data = rbacData.roles
+        .filter(i => !term || i.name.toLowerCase().includes(term))
+        .map(i => [i.name, i.namespace, i.rules_count, timeAgo(i.age)]);
+    } else if (paneId === 'rbs') {
+      filename = 'access_control_role_bindings_export.csv';
+      headers = ['Ad', 'Namespace', 'Subject\'ler', 'Rol Referansi', 'Yas'];
+      data = rbacData.role_bindings
+        .filter(i => !term || i.name.toLowerCase().includes(term))
+        .map(i => [i.name, i.namespace, i.subjects, (i.roleRef && i.roleRef.name) || '', timeAgo(i.age)]);
+    } else if (paneId === 'crs') {
+      filename = 'access_control_cluster_roles_export.csv';
+      headers = ['Ad', 'Kural Sayisi', 'Yas'];
+      data = rbacData.cluster_roles
+        .filter(i => !term || i.name.toLowerCase().includes(term))
+        .map(i => [i.name, i.rules_count, timeAgo(i.age)]);
+    } else if (paneId === 'crbs') {
+      filename = 'access_control_cluster_role_bindings_export.csv';
+      headers = ['Ad', 'Subject\'ler', 'Rol Referansi', 'Yas'];
+      data = rbacData.cluster_role_bindings
+        .filter(i => !term || i.name.toLowerCase().includes(term))
+        .map(i => [i.name, i.subjects, (i.roleRef && i.roleRef.name) || '', timeAgo(i.age)]);
+    } else {
+      showToast('Bilinmeyen tab: ' + paneId, 'warning');
+      return;
+    }
+
+    if (!data || data.length === 0) { showToast('Disa aktarilacak veri yok', 'warning'); return; }
+    exportToCsv(filename, headers, data);
+    showToast('CSV indirildi', 'success');
+  }
 </script>
 
-<!-- Reuse modals (detail, yaml, confirm) -->
+<!-- Reuse modals (detail, yaml) -->
 <div class="modal fade" id="detailModal" tabindex="-1"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="detailModalLabel">Detail</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body" id="detailModalBody">Yükleniyor...</div><div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button></div></div></div></div>
 <div class="modal fade" id="yamlEditModal" tabindex="-1"><div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="yamlEditTitle">YAML Edit</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><textarea id="yamlEditTextarea" class="form-control font-monospace" style="min-height:500px;"></textarea></div><div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button><button class="btn btn-primary" id="yamlEditSaveBtn">Kaydet</button></div></div></div></div>
-<div class="modal fade" id="confirmDeleteModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Onay</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><p id="confirmDeleteText" class="mb-0"></p></div><div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal">İptal</button><button class="btn btn-danger" id="confirmDeleteBtn">Sil</button></div></div></div></div>
 {% endblock %}

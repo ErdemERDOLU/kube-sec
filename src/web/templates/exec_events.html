@@ -3,41 +3,354 @@
 {% block title %}Pod Exec Olayları{% endblock %}
 
 {% block content %}
-<style>
-    .exec-table { background: #fff; padding: 20px; border-radius: 8px; width: 100%; border-collapse: collapse; }
-    th, td { padding: 8px; border-bottom: 1px solid #eee; }
-    th { background: #f0f0f0; }
-    .ns { color: #0074d9; font-weight: bold; }
-    .pod { color: #b30000; }
-    .cmd { color: #333; font-family: monospace; }
-</style>
-<h2>Kubernetes Pod Exec Olayları</h2>
-<div style="margin:30px 0 10px 0;">
-    <b>Son Pod Exec Olayları:</b>
-    <div id="exec-table" style="margin-top:10px;">Yükleniyor...</div>
+<div class="container-fluid">
+
+    <!-- Sayfa Başlığı -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0 text-gray-800">
+                        <i class="fas fa-terminal text-warning me-2"></i>
+                        Kubernetes Olayları
+                    </h1>
+                    <p class="text-muted mb-0">Pod Exec ve Küme Olayları</p>
+                </div>
+                <div class="text-end">
+                    <button class="btn btn-outline-primary btn-sm" onclick="loadExecEvents()">
+                        <i class="fas fa-sync-alt me-1"></i>Yenile
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Olaylar Kartı -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between"
+             style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: #fff;">
+            <h6 class="m-0 font-weight-bold text-white">
+                <i class="fas fa-list-alt me-2"></i>Son Kubernetes Olayları
+            </h6>
+            <small class="opacity-75">Son 100 olay gösteriliyor</small>
+        </div>
+        <div class="card-body">
+            <!-- Özet satırı (AC14) -->
+            <div id="exec-summary"></div>
+
+            <!-- Yükleniyor / Hata alanı (AC1, AC6) -->
+            <div id="exec-table"></div>
+
+            <!-- Veri Tablosu (AC2, AC3) -->
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover d-none" id="events-table">
+                    <thead class="table-dark">
+                        <!-- Başlık satırı -->
+                        <tr>
+                            <th><i class="fas fa-clock me-1"></i>Zaman</th>
+                            <th><i class="fas fa-layer-group me-1"></i>Namespace</th>
+                            <th><i class="fas fa-cube me-1"></i>Kaynak Adı</th>
+                            <th><i class="fas fa-tag me-1"></i>Tür</th>
+                            <th><i class="fas fa-exclamation-circle me-1"></i>Tip</th>
+                            <th><i class="fas fa-question-circle me-1"></i>Sebep</th>
+                            <th><i class="fas fa-comment-alt me-1"></i>Mesaj</th>
+                        </tr>
+                        <!-- Filtre satırı (AC7, AC15) -->
+                        <tr class="bg-light">
+                            <th></th>
+                            <th>
+                                <select class="form-select form-select-sm" id="filter-ns">
+                                    <option value="">Tümü</option>
+                                </select>
+                            </th>
+                            <th></th>
+                            <th>
+                                <select class="form-select form-select-sm" id="filter-kind">
+                                    <option value="">Tümü</option>
+                                </select>
+                            </th>
+                            <th>
+                                <select class="form-select form-select-sm" id="filter-type">
+                                    <option value="">Tümü</option>
+                                    <option value="Warning">Warning</option>
+                                    <option value="Normal">Normal</option>
+                                </select>
+                            </th>
+                            <th></th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="events-tbody"></tbody>
+                </table>
+            </div>
+
+            <!-- Pagination (AC8) -->
+            <nav>
+                <ul class="pagination justify-content-center" id="events-pagination"></ul>
+            </nav>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.font-weight-bold { font-weight: 700 !important; }
+.text-gray-800 { color: #5a5c69 !important; }
+</style>
 <script>
-fetch('/exec-events')
-    .then(resp => resp.json())
-    .then(data => {
-        if (data.error) {
-            document.getElementById('exec-table').innerHTML = 'Backend Hatası: ' + data.error;
-            return;
-        }
-        let html = '<table class="exec-table">';
-        html += '<tr><th>Zaman</th><th>Namespace</th><th>Pod</th><th>Kullanıcı</th><th>Komut</th></tr>';
-        if (!data.events || data.events.length === 0) {
-            html += '<tr><td colspan="5" style="color:#888">Kayıt yok</td></tr>';
-        } else {
-            data.events.forEach(ev => {
-                html += `<tr><td>${ev.time}</td><td class="ns">${ev.namespace}</td><td class="pod">${ev.pod}</td><td>${ev.user || '-'}</td><td class="cmd">${ev.command}</td></tr>`;
-            });
-        }
-        html += '</table>';
-        document.getElementById('exec-table').innerHTML = html;
-    })
-    .catch(() => {
-        document.getElementById('exec-table').innerHTML = 'Hata oluştu.';
+/* ---------------------------------------------------------------
+   exec_events.html — client-side filtreleme, pagination, render
+   escapeHtml() ve timeAgo() common.js üzerinden base.html'e
+   yükleniyor; bu dosyada YENIDEN TANIMLANMADI.
+--------------------------------------------------------------- */
+
+const ROWS_PER_PAGE = 20;
+let allEvents    = [];
+let currentPage  = 1;
+let filterNs     = '';
+let filterKind   = '';
+let filterType   = '';
+
+/* ------------------------------------------------------------------
+   loadExecEvents()
+   Backlog #1 kapsamında eklenen hata gösterimi (alert-danger banner,
+   resp.ok kontrolü, retry butonu, I18N anahtarları) KORUNDU — AC6.
+------------------------------------------------------------------ */
+function loadExecEvents() {
+    const container = document.getElementById('exec-table');
+
+    /* AC1: animasyonlu spinner — base.html'deki .loading-spinner sınıfı */
+    container.innerHTML = `
+        <div class="d-flex justify-content-center align-items-center py-4">
+            <div class="loading-spinner me-2"></div>
+            <span class="text-muted">Veriler yükleniyor...</span>
+        </div>`;
+
+    document.getElementById('events-table').classList.add('d-none');
+    document.getElementById('events-tbody').innerHTML = '';
+    document.getElementById('events-pagination').innerHTML = '';
+    document.getElementById('exec-summary').innerHTML = '';
+
+    const locale = window.locale || 'tr';
+    const i18n   = window.i18n   || {};
+
+    fetch('/exec-events')
+        .then(resp => {
+            /* resp.ok kontrolü — Backlog #1 */
+            if (!resp.ok) {
+                const httpDetail = (i18n['error.http_detail'] && i18n['error.http_detail'][locale]) || 'HTTP {status} hatası';
+                throw new Error(httpDetail.replace('{status}', resp.status));
+            }
+            return resp.json();
+        })
+        .then(data => {
+            if (data.error) {
+                /* M5: escapeHtml ile XSS koruması */
+                container.innerHTML = 'Backend Hatası: ' + escapeHtml(data.error);
+                return;
+            }
+
+            container.innerHTML = '';
+            allEvents   = data.events || [];
+            filterNs    = '';
+            filterKind  = '';
+            filterType  = '';
+
+            populateFilterOptions();
+            currentPage = 1;
+            renderTablePage(1);
+        })
+        .catch(err => {
+            /* alert-danger banner + retry butonu + I18N — Backlog #1, AC6 */
+            const fetchFailed = (i18n['error.fetch_failed'] && i18n['error.fetch_failed'][locale]) || 'Veri alınamadı';
+            const retryLabel  = (i18n['error.retry']        && i18n['error.retry'][locale])        || 'Tekrar Dene';
+            container.innerHTML = `<div class="alert alert-danger"><strong>${fetchFailed}:</strong> ${escapeHtml(err.message)} <button class="btn btn-sm btn-outline-danger ms-2" onclick="loadExecEvents()">${retryLabel}</button></div>`;
+        });
+}
+
+/* ------------------------------------------------------------------
+   populateFilterOptions()
+   Namespace ve Kind dropdown'larını veriden dinamik olarak doldurur.
+   Tip (Warning/Normal) dropdown'u HTML'de sabit tanımlı.
+------------------------------------------------------------------ */
+function populateFilterOptions() {
+    const nsFilter   = document.getElementById('filter-ns');
+    const kindFilter = document.getElementById('filter-kind');
+
+    const namespaces = [...new Set(allEvents.map(ev => ev.namespace || '').filter(Boolean))].sort();
+    const kinds      = [...new Set(allEvents.map(ev => ev.kind      || '').filter(Boolean))].sort();
+
+    nsFilter.innerHTML = '<option value="">Tümü</option>';
+    namespaces.forEach(ns => {
+        const opt = document.createElement('option');
+        opt.value = ns; opt.textContent = ns;
+        nsFilter.appendChild(opt);
     });
+
+    kindFilter.innerHTML = '<option value="">Tümü</option>';
+    kinds.forEach(k => {
+        const opt = document.createElement('option');
+        opt.value = k; opt.textContent = k;
+        kindFilter.appendChild(opt);
+    });
+
+    document.getElementById('filter-type').value = '';
+}
+
+/* ------------------------------------------------------------------
+   applyFilters()  — seçilen filtre değerlerine göre olay listesi döner
+------------------------------------------------------------------ */
+function applyFilters() {
+    return allEvents.filter(ev => {
+        if (filterNs   && ev.namespace !== filterNs)   return false;
+        if (filterKind && ev.kind      !== filterKind)  return false;
+        if (filterType && ev.type      !== filterType)  return false;
+        return true;
+    });
+}
+
+/* ------------------------------------------------------------------
+   renderTablePage(page)
+   Filtrelenmiş olayları sayfalayarak DOM'a yazar.
+   AC8: 20 satır/sayfa
+   AC14: özet satırı (toplam / filtrelenmiş)
+------------------------------------------------------------------ */
+function renderTablePage(page) {
+    const filtered      = applyFilters();
+    const total         = allEvents.length;
+    const filteredTotal = filtered.length;
+    const totalPages    = Math.max(1, Math.ceil(filteredTotal / ROWS_PER_PAGE));
+    currentPage         = Math.min(Math.max(1, page), totalPages);
+
+    const start    = (currentPage - 1) * ROWS_PER_PAGE;
+    const pageRows = filtered.slice(start, start + ROWS_PER_PAGE);
+
+    const table      = document.getElementById('events-table');
+    const tbody      = document.getElementById('events-tbody');
+    const summaryDiv = document.getElementById('exec-summary');
+
+    /* AC14: özet mesajı */
+    if (total === 0) {
+        summaryDiv.innerHTML = '<div class="alert alert-warning py-2"><i class="fas fa-info-circle me-2"></i>Kayıt yok.</div>';
+    } else if (filteredTotal !== total) {
+        summaryDiv.innerHTML = `<div class="alert alert-info py-2"><i class="fas fa-info-circle me-2"></i><strong>${total}</strong> olay yüklendi, <strong>${filteredTotal}</strong> tanesi gösteriliyor.</div>`;
+    } else {
+        summaryDiv.innerHTML = `<div class="alert alert-info py-2"><i class="fas fa-info-circle me-2"></i><strong>${total}</strong> olay yüklendi.</div>`;
+    }
+
+    if (filteredTotal === 0) {
+        table.classList.add('d-none');
+        tbody.innerHTML = '';
+    } else {
+        table.classList.remove('d-none');
+        /* M5: escapeHtml evRenderer içinde her değere uygulandı */
+        tbody.innerHTML = pageRows.map(evRenderer).join('');
+    }
+
+    updatePaginationControls(currentPage, totalPages);
+}
+
+/* ------------------------------------------------------------------
+   evRenderer(ev)
+   Backend response alanlarına göre tablo satırı üretir.
+   M6: ev.pod / ev.user / ev.command YOK — gerçek alanlar kullanıldı.
+   M5: tüm değerler escapeHtml() ile XSS'e karşı korundu.
+   AC9: type badge renklendirmesi (Warning → bg-warning, Normal → bg-success)
+   AC10: namespace → badge bg-secondary
+   AC11: timeAgo() + title tooltip (common.js'ten — yeniden tanımlanmadı)
+------------------------------------------------------------------ */
+function evRenderer(ev) {
+    /* AC9 — Tip badge */
+    let typeBadge;
+    if (ev.type === 'Warning') {
+        typeBadge = `<span class="badge bg-warning text-dark">${escapeHtml(ev.type)}</span>`;
+    } else if (ev.type === 'Normal') {
+        typeBadge = `<span class="badge bg-success">${escapeHtml(ev.type)}</span>`;
+    } else {
+        typeBadge = `<span class="badge bg-secondary">${escapeHtml(ev.type || '-')}</span>`;
+    }
+
+    /* AC11 — timeAgo() + tam tarih tooltip */
+    const timeStr = String(ev.time || '');
+    const timeDisplay = timeStr
+        ? `<span title="${escapeHtml(timeStr)}" style="cursor:default;">${escapeHtml(timeAgo(timeStr))}</span>`
+        : '-';
+
+    const rowClass = ev.type === 'Warning' ? 'table-warning' : '';
+
+    return `<tr class="${rowClass}">
+        <td style="white-space:nowrap;">${timeDisplay}</td>
+        <td><span class="badge bg-secondary">${escapeHtml(ev.namespace || '-')}</span></td>
+        <td><strong>${escapeHtml(ev.name || '-')}</strong></td>
+        <td><span class="badge bg-primary">${escapeHtml(ev.kind || '-')}</span></td>
+        <td>${typeBadge}</td>
+        <td><code>${escapeHtml(ev.reason || '-')}</code></td>
+        <td><small>${escapeHtml(ev.message || '-')}</small></td>
+    </tr>`;
+}
+
+/* ------------------------------------------------------------------
+   updatePaginationControls(currentPage, totalPages)
+   privileged_containers.html'deki pagination mantığı adapte edildi.
+------------------------------------------------------------------ */
+function updatePaginationControls(currentPage, totalPages) {
+    const ul = document.getElementById('events-pagination');
+    if (!ul) return;
+    ul.innerHTML = '';
+
+    function makeLi(label, page, disabled, active) {
+        const liEl = document.createElement('li');
+        liEl.className = 'page-item' + (disabled ? ' disabled' : '') + (active ? ' active' : '');
+        const a = document.createElement('a');
+        a.className = 'page-link';
+        a.href = '#';
+        a.textContent = label;
+        a.onclick = function(e) {
+            e.preventDefault();
+            if (!disabled && !active) renderTablePage(page);
+        };
+        liEl.appendChild(a);
+        return liEl;
+    }
+
+    ul.appendChild(makeLi('«', 1,          currentPage === 1));
+    ul.appendChild(makeLi('‹', Math.max(1, currentPage - 1), currentPage === 1));
+
+    const maxButtons = 7;
+    let winStart = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+    let winEnd   = Math.min(totalPages, winStart + maxButtons - 1);
+    if (winEnd - winStart + 1 < maxButtons) winStart = Math.max(1, winEnd - maxButtons + 1);
+
+    for (let p = winStart; p <= winEnd; p++) {
+        ul.appendChild(makeLi(String(p), p, false, p === currentPage));
+    }
+
+    ul.appendChild(makeLi('›', Math.min(totalPages, currentPage + 1), currentPage === totalPages));
+    ul.appendChild(makeLi('»', totalPages, currentPage === totalPages));
+}
+
+/* ------------------------------------------------------------------
+   Filtre event listener'ları
+   AC12: filtre değişince pagination 1. sayfaya sıfırlanır.
+------------------------------------------------------------------ */
+document.getElementById('filter-ns').addEventListener('change', function() {
+    filterNs = this.value;
+    currentPage = 1;
+    renderTablePage(1);
+});
+document.getElementById('filter-kind').addEventListener('change', function() {
+    filterKind = this.value;
+    currentPage = 1;
+    renderTablePage(1);
+});
+document.getElementById('filter-type').addEventListener('change', function() {
+    filterType = this.value;
+    currentPage = 1;
+    renderTablePage(1);
+});
+
+/* İlk yükleme */
+loadExecEvents();
 </script>
 {% endblock %}

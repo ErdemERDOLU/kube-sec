@@ -251,6 +251,58 @@ I18N = {
     },
     'pss.namespaces_loaded': {'tr': 'namespace yüklendi.', 'en': 'namespaces loaded.'},
     'pss.api_error_prefix': {'tr': 'API hatası: ', 'en': 'API error: '},
+    # NetworkPolicy Kapsam Analizi
+    'netpol.tab_title': {'tr': 'NetworkPolicy Kapsam', 'en': 'NetworkPolicy Coverage'},
+    'netpol.coverage_title': {'tr': 'NetworkPolicy Kapsam Analizi', 'en': 'NetworkPolicy Coverage Analysis'},
+    'netpol.coverage_subtitle': {'tr': "Namespace ve pod bazında NetworkPolicy kapsam durumunu görüntüleyin.", 'en': 'View NetworkPolicy coverage status by namespace and pod.'},
+    'netpol.loading': {'tr': 'Kapsam verileri yükleniyor...', 'en': 'Loading coverage data...'},
+    'netpol.error': {'tr': 'Kapsam verileri yüklenemedi.', 'en': 'Failed to load coverage data.'},
+    'netpol.ns_coverage_pct': {'tr': 'Namespace Kapsam Oranı', 'en': 'Namespace Coverage Rate'},
+    'netpol.pod_coverage_pct': {'tr': 'Pod Kapsam Oranı', 'en': 'Pod Coverage Rate'},
+    'netpol.total_ns': {'tr': 'Toplam Namespace', 'en': 'Total Namespaces'},
+    'netpol.covered_ns': {'tr': 'Korunan Namespace', 'en': 'Protected Namespaces'},
+    'netpol.uncovered_ns': {'tr': 'Korumasız Namespace', 'en': 'Unprotected Namespaces'},
+    'netpol.total_pods': {'tr': 'Toplam Pod', 'en': 'Total Pods'},
+    'netpol.covered_pods': {'tr': 'Korunan Pod', 'en': 'Protected Pods'},
+    'netpol.uncovered_pods': {'tr': 'Korumasız Pod', 'en': 'Unprotected Pods'},
+    'netpol.ns_table_title': {'tr': 'Namespace NetworkPolicy Durumu', 'en': 'Namespace NetworkPolicy Status'},
+    'netpol.col_namespace': {'tr': 'Namespace', 'en': 'Namespace'},
+    'netpol.col_policy_count': {'tr': 'Policy Sayısı', 'en': 'Policy Count'},
+    'netpol.col_total_pods': {'tr': 'Toplam Pod', 'en': 'Total Pods'},
+    'netpol.col_covered_pods': {'tr': 'Korunan Pod', 'en': 'Protected Pods'},
+    'netpol.col_uncovered_pods': {'tr': 'Korumasız Pod', 'en': 'Unprotected Pods'},
+    'netpol.col_status': {'tr': 'Durum', 'en': 'Status'},
+    'netpol.status_protected': {'tr': 'Korumalı', 'en': 'Protected'},
+    'netpol.status_partial': {'tr': 'Kısmi Koruma', 'en': 'Partial'},
+    'netpol.status_unprotected': {'tr': 'Korumasız', 'en': 'Unprotected'},
+    'netpol.no_data': {'tr': 'Veri bulunamadı.', 'en': 'No data found.'},
+    'netpol.hide_system_ns': {'tr': "Sistem namespace'lerini gizle", 'en': 'Hide system namespaces'},
+    'netpol.refresh': {'tr': 'Yenile', 'en': 'Refresh'},
+    'netpol.export_csv': {'tr': 'CSV Dışa Aktar', 'en': 'Export CSV'},
+    'netpol.search_placeholder': {'tr': 'Namespace ara...', 'en': 'Search namespaces...'},
+    'netpol.pod_detail_title': {'tr': 'Korumasız Pod Listesi', 'en': 'Unprotected Pod List'},
+    'netpol.col_pod_name': {'tr': 'Pod Adı', 'en': 'Pod Name'},
+    'netpol.col_pod_labels': {'tr': "Label'lar", 'en': 'Labels'},
+    'netpol.modal_close': {'tr': 'Kapat', 'en': 'Close'},
+    'netpol.preparing': {'tr': 'Analiz hazırlanıyor, lütfen birkaç saniye sonra yenileyin...', 'en': 'Analysis is being prepared, please refresh in a few seconds...'},
+    'netpol.disclaimer': {
+        'tr': 'Bu analiz matchLabels ve matchExpressions destekler; ancak podSelector dışındaki gelişmiş seçim mekanizmaları (örneği CRD tabanlı uzantılar) kapsam dışındadır.',
+        'en': 'This analysis supports matchLabels and matchExpressions; however, advanced selection mechanisms beyond podSelector (e.g., CRD-based extensions) are out of scope.',
+    },
+    'error.cluster_checking': {'tr': 'Kubernetes baglantisi kontrol ediliyor', 'en': 'Checking Kubernetes connection'},
+    'error.cluster_checking_msg': {'tr': "Cluster'a henuz baglanilamadi, kontrol devam ediyor...", 'en': 'Could not connect to cluster yet, checking...'},
+    'error.retry': {'tr': 'Tekrar Dene', 'en': 'Retry'},
+    'error.fetch_failed': {'tr': 'Veri alinamadi', 'en': 'Failed to fetch data'},
+    'error.http_detail': {'tr': 'HTTP {status} hatasi', 'en': 'HTTP {status} error'},
+    'cache.last_update': {'tr': 'Son guncelleme', 'en': 'Last updated'},
+    'cache.ago': {'tr': 'once', 'en': 'ago'},
+    'cache.seconds': {'tr': 'saniye', 'en': 'seconds'},
+    'cache.minutes': {'tr': 'dakika', 'en': 'minutes'},
+    'cache.stale_warning': {'tr': 'Gosterilen veri 5 dakikadan eski olabilir.', 'en': 'Displayed data may be older than 5 minutes.'},
+    'cache.error_prefix': {'tr': 'Veri guncellenemedi', 'en': 'Data update failed'},
+    'cache.error_stale_data': {'tr': 'gosterilen veri eski olabilir.', 'en': 'displayed data may be outdated.'},
+    'cache.just_now': {'tr': 'az once', 'en': 'just now'},
+    'cache.live_data': {'tr': 'Canli veri', 'en': 'Live data'},
 }
 
 def translate(key: str, lang: str) -> str:
@@ -432,6 +484,10 @@ def kubeconfigs_activate():
             pass
         try:
             update_pss_cache()
+        except Exception:
+            pass
+        try:
+            update_netpol_coverage_cache()
         except Exception:
             pass
         return jsonify({'ok': True, 'active': name})
@@ -2651,10 +2707,11 @@ def k8s_explorer_delete():
 workload_stats_cache = None
 workload_stats_cache_time = 0
 WORKLOAD_STATS_CACHE_TTL = 20  # 20 saniye
+_wsc_last_error = None  # str | None -- son workload-stats yenileme hatasi (basarili ise None)
 
 import threading
 def update_workload_stats_cache():
-    global workload_stats_cache, workload_stats_cache_time
+    global workload_stats_cache, workload_stats_cache_time, _wsc_last_error
     try:
         load_kube_config_active()
         c = client.Configuration.get_default_copy()
@@ -2770,8 +2827,10 @@ def update_workload_stats_cache():
             'cronjobs': {'ready': cronjobs_ready, 'failed': cronjobs_failed}
         }
         workload_stats_cache_time = time.time()
+        _wsc_last_error = None  # basarili guncelleme -- hata durumunu sifirla
     except Exception as e:
         print('WORKLOAD STATS CACHE ERROR:', e, file=sys.stderr)
+        _wsc_last_error = str(e)  # basarisiz guncelleme -- hatayi kaydet (cache degismez)
 
 def workload_stats_cache_refresher():
     while True:
@@ -2787,14 +2846,22 @@ start_workload_stats_cache()
 
 @app.route('/k8s-explorer/workload-stats')
 def k8s_explorer_workload_stats():
-    global workload_stats_cache, workload_stats_cache_time
+    global workload_stats_cache, workload_stats_cache_time, _wsc_last_error
     try:
         refresh = request.args.get('refresh')
         now = time.time()
         # Eğer refresh=1 parametresi varsa veya cache yoksa/süresi dolduysa, güncelle
         if refresh == '1' or not workload_stats_cache or (now - workload_stats_cache_time > WORKLOAD_STATS_CACHE_TTL):
             update_workload_stats_cache()
-        return jsonify(workload_stats_cache)
+        result = dict(workload_stats_cache) if workload_stats_cache else {}
+        age = int(now - workload_stats_cache_time) if workload_stats_cache_time else int(now)
+        result['_cache_meta'] = {
+            'updated_at': workload_stats_cache_time,
+            'age_seconds': age,
+            'stale': age > 300,
+            'last_error': _wsc_last_error,
+        }
+        return jsonify(result)
     except Exception as e:
         import sys, traceback
         print('WORKLOAD STATS ERROR:', e, file=sys.stderr)
@@ -2856,9 +2923,10 @@ def k8s_explorer_health():
 pods_summary_cache = None
 pods_summary_cache_time = 0
 PODS_SUMMARY_CACHE_TTL = 180  # 3 dakika
+_psc_last_error = None  # str | None -- son pods-summary yenileme hatasi (basarili ise None)
 
 def update_pods_summary_cache():
-    global pods_summary_cache, pods_summary_cache_time
+    global pods_summary_cache, pods_summary_cache_time, _psc_last_error
     try:
         load_kube_config_active()
         c = client.Configuration.get_default_copy()
@@ -2894,8 +2962,10 @@ def update_pods_summary_cache():
             })
         pods_summary_cache = {'pods': result}
         pods_summary_cache_time = time.time()
+        _psc_last_error = None  # basarili guncelleme -- hata durumunu sifirla
     except Exception as e:
         print('PODS SUMMARY CACHE ERROR:', e, file=sys.stderr)
+        _psc_last_error = str(e)  # basarisiz guncelleme -- hatayi kaydet (cache degismez)
 
 def pods_summary_cache_refresher():
     while True:
@@ -2910,12 +2980,20 @@ start_pods_summary_cache()
 
 @app.route('/k8s-explorer/pods-summary')
 def pods_summary():
-    global pods_summary_cache, pods_summary_cache_time
+    global pods_summary_cache, pods_summary_cache_time, _psc_last_error
     try:
         now = time.time()
         if not pods_summary_cache or (now - pods_summary_cache_time > PODS_SUMMARY_CACHE_TTL):
             update_pods_summary_cache()
-        return jsonify(pods_summary_cache)
+        result = dict(pods_summary_cache) if pods_summary_cache else {'pods': []}
+        age = int(now - pods_summary_cache_time) if pods_summary_cache_time else int(now)
+        result['_cache_meta'] = {
+            'updated_at': pods_summary_cache_time,
+            'age_seconds': age,
+            'stale': age > 300,
+            'last_error': _psc_last_error,
+        }
+        return jsonify(result)
     except Exception as e:
         return jsonify({'pods': [], 'error': str(e)})
 
@@ -5760,3 +5838,385 @@ def k8s_explorer_pss_namespace_detail():
 def pod_security_standards():
     """Pod Security Standards analiz sayfasını render eder."""
     return render_template('pod_security_standards.html')
+
+
+# ---------------------------------------------------------------------------
+# NetworkPolicy Kapsam Analizi — In-Memory Cache
+# ---------------------------------------------------------------------------
+
+netpol_coverage_cache = None        # dict veya None
+netpol_coverage_cache_time = 0      # epoch seconds
+NETPOL_COVERAGE_CACHE_TTL = 30      # saniye; büyük cluster'larda artırılabilir
+
+
+def _pod_matches_pod_selector(pod_labels: dict, pod_selector) -> bool:
+    """Bir pod'un `pod_selector` nesnesine (V1LabelSelector) uyup uymadığını döner.
+
+    Eşleştirme mantığı:
+    - podSelector boşsa (matchLabels None/{} ve matchExpressions None/[]) → tüm pod'lar seçilir.
+    - matchLabels tanımlıysa → pod tüm key-value çiftlerini içermelidir (AND).
+    - matchExpressions tanımlıysa → her expression sağlanmalıdır (AND).
+    - Her ikisi de tanımlıysa → her ikisinin tüm koşulları sağlanmalıdır (AND).
+
+    :param pod_labels: Pod'un metadata.labels dict'i (boş dict kabul edilir).
+    :param pod_selector: kubernetes client V1LabelSelector nesnesi.
+    :returns: True ise pod bu policy kapsamında, False ise dışında.
+    """
+    if pod_selector is None:
+        return True
+
+    match_labels = getattr(pod_selector, 'match_labels', None) or {}
+    match_expressions = getattr(pod_selector, 'match_expressions', None) or []
+
+    # Tamamen boş podSelector → namespace'teki tüm pod'ları seç
+    if not match_labels and not match_expressions:
+        return True
+
+    # --- matchLabels kontrolü (AND) ---
+    for key, value in match_labels.items():
+        if pod_labels.get(key) != value:
+            return False
+
+    # --- matchExpressions kontrolü (AND) ---
+    for expr in match_expressions:
+        key = getattr(expr, 'key', None)
+        # operator değerini küçük harfe normalize et (Risk #4)
+        operator = (getattr(expr, 'operator', '') or '').lower()
+        values = list(getattr(expr, 'values', None) or [])
+
+        if operator == 'in':
+            # key mevcut olmalı VE değeri values listesinde olmalı
+            if pod_labels.get(key) not in values:
+                return False
+        elif operator == 'notin':
+            # key mevcut değilse → koşul sağlanmış sayılır
+            # key mevcutsa → değeri values listesinde OLMAMALI
+            if key in pod_labels and pod_labels[key] in values:
+                return False
+        elif operator == 'exists':
+            # key pod'da mevcut olmalı
+            if key not in pod_labels:
+                return False
+        elif operator == 'doesnotexist':
+            # key pod'da mevcut OLMAMALI
+            if key in pod_labels:
+                return False
+        # Tanınmayan operator → güvenli taraf: koşul sağlanmamış say
+        else:
+            return False
+
+    return True
+
+
+def _netpol_pod_selector_summary(pod_selector) -> str:
+    """NetworkPolicy podSelector'ının kısa metin özetini döner (UI için).
+
+    :param pod_selector: V1LabelSelector nesnesi veya None.
+    :returns: Örn. 'app=web, tier=frontend' ya da '(tümü)'.
+    """
+    if pod_selector is None:
+        return '(tümü)'
+    match_labels = getattr(pod_selector, 'match_labels', None) or {}
+    match_expressions = getattr(pod_selector, 'match_expressions', None) or []
+    if not match_labels and not match_expressions:
+        return '(tümü)'
+    parts = [f'{k}={v}' for k, v in match_labels.items()]
+    for expr in match_expressions:
+        key = getattr(expr, 'key', '')
+        operator = getattr(expr, 'operator', '')
+        values = list(getattr(expr, 'values', None) or [])
+        if values:
+            parts.append(f'{key} {operator} [{",".join(values)}]')
+        else:
+            parts.append(f'{key} {operator}')
+    return ', '.join(parts) if parts else '(tümü)'
+
+
+def update_netpol_coverage_cache():
+    """Tüm namespace'ler için NetworkPolicy + Pod listesini çekip kapsam analizini hesaplar,
+    sonucu modül seviyesi netpol_coverage_cache dict'ine yazar.
+
+    kubeconfigs_activate() tarafından kubeconfig değişiminde de çağrılır.
+    Toplam süre 5 saniyeyi aşarsa stderr'e uyarı yazar.
+    """
+    global netpol_coverage_cache, netpol_coverage_cache_time
+    import time as _time
+    _start = _time.time()
+    try:
+        load_kube_config_active()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        core_v1 = client.CoreV1Api()
+        net_v1 = client.NetworkingV1Api()
+
+        # Tüm namespace'leri listele
+        namespaces = core_v1.list_namespace().items
+
+        # Tüm NetworkPolicy'leri tek seferde çek; namespace başına grup oluştur
+        all_netpols = net_v1.list_network_policy_for_all_namespaces().items
+        netpols_by_ns: dict = {}
+        for np in all_netpols:
+            ns_name = np.metadata.namespace
+            netpols_by_ns.setdefault(ns_name, []).append(np)
+
+        ns_results = []
+        total_covered_ns = 0
+        total_uncovered_ns = 0
+        total_pods_all = 0
+        total_covered_pods_all = 0
+
+        for ns in namespaces:
+            ns_name = ns.metadata.name
+            ns_netpols = netpols_by_ns.get(ns_name, [])
+            policy_count = len(ns_netpols)
+
+            # Pod'ları listele — hata olursa boş liste kullan
+            try:
+                pods = core_v1.list_namespaced_pod(ns_name).items
+            except Exception as _pod_err:
+                print(
+                    f'NETPOL COVERAGE CACHE: pod list error for ns {ns_name}: {_pod_err}',
+                    file=sys.stderr
+                )
+                pods = []
+
+            total_pods = len(pods)
+
+            if policy_count == 0:
+                # Hiç NetworkPolicy yok → tüm pod'lar korumasız
+                covered_pods = 0
+                uncovered_pods = total_pods
+                status = 'unprotected'
+                total_uncovered_ns += 1
+            else:
+                covered_count = 0
+                for pod in pods:
+                    pod_labels = pod.metadata.labels or {}
+                    matched = False
+                    for np in ns_netpols:
+                        pod_selector = getattr(np.spec, 'pod_selector', None) if np.spec else None
+                        if _pod_matches_pod_selector(pod_labels, pod_selector):
+                            matched = True
+                            break
+                    if matched:
+                        covered_count += 1
+
+                covered_pods = covered_count
+                uncovered_pods = total_pods - covered_count
+
+                if uncovered_pods == 0:
+                    status = 'protected'
+                else:
+                    status = 'partial'
+
+                total_covered_ns += 1
+
+            total_pods_all += total_pods
+            total_covered_pods_all += covered_pods
+
+            ns_results.append({
+                'name': ns_name,
+                'policy_count': policy_count,
+                'total_pods': total_pods,
+                'covered_pods': covered_pods,
+                'uncovered_pods': uncovered_pods,
+                'status': status,
+            })
+
+        total_ns = len(namespaces)
+        uncovered_ns = total_ns - total_covered_ns
+
+        ns_coverage_pct = round((total_covered_ns / total_ns) * 100, 1) if total_ns > 0 else 0.0
+        pod_coverage_pct = (
+            round((total_covered_pods_all / total_pods_all) * 100, 1)
+            if total_pods_all > 0 else 100.0
+        )
+
+        netpol_coverage_cache = {
+            'cluster_summary': {
+                'total_namespaces': total_ns,
+                'covered_namespaces': total_covered_ns,
+                'uncovered_namespaces': uncovered_ns,
+                'namespace_coverage_pct': ns_coverage_pct,
+                'total_pods': total_pods_all,
+                'covered_pods': total_covered_pods_all,
+                'uncovered_pods': total_pods_all - total_covered_pods_all,
+                'pod_coverage_pct': pod_coverage_pct,
+            },
+            'namespaces': ns_results,
+        }
+        netpol_coverage_cache_time = _time.time()
+
+        elapsed = _time.time() - _start
+        if elapsed > 5:
+            print(
+                f'NETPOL COVERAGE CACHE WARNING: hesaplama süresi {elapsed:.1f}s (>5s)',
+                file=sys.stderr
+            )
+    except Exception as e:
+        print('NETPOL COVERAGE CACHE ERROR:', e, file=sys.stderr)
+
+
+def netpol_coverage_cache_refresher():
+    """Daemon thread döngüsü: TTL aralıklarla netpol kapsam cache'ini yeniler."""
+    while True:
+        update_netpol_coverage_cache()
+        time.sleep(NETPOL_COVERAGE_CACHE_TTL)
+
+
+def start_netpol_coverage_cache():
+    """Arka plan cache thread'ini başlatır (daemon, uygulama ömrü boyunca yaşar)."""
+    t = threading.Thread(target=netpol_coverage_cache_refresher, daemon=True)
+    t.start()
+
+
+start_netpol_coverage_cache()
+
+
+# ---------------------------------------------------------------------------
+# NetworkPolicy Kapsam Analizi — API Endpoint'leri
+# ---------------------------------------------------------------------------
+
+@app.route('/k8s-explorer/netpol-coverage-summary')
+def k8s_explorer_netpol_coverage_summary():
+    """NetworkPolicy Kapsam Özeti — cluster geneli namespace + pod kapsam istatistikleri.
+    ---
+    tags:
+      - netpol
+    get:
+      description: >
+        Tüm namespace'ler için NetworkPolicy varlık durumunu, her namespace'teki
+        covered/uncovered pod sayılarını ve cluster geneli kapsam yüzdelerini döner.
+        Cache dolmamışsa {"loading": true} döner; cache doluysa {"cluster_summary": {...},
+        "namespaces": [...]} şeklinde tam veriyi döner.
+      responses:
+        200:
+          description: NetworkPolicy kapsam özet verisi
+          schema:
+            type: object
+            properties:
+              cluster_summary:
+                type: object
+              namespaces:
+                type: array
+        500:
+          description: Sunucu hatası
+    """
+    global netpol_coverage_cache, netpol_coverage_cache_time
+    try:
+        now = time.time()
+        if not netpol_coverage_cache or (now - netpol_coverage_cache_time > NETPOL_COVERAGE_CACHE_TTL):
+            update_netpol_coverage_cache()
+        if not netpol_coverage_cache:
+            return jsonify({'loading': True})
+        return jsonify(netpol_coverage_cache)
+    except Exception as e:
+        print('NETPOL COVERAGE SUMMARY ERROR:', e, file=sys.stderr)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/k8s-explorer/netpol-coverage-ns-detail')
+def k8s_explorer_netpol_coverage_ns_detail():
+    """NetworkPolicy Kapsam Namespace Detayı — tek namespace için korumasız pod listesi.
+    ---
+    tags:
+      - netpol
+    get:
+      description: >
+        Belirtilen namespace'teki NetworkPolicy listesini, her policy'nin podSelector özetini
+        ve hiçbir NetworkPolicy tarafından kapsanmayan pod'ların adlarını + label'larını döner.
+      parameters:
+        - in: query
+          name: namespace
+          schema:
+            type: string
+          required: true
+          description: Detayı alınacak namespace adı
+      responses:
+        200:
+          description: Namespace başına korumasız pod detayı
+          schema:
+            type: object
+            properties:
+              namespace:
+                type: string
+              policy_count:
+                type: integer
+              policies:
+                type: array
+              unprotected_pods:
+                type: array
+              total_pods:
+                type: integer
+              covered_pods:
+                type: integer
+              uncovered_pods:
+                type: integer
+        400:
+          description: namespace parametresi eksik
+        500:
+          description: Sunucu hatası
+    """
+    namespace = request.args.get('namespace', '').strip()
+    if not namespace:
+        return jsonify({'error': 'namespace parametresi zorunlu'}), 400
+    try:
+        load_kube_config_active()
+        c = client.Configuration.get_default_copy()
+        c.verify_ssl = False
+        c.assert_hostname = False
+        client.Configuration.set_default(c)
+        core_v1 = client.CoreV1Api()
+        net_v1 = client.NetworkingV1Api()
+
+        ns_netpols = net_v1.list_namespaced_network_policy(namespace).items
+        policy_count = len(ns_netpols)
+
+        policies_summary = []
+        for np in ns_netpols:
+            pod_selector = getattr(np.spec, 'pod_selector', None) if np.spec else None
+            policies_summary.append({
+                'name': np.metadata.name,
+                'pod_selector_summary': _netpol_pod_selector_summary(pod_selector),
+            })
+
+        pods = core_v1.list_namespaced_pod(namespace).items
+        total_pods = len(pods)
+
+        unprotected_pods = []
+        covered_count = 0
+
+        for pod in pods:
+            pod_labels = pod.metadata.labels or {}
+            matched = False
+            if policy_count > 0:
+                for np in ns_netpols:
+                    pod_selector = getattr(np.spec, 'pod_selector', None) if np.spec else None
+                    if _pod_matches_pod_selector(pod_labels, pod_selector):
+                        matched = True
+                        break
+            if matched:
+                covered_count += 1
+            else:
+                unprotected_pods.append({
+                    'name': pod.metadata.name,
+                    'labels': pod_labels,
+                })
+
+        covered_pods = covered_count
+        uncovered_pods = total_pods - covered_count
+
+        return jsonify({
+            'namespace': namespace,
+            'policy_count': policy_count,
+            'policies': policies_summary,
+            'unprotected_pods': unprotected_pods,
+            'total_pods': total_pods,
+            'covered_pods': covered_pods,
+            'uncovered_pods': uncovered_pods,
+        })
+    except Exception as e:
+        print('NETPOL COVERAGE NS DETAIL ERROR:', e, file=sys.stderr)
+        return jsonify({'error': str(e)}), 500

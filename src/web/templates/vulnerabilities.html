@@ -187,6 +187,9 @@
                         {% endif %}
                     </h4>
                     <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="exportVulnerabilities()">
+                            <i class="bi bi-download me-1"></i>CSV İndir
+                        </button>
                         <button type="button" class="btn btn-outline-secondary btn-sm" onclick="expandAll()">
                             <i class="bi bi-arrows-expand me-1"></i>Tümünü Aç
                         </button>
@@ -256,17 +259,6 @@
                                         {% endfor %}
                                     </div>
                                     
-                                    <!-- Added action buttons for each deployment -->
-                                    <div class="border-top pt-3 mt-3">
-                                        <div class="d-flex gap-2">
-                                            <button class="btn btn-outline-primary btn-sm" onclick="exportDeploymentReport('{{ dep }}')">
-                                                <i class="bi bi-download me-1"></i>Rapor İndir
-                                            </button>
-                                            <button class="btn btn-outline-info btn-sm" onclick="viewDeploymentDetails('{{ dep }}')">
-                                                <i class="bi bi-eye me-1"></i>Detayları Görüntüle
-                                            </button>
-                                        </div>
-                                    </div>
                                 {% else %}
                                     <div class="text-center py-4">
                                         <i class="bi bi-shield-check text-success fs-1 mb-3"></i>
@@ -342,6 +334,34 @@
 
 {% block scripts %}
 <script>
+    // Jinja2 context'ten zafiyet ve imaj verisini JS degiskenlerine gomme
+    // Namespace filtresi server-side uygulandiginden VULN_DATA zaten filtrelenmis gelir.
+    const VULN_DATA = {{ vulnerabilities | default({}) | tojson }};
+    const POD_IMAGES = {{ pod_images | default({}) | tojson }};
+
+    function exportVulnerabilities() {
+        const headers = ['Deployment', 'Image', 'Zafiyet'];
+        const rows = [];
+        const deployments = Object.keys(VULN_DATA);
+        if (deployments.length === 0) {
+            showToast('Disa aktarilacak veri yok', 'warning');
+            return;
+        }
+        deployments.forEach(function(dep) {
+            const vulns = VULN_DATA[dep] || [];
+            const image = POD_IMAGES[dep] || '';
+            if (vulns.length === 0) {
+                rows.push([dep, image, '']);
+            } else {
+                vulns.forEach(function(v) {
+                    rows.push([dep, image, v]);
+                });
+            }
+        });
+        exportToCsv('zafiyetler_export.csv', headers, rows);
+        showToast('CSV indirildi', 'success');
+    }
+
     function expandAll() {
         const collapses = document.querySelectorAll('.accordion-collapse');
         collapses.forEach(collapse => {
@@ -370,16 +390,6 @@
         setTimeout(() => {
             location.reload();
         }, 1000);
-    }
-    
-    function exportDeploymentReport(deploymentName) {
-        // Placeholder for export functionality
-        alert(`${deploymentName} için rapor indirme özelliği yakında eklenecek.`);
-    }
-    
-    function viewDeploymentDetails(deploymentName) {
-        // Placeholder for detail view functionality
-        alert(`${deploymentName} detayları yakında eklenecek.`);
     }
     
     // Auto-refresh every 5 minutes

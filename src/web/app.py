@@ -168,84 +168,9 @@ from web.background import (
     _netpol_pod_selector_summary,
 )
 
-@app.route('/kubeconfigs', methods=['GET'])
-def kubeconfigs_list():
-    active = session.get(KUBECONFIG_ACTIVE_KEY)
-    return jsonify({'items': list_kubeconfigs(), 'active': active})
-
-@app.route('/kubeconfigs', methods=['POST'])
-def kubeconfigs_add():
-    try:
-        data = request.get_json(force=True) or {}
-        name = data.get('name')
-        content = data.get('content')  # raw kubeconfig YAML
-        if not name or not content:
-            return jsonify({'error': 'name ve content zorunlu'}), 400
-        safe_name = ''.join([c for c in name if c.isalnum() or c in ('-','_','.')]) or f'cfg_{int(time.time())}'
-        path = os.path.join(KUBECONFIG_UPLOAD_DIR, safe_name)
-        with open(path,'w') as f:
-            f.write(content)
-        return jsonify({'ok': True, 'name': safe_name})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/kubeconfigs/activate', methods=['POST'])
-def kubeconfigs_activate():
-    try:
-        data = request.get_json(force=True) or {}
-        name = data.get('name')
-        if not name:
-            return jsonify({'error': 'name zorunlu'}), 400
-        lst = list_kubeconfigs()
-        if not any(i['name']==name for i in lst):
-            return jsonify({'error': 'bulunamadı'}), 404
-        session[KUBECONFIG_ACTIVE_KEY] = name
-        # global değişkeni de güncelle
-        global KUBECONFIG_ACTIVE_GLOBAL, KUBECONFIG_LAST_PATH
-        with _KUBECONFIG_LOCK:
-            KUBECONFIG_ACTIVE_GLOBAL = name
-        # Aktifleştirme sonrası cache'leri yeni kubeconfig ile tazele (hata yutsa da sorun yok)
-        try:
-            update_pods_summary_cache()
-        except Exception:
-            pass
-        try:
-            update_workload_stats_cache()
-        except Exception:
-            pass
-        try:
-            update_pss_cache()
-        except Exception:
-            pass
-        try:
-            update_netpol_coverage_cache()
-        except Exception:
-            pass
-        return jsonify({'ok': True, 'active': name})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/kubeconfigs', methods=['DELETE'])
-def kubeconfigs_delete():
-    try:
-        data = request.get_json(force=True) or {}
-        name = data.get('name')
-        if not name:
-            return jsonify({'error': 'name zorunlu'}), 400
-        path = os.path.join(KUBECONFIG_UPLOAD_DIR, name)
-        if os.path.exists(path):
-            os.remove(path)
-            if session.get(KUBECONFIG_ACTIVE_KEY) == name:
-                session.pop(KUBECONFIG_ACTIVE_KEY, None)
-                # global'i de temizle
-                global KUBECONFIG_ACTIVE_GLOBAL
-                with _KUBECONFIG_LOCK:
-                    if KUBECONFIG_ACTIVE_GLOBAL == name:
-                        KUBECONFIG_ACTIVE_GLOBAL = None
-            return jsonify({'ok': True})
-        return jsonify({'error': 'bulunamadı'}), 404
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+# ---- Blueprint: kubeconfigs (GET/POST/DELETE /kubeconfigs, POST /kubeconfigs/activate) ----
+from web.blueprints.kubeconfigs import bp_kubeconfigs
+app.register_blueprint(bp_kubeconfigs)
 
 @app.route('/k8s-explorer/app-health')
 def app_health():

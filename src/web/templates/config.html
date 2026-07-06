@@ -2200,7 +2200,7 @@ async function fetchAndRenderPriorityClassesTable() {
               <th>Preemption</th>
               <th>Description</th>
               <th>Age</th>
-              <th>Actions</th>
+              <th style="white-space: nowrap;">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -2215,9 +2215,9 @@ async function fetchAndRenderPriorityClassesTable() {
           <td><span class="badge bg-info">${pc.value ?? '-'}</span></td>
           <td>${gdef}</td>
           <td>${pc.preemption_policy || '-'}</td>
-          <td style="max-width: 420px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${pc.description || ''}">${pc.description || ''}</td>
+          <td style="max-width: 220px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; word-wrap: break-word;" title="${pc.description || ''}">${pc.description || ''}</td>
           <td>${age}</td>
-          <td>
+          <td style="white-space: nowrap;">
             <button class=\"btn btn-sm btn-outline-primary me-1 btn-edit-pc\" data-name=\"${pc.name}\"><i class=\"bi bi-pencil\"></i></button>
             <button class=\"btn btn-sm btn-outline-danger btn-delete-pc\" data-name=\"${pc.name}\"><i class=\"bi bi-trash\"></i></button>
           </td>

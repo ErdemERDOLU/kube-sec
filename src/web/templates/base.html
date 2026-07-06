@@ -300,6 +300,42 @@
             .container-main {
                 padding: 1rem;
             }
+
+            /* Tab navigasyonu: mobil yatay kaydırma (KK-1) */
+            .nav-pills, .nav-tabs {
+                flex-wrap: nowrap !important;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: thin;
+            }
+            .nav-pills .nav-item, .nav-tabs .nav-item {
+                flex-shrink: 0;
+            }
+            /* nav-fill davranışını mobilde iptal et — masaüstü etkilenmez */
+            .nav-fill .nav-item,
+            .nav-fill .nav-link {
+                flex: none;
+            }
+        }
+
+        /* Tablo başlığı sabit (sticky thead) — KK-3 */
+        /* CSS Overflow Modeli notu:
+           .table-responsive'in overflow-x:auto değeri, CSS spec gereği overflow-y'yi
+           de örtük olarak "auto" yapıyor; bu nedenle element kendi scroll container'ını
+           oluşturuyor. position:sticky ise en yakın scroll container'a (sayfa değil,
+           .table-responsive kutusu) göre çalışır.
+           max-height olmadan container içerik kadar büyüyeceğinden dikey overflow
+           hiç oluşmuyor → thead asla "yapışmıyor".
+           Çözüm: max-height + overflow-y:auto ile gerçek bir sınırlı dikey scroll
+           alanı yaratılıyor; böylece thead bu container içinde gerçekten sabit kalıyor. */
+        .table-responsive {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .table-responsive thead {
+            position: sticky;
+            top: 0;
+            z-index: 2;
         }
 
         /* Keep existing component styles */

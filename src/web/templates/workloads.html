@@ -509,6 +509,28 @@
   padding: 0.45rem 0.85rem;
   font-size: 0.82rem;
 }
+
+/* KK-2: Mobil tablo override — table-layout:fixed + sabit piksel genişlikleri
+   dar ekranda yatay taşmaya yol açar; auto modda table-responsive ile
+   doğal genişlikte yatay kaydırma sağlanır */
+@media (max-width: 768px) {
+  #pods-table, #deployments-table, #daemonsets-table,
+  #statefulsets-table, #replicasets-table {
+    table-layout: auto;
+  }
+  #pods-table th, #deployments-table th, #daemonsets-table th,
+  #statefulsets-table th, #replicasets-table th {
+    width: auto !important;
+  }
+
+  /* KK-4: Namespace filtre select'leri dar ekranda tam genişliğe geç
+     (network.html'deki .filter-controls pattern'ini yansıtır) */
+  #podsNamespaceFilter, #deploymentsNamespaceFilter,
+  #statefulsetNamespaceFilter, #replicasetsNamespaceFilter,
+  #jobsNamespaceFilter, #cronjobsNamespaceFilter {
+    width: 100% !important;
+  }
+}
 </style>
 
 <!-- Hero Header Section -->

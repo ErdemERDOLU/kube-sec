@@ -17,10 +17,10 @@
 **Sorun:** 403 Forbidden gibi kimlik doğrulama hataları kullanıcıya hiç veya çok geç gösteriliyor. Kullanıcı, cluster bağlantısının kesildiğini veya yetkisiz olduğunu anlayamıyor.
 
 **Kabul kriterleri:**
-- [ ] Cluster health check başarısız olduğunda ilk 5 saniye içinde kullanıcıya görsel bir uyarı (banner veya toast) gösterilir.
-- [ ] Tüm sayfa bazlı fetch çağrılarında (en az 15 farklı template'teki fetch blokları) HTTP 401/403/500 yanıtı için açıklayıcı hata mesajı gösterilir; `"Hata oluştu"` gibi genel mesajlar yerine HTTP durum kodu ve backend'den dönen hata metni kullanıcıya iletilir.
-- [ ] `vulnerabilities.html` içindeki `exportDeploymentReport` ve `viewDeploymentDetails` butonları ya gerçek işlevselliğe kavuşturulur ya da kullanıcıya görünmez yapılır (buton DOM'dan kaldırılır).
-- [ ] `k8s_explorer.html` içindeki `fetchApi()` fonksiyonunda `resp.ok` kontrolü eklenir ve başarısız HTTP durumları kullanıcıya gösterilir.
+- [x] Cluster health check başarısız olduğunda ilk 5 saniye içinde kullanıcıya görsel bir uyarı (banner veya toast) gösterilir.
+- [x] Tüm sayfa bazlı fetch çağrılarında (en az 15 farklı template'teki fetch blokları) HTTP 401/403/500 yanıtı için açıklayıcı hata mesajı gösterilir; `"Hata oluştu"` gibi genel mesajlar yerine HTTP durum kodu ve backend'den dönen hata metni kullanıcıya iletilir.
+- [x] `vulnerabilities.html` içindeki `exportDeploymentReport` ve `viewDeploymentDetails` butonları ya gerçek işlevselliğe kavuşturulur ya da kullanıcıya görünmez yapılır (buton DOM'dan kaldırılır).
+- [x] `k8s_explorer.html` içindeki `fetchApi()` fonksiyonunda `resp.ok` kontrolü eklenir ve başarısız HTTP durumları kullanıcıya gösterilir.
 
 ---
 
@@ -42,10 +42,10 @@
 **Sorun:** Uygulama iki dil destekliyor (TR/EN) ancak sayfaların büyük çoğunluğu bu sistemden geçmiyor. Dil değiştirme kullanıcıya yanlış bir beklenti oluşturuyor; İngilizce'ye geçildiğinde sayfaların %70'inden fazlası hâlâ Türkçe veya karışık görünüyor.
 
 **Kabul kriterleri:**
-- [ ] Tüm 22 şablon dosyasındaki kullanıcıya görünen statik metinler `t()` fonksiyonu üzerinden I18N sözlüğüne bağlanır.
-- [ ] I18N sözlüğüne en az 150 yeni anahtar eklenir (mevcut ~40 üzerine).
-- [ ] Dil EN olarak seçildiğinde hiçbir sayfada Türkçe hardcoded metin kalmaz (JS içindeki `alert()` mesajları dahil).
-- [ ] Dil TR olarak seçildiğinde hiçbir sayfada İngilizce hardcoded metin kalmaz.
+- [x] Tüm 22 şablon dosyasındaki kullanıcıya görünen statik metinler `t()` fonksiyonu üzerinden I18N sözlüğüne bağlanır.
+- [x] I18N sözlüğüne en az 150 yeni anahtar eklenir (mevcut ~40 üzerine).
+- [x] Dil EN olarak seçildiğinde hiçbir sayfada Türkçe hardcoded metin kalmaz (JS içindeki `alert()` mesajları dahil).
+- [x] Dil TR olarak seçildiğinde hiçbir sayfada İngilizce hardcoded metin kalmaz.
 
 ---
 
@@ -62,9 +62,9 @@
 **Sorun:** Kullanıcı yanlış URL'ye ulaşırsa boş bir sayfa ile karşılaşır. Bakımcı için hangi dosyanın gerçek olduğu belirsizleşir.
 
 **Kabul kriterleri:**
-- [ ] 4 stub şablon dosyası silinir veya ana `workloads.html`'e yönlendiren redirect route'ları eklenir.
-- [ ] Silinen/yönlendirilen dosyalar için `app.py`'deki render_template çağrıları güncellenir.
-- [ ] Silme sonrası uygulama hatasız başlar ve workloads sayfası tam işlevsel kalır.
+- [x] 4 stub şablon dosyası silinir veya ana `workloads.html`'e yönlendiren redirect route'ları eklenir.
+- [x] Silinen/yönlendirilen dosyalar için `app.py`'deki render_template çağrıları güncellenir.
+- [x] Silme sonrası uygulama hatasız başlar ve workloads sayfası tam işlevsel kalır.
 
 ---
 
@@ -79,9 +79,9 @@
 **Sorun:** Kullanıcı, cluster'ındaki namespace'lerin hangi güvenlik profiline uygun olduğunu göremez; yalnızca tekil container özelliklerini tablo şeklinde görüyor ama bütünsel uyumluluk resmi eksik.
 
 **Kabul kriterleri:**
-- [ ] Yeni bir ekran veya mevcut `privileged_containers.html` içerisinde bir tab eklenir: her namespace için PSA etiketlerini (`enforce`, `warn`, `audit`) ve seviyelerini (`privileged`, `baseline`, `restricted`) listeler.
-- [ ] PSA etiketi atanmamış namespace'ler "Uyumsuz" veya "Tanımlanmamış" olarak işaretlenir.
-- [ ] Her namespace için mevcut pod'ların seçilen profille uyumluluğu (uyumlu pod sayısı / toplam pod sayısı) gösterilir.
+- [x] Yeni bir ekran veya mevcut `privileged_containers.html` içerisinde bir tab eklenir: her namespace için PSA etiketlerini (`enforce`, `warn`, `audit`) ve seviyelerini (`privileged`, `baseline`, `restricted`) listeler.
+- [x] PSA etiketi atanmamış namespace'ler "Uyumsuz" veya "Tanımlanmamış" olarak işaretlenir.
+- [x] Her namespace için mevcut pod'ların seçilen profille uyumluluğu (uyumlu pod sayısı / toplam pod sayısı) gösterilir.
 
 ---
 
@@ -96,10 +96,10 @@
 **Sorun:** NetworkPolicy olmayan namespace'ler varsayılan olarak tüm trafiğe açıktır; bu, lateral movement için büyük bir risk oluşturur. Kullanıcı bu riskin farkında olmuyor.
 
 **Kabul kriterleri:**
-- [ ] Network ekranında veya ayrı bir güvenlik kontrol sayfasında, tüm namespace'ler için NetworkPolicy varlık durumu gösterilir (var/yok).
-- [ ] NetworkPolicy bulunmayan namespace'ler kırmızı uyarı ile işaretlenir.
-- [ ] "Korumasız pod" sayısı gösterilir: hiçbir NetworkPolicy'nin `podSelector`'ına uymayan pod'lar listelenir.
-- [ ] Cluster geneli kapsam oranı (NetworkPolicy olan namespace sayısı / toplam namespace sayısı * 100) hesaplanır ve gösterilir.
+- [x] Network ekranında veya ayrı bir güvenlik kontrol sayfasında, tüm namespace'ler için NetworkPolicy varlık durumu gösterilir (var/yok).
+- [x] NetworkPolicy bulunmayan namespace'ler kırmızı uyarı ile işaretlenir.
+- [x] "Korumasız pod" sayısı gösterilir: hiçbir NetworkPolicy'nin `podSelector`'ına uymayan pod'lar listelenir.
+- [x] Cluster geneli kapsam oranı (NetworkPolicy olan namespace sayısı / toplam namespace sayısı * 100) hesaplanır ve gösterilir.
 
 ---
 
@@ -115,9 +115,9 @@
 **Sorun:** Bir hata düzeltmesi veya davranış değişikliği yapıldığında tüm kopyalar ayrı ayrı güncellenmeli; bu, tutarsızlıklara ve regresyonlara yol açar.
 
 **Kabul kriterleri:**
-- [ ] `showToast()`, `escapeHtml()`, `timeAgo()` ve `openConfirmModal()` fonksiyonları tek bir paylaşılan JS dosyasına (`src/web/static/common.js` veya benzeri) taşınır.
-- [ ] Tüm template'ler bu paylaşılan dosyayı `<script src=...>` ile yükler ve yerel kopyalar kaldırılır.
-- [ ] Fonksiyon imzaları ve davranışları tüm template'lerde tutarlı hale gelir (örneğin toast süresi, toast renkleri).
+- [x] `showToast()`, `escapeHtml()`, `timeAgo()` ve `openConfirmModal()` fonksiyonları tek bir paylaşılan JS dosyasına (`src/web/static/common.js` veya benzeri) taşınır.
+- [x] Tüm template'ler bu paylaşılan dosyayı `<script src=...>` ile yükler ve yerel kopyalar kaldırılır.
+- [x] Fonksiyon imzaları ve davranışları tüm template'lerde tutarlı hale gelir (örneğin toast süresi, toast renkleri).
 
 ---
 
@@ -135,11 +135,11 @@
 **Sorun:** Diğer sayfalardaki modern UX ile karşılaştırıldığında bu ekran çok basit ve tutarsız kalır. Exec olayları güvenlik açısından kritik olmasına rağmen kullanıcıya kötü bir deneyim sunuyor.
 
 **Kabul kriterleri:**
-- [ ] Sayfa, diğer sayfalardaki görsel dile uygun hale getirilir (card yapılarını, gradient başlık, badge'ler kullanır).
-- [ ] Veri yüklenirken spinner animasyonu gösterilir.
-- [ ] Hata durumunda, HTTP durum kodu ve hata mesajı içeren bir alert kutusu gösterilir.
-- [ ] Namespace bazlı filtreleme eklenir.
-- [ ] Olay sayısı 50'den fazla olduğunda pagination uygulanır.
+- [x] Sayfa, diğer sayfalardaki görsel dile uygun hale getirilir (card yapılarını, gradient başlık, badge'ler kullanır).
+- [x] Veri yüklenirken spinner animasyonu gösterilir.
+- [x] Hata durumunda, HTTP durum kodu ve hata mesajı içeren bir alert kutusu gösterilir.
+- [x] Namespace bazlı filtreleme eklenir.
+- [x] Olay sayısı 50'den fazla olduğunda pagination uygulanır.
 
 ---
 
@@ -155,10 +155,10 @@
 **Sorun:** YAML linter, diğer sayfaların zenginliğine kıyasla çok kısıtlı bir işlevsellik sunuyor. Kullanıcının hatayı bulması için satır numarası bilgisi sunulmuyor.
 
 **Kabul kriterleri:**
-- [ ] Dosya sürükle-bırak veya dosya seçici ile `.yaml`/`.yml` dosyası yükleme desteği eklenir.
-- [ ] Lint hatalarında satır numarası ve kolon pozisyonu gösterilir.
-- [ ] Başarılı lint sonucunda "geçerli Kubernetes manifesti" kontrolü yapılır (apiVersion, kind alanlarının varlığı).
-- [ ] Hata olan satır textarea'da vurgulanır veya satır numarasına scroll yapılır.
+- [x] Dosya sürükle-bırak veya dosya seçici ile `.yaml`/`.yml` dosyası yükleme desteği eklenir.
+- [x] Lint hatalarında satır numarası ve kolon pozisyonu gösterilir.
+- [x] Başarılı lint sonucunda "geçerli Kubernetes manifesti" kontrolü yapılır (apiVersion, kind alanlarının varlığı).
+- [x] Hata olan satır textarea'da vurgulanır veya satır numarasına scroll yapılır.
 
 ---
 
@@ -174,9 +174,9 @@
 **Sorun:** Kullanıcı, güvenlik denetimi veya uyumluluk raporlaması için verileri dışarı aktaramıyor. Yalnızca bir ekranda kısmen çalışan bir CSV export var.
 
 **Kabul kriterleri:**
-- [ ] En az 5 ekranda (privileged_containers, vulnerabilities, access_control, workloads, nodes) CSV export butonu çalışan şekilde eklenir.
-- [ ] `vulnerabilities.html`'deki "Rapor İndir" butonu gerçek bir CSV dosyası indirir.
-- [ ] Tüm export dosyalarında başlık satırı (header row) ve UTF-8 BOM bulunur (Türkçe karakter desteği).
+- [x] En az 5 ekranda (privileged_containers, vulnerabilities, access_control, workloads, nodes) CSV export butonu çalışan şekilde eklenir.
+- [x] `vulnerabilities.html`'deki "Rapor İndir" butonu gerçek bir CSV dosyası indirir.
+- [x] Tüm export dosyalarında başlık satırı (header row) ve UTF-8 BOM bulunur (Türkçe karakter desteği).
 
 ---
 
@@ -209,9 +209,9 @@
 **Sorun:** Kullanıcı, gördüğü verinin güncelliği hakkında bilgi sahibi değildir. Bayat veriyle karar alabilir.
 
 **Kabul kriterleri:**
-- [ ] Cache destekli sayfalarda (workloads, nodes, pods) "Son güncelleme: X dakika önce" zaman damgası gösterilir.
-- [ ] Cache verisi 5 dakikadan eskiyse, sarı bir uyarı banner'ı gösterilir.
-- [ ] Cache yenileme hatası durumunda kullanıcıya "Veri güncellenemedi, gösterilen veri eski olabilir" mesajı iletilir.
+- [x] Cache destekli sayfalarda (workloads, nodes, pods) "Son güncelleme: X dakika önce" zaman damgası gösterilir.
+- [x] Cache verisi 5 dakikadan eskiyse, sarı bir uyarı banner'ı gösterilir.
+- [x] Cache yenileme hatası durumunda kullanıcıya "Veri güncellenemedi, gösterilen veri eski olabilir" mesajı iletilir.
 
 ---
 
@@ -226,9 +226,9 @@
 **Sorun:** Hassas veriler (şifreler, tokenlar, sertifika anahtarları) ekranda açık olarak görünür. Ekran paylaşımı veya omuz sörfü riski oluşturur.
 
 **Kabul kriterleri:**
-- [ ] Secret değerleri varsayılan olarak maskelenmiş gösterilir (örneğin `*********`).
-- [ ] Değeri görmek için kullanıcı açık bir "Göster" butonuna tıklar; 30 saniye sonra değer otomatik olarak tekrar maskelenir.
-- [ ] ConfigMap suspect tablosundaki değer önizlemesi de maskelenmiş gösterilir; tam değeri görmek için tıklanması gerekir.
+- [x] Secret değerleri varsayılan olarak maskelenmiş gösterilir (örneğin `*********`).
+- [x] Değeri görmek için kullanıcı açık bir "Göster" butonuna tıklar; 30 saniye sonra değer otomatik olarak tekrar maskelenir.
+- [x] ConfigMap suspect tablosundaki değer önizlemesi de maskelenmiş gösterilir; tam değeri görmek için tıklanması gerekir.
 
 ---
 
@@ -244,9 +244,9 @@
 **Sorun:** Kimlik bilgileri güvenli bir şekilde iletilmiyor ve saklanmıyor. Hassas credential'lar tarayıcı geliştirici araçları ile görülebilir.
 
 **Kabul kriterleri:**
-- [ ] Şifre alanı `autocomplete="off"` ve `autocomplete="new-password"` niteliklerine sahip olur.
-- [ ] Backend, kimlik bilgilerini istek loglarında kayıt etmez (mevcut loglama kontrol edilir).
-- [ ] Harbor URL ve kullanıcı adı server-side session'da veya encrypted cookie'de saklanır, böylece kullanıcı her seferinde yeniden girmek zorunda kalmaz. Şifre asla client-side saklanmaz.
+- [x] Şifre alanı `autocomplete="off"` ve `autocomplete="new-password"` niteliklerine sahip olur.
+- [x] Backend, kimlik bilgilerini istek loglarında kayıt etmez (mevcut loglama kontrol edilir).
+- [x] Harbor URL ve kullanıcı adı server-side session'da veya encrypted cookie'de saklanır, böylece kullanıcı her seferinde yeniden girmek zorunda kalmaz. Şifre asla client-side saklanmaz.
 
 ---
 
@@ -263,9 +263,9 @@
 **Sorun:** Masaüstü uygulaması olmasına rağmen, tablet ve dar pencere kullanımında görsel taşmalar ve kullanılabilirlik sorunları oluşur.
 
 **Kabul kriterleri:**
-- [ ] 768px genişlik altında tüm tab navigasyonları yatay scroll veya dropdown menüsüne dönüşür.
-- [ ] Tüm card grid'ler 576px altında tek sütuna düşerek tam genişlikte gösterilir.
-- [ ] Tüm tablo sayfalarında yatay scroll mevcut ve sabit sütun başlığı korunur.
+- [x] 768px genişlik altında tüm tab navigasyonları yatay scroll veya dropdown menüsüne dönüşür.
+- [x] Tüm card grid'ler 576px altında tek sütuna düşerek tam genişlikte gösterilir.
+- [x] Tüm tablo sayfalarında yatay scroll mevcut ve sabit sütun başlığı korunur.
 
 ---
 

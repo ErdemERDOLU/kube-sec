@@ -12,11 +12,11 @@
             <i class="fas fa-file-code text-primary me-2"></i>
             YAML Linter
           </h1>
-          <p class="text-muted mb-0">Kubernetes manifest dosyalarınızı syntax ve best practice açısından kontrol edin</p>
+          <p class="text-muted mb-0">{{ t('linter.subtitle') }}</p>
         </div>
         <div class="text-end">
           <button id="clear-btn" class="btn btn-outline-secondary btn-sm">
-            <i class="fas fa-trash-alt me-1"></i>Temizle
+            <i class="fas fa-trash-alt me-1"></i>{{ t('linter.btn_clear') }}
           </button>
         </div>
       </div>
@@ -29,7 +29,7 @@
       <div class="card shadow">
         <div class="card-header py-3" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color:#fff;">
           <h6 class="m-0 font-weight-bold text-white">
-            <i class="fas fa-edit me-2"></i>YAML İçeriği
+            <i class="fas fa-edit me-2"></i>{{ t('linter.card_title') }}
           </h6>
         </div>
         <div class="card-body">
@@ -37,10 +37,10 @@
           <!-- Dosya seçici -->
           <div class="mb-3 d-flex align-items-center gap-2 flex-wrap">
             <label class="btn btn-outline-primary btn-sm mb-0" for="file-input" style="cursor:pointer;">
-              <i class="fas fa-folder-open me-1"></i>Dosya Seç (.yaml / .yml)
+              <i class="fas fa-folder-open me-1"></i>{{ t('linter.btn_choose_file') }}
             </label>
             <input type="file" id="file-input" accept=".yaml,.yml" class="d-none">
-            <span class="text-muted small" id="file-name-label">Dosya seçilmedi</span>
+            <span class="text-muted small" id="file-name-label">{{ t('linter.no_file_selected') }}</span>
           </div>
 
           <!-- Drag-drop + textarea sarmalayıcı -->
@@ -82,13 +82,13 @@
                    color:#2563eb;
                    pointer-events:none;
                  ">
-              <span><i class="fas fa-file-import me-2"></i>Dosyayı bırakın</span>
+              <span><i class="fas fa-file-import me-2"></i>{{ t('linter.drop_file') }}</span>
             </div>
 
             <textarea id="yaml-input"
                       class="form-control font-monospace"
                       rows="20"
-                      placeholder="YAML içeriğini buraya yapıştırın veya dosya sürükleyip bırakın..."
+                      placeholder="{{ t('linter.placeholder') }}"
                       spellcheck="false"
                       style="
                         resize:vertical;
@@ -103,7 +103,7 @@
           <!-- Butonlar -->
           <div class="d-flex gap-2">
             <button id="lint-btn" class="btn btn-primary">
-              <i class="fas fa-check-circle me-1"></i>Lint Et
+              <i class="fas fa-check-circle me-1"></i>{{ t('linter.btn_lint') }}
             </button>
           </div>
         </div>
@@ -115,12 +115,12 @@
       <div class="card shadow">
         <div class="card-header py-3" style="background: linear-gradient(135deg, #475569 0%, #334155 100%); color:#fff;">
           <h6 class="m-0 font-weight-bold text-white">
-            <i class="fas fa-clipboard-check me-2"></i>Sonuçlar
+            <i class="fas fa-clipboard-check me-2"></i>{{ t('linter.results_title') }}
           </h6>
         </div>
         <div class="card-body">
           <div id="lint-result">
-            <p class="text-muted mb-0"><i class="fas fa-info-circle me-1"></i>Lint sonuçları burada görüntülenecek.</p>
+            <p class="text-muted mb-0"><i class="fas fa-info-circle me-1"></i>{{ t('linter.results_placeholder') }}</p>
           </div>
         </div>
       </div>
@@ -180,8 +180,8 @@
   };
 
   const SEVERITY_BADGE = {
-    'error'   : '<span class="badge bg-danger me-1">Hata</span>',
-    'warning' : '<span class="badge bg-warning text-dark me-1">Uyarı</span>',
+    'error'   : '<span class="badge bg-danger me-1">{{ t("linter.severity_error") }}</span>',
+    'warning' : '<span class="badge bg-warning text-dark me-1">{{ t("linter.severity_warning") }}</span>',
   };
 
   // ---------------------------------------------------------------
@@ -232,13 +232,13 @@
     // Uzantı kontrolü
     const name = file.name.toLowerCase();
     if (!name.endsWith('.yaml') && !name.endsWith('.yml')) {
-      showFileSizeError('Yalnızca .yaml veya .yml uzantılı dosyalar desteklenmektedir.');
+      showFileSizeError('{{ t("linter.invalid_extension") }}');
       return;
     }
 
     // Boyut kontrolü (spec O3)
     if (file.size > MAX_FILE_SIZE) {
-      showFileSizeError('Dosya boyutu 1 MB sınırını aşıyor (' + (file.size / 1024 / 1024).toFixed(2) + ' MB). Lütfen daha küçük bir dosya seçin.');
+      showFileSizeError('{{ t("linter.file_too_large") }}');
       return;
     }
 
@@ -247,17 +247,17 @@
     reader.onload = function (e) {
       textarea.value = e.target.result;
       updateLineNumbers();
-      resultDiv.innerHTML = '<p class="text-muted mb-0"><i class="fas fa-file-check me-1"></i>Dosya yüklendi: <strong>' + escapeHtml(file.name) + '</strong>. "Lint Et" butonuna basın.</p>';
+      resultDiv.innerHTML = '<p class="text-muted mb-0"><i class="fas fa-file-check me-1"></i>{{ t("linter.file_loaded") }} <strong>' + escapeHtml(file.name) + '</strong>. {{ t("linter.file_loaded_action") }}</p>';
     };
     reader.onerror = function () {
-      showFileSizeError('Dosya okunurken bir hata oluştu.');
+      showFileSizeError('{{ t("linter.file_read_error") }}');
     };
     reader.readAsText(file);
   }
 
   function showFileSizeError(msg) {
     resultDiv.innerHTML = '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle me-2"></i>' + escapeHtml(msg) + '</div>';
-    fileLabel.textContent = 'Dosya seçilmedi';
+    fileLabel.textContent = '{{ t("linter.no_file_selected") }}';
     fileInput.value = '';
   }
 
@@ -305,9 +305,9 @@
   // ---------------------------------------------------------------
   clearBtn.addEventListener('click', function () {
     textarea.value = '';
-    fileLabel.textContent = 'Dosya seçilmedi';
+    fileLabel.textContent = '{{ t("linter.no_file_selected") }}';
     fileInput.value = '';
-    resultDiv.innerHTML = '<p class="text-muted mb-0"><i class="fas fa-info-circle me-1"></i>Lint sonuçları burada görüntülenecek.</p>';
+    resultDiv.innerHTML = '<p class="text-muted mb-0"><i class="fas fa-info-circle me-1"></i>{{ t("linter.results_placeholder") }}</p>';
     updateLineNumbers();
     textarea.focus();
   });
@@ -354,7 +354,7 @@
 
   function renderSyntaxError(data) {
     let html = '<div class="alert alert-danger mb-3">';
-    html += '<div class="fw-bold mb-1"><i class="fas fa-times-circle me-1"></i>Syntax Hatası</div>';
+    html += '<div class="fw-bold mb-1"><i class="fas fa-times-circle me-1"></i>{{ t("linter.syntax_error") }}</div>';
 
     // Satır/sütun badge (spec K5)
     if (data.line !== null && data.line !== undefined) {
@@ -374,7 +374,7 @@
 
   function renderDocCount(n) {
     if (n === 0) return '';
-    const label = n === 1 ? '1 belge kontrol edildi' : (n + ' belge kontrol edildi');
+    const label = n + ' {{ t("linter.doc_count") }}';
     return '<p class="text-muted small mb-2"><i class="fas fa-layer-group me-1"></i>' + label + '</p>';
   }
 
@@ -389,15 +389,15 @@
     if (warnings.length === 0) {
       html += '<div class="alert alert-success mb-0">';
       html += '<i class="fas fa-check-circle me-2"></i>';
-      html += '<strong>Tüm kontroller başarılı!</strong> YAML syntax geçerli ve best practice ihlali bulunamadı.';
+      html += '{{ t("linter.all_checks_passed") }}';
       html += '</div>';
       return html;
     }
 
     // Uyarılar varsa başlık
     html += '<div class="alert alert-warning mb-3">';
-    html += '<i class="fas fa-check-circle me-1 text-success"></i> Syntax geçerli &nbsp;|&nbsp; ';
-    html += '<i class="fas fa-exclamation-triangle me-1"></i><strong>' + warnings.length + ' best practice uyarısı</strong> bulundu.';
+    html += '<i class="fas fa-check-circle me-1 text-success"></i> {{ t("linter.syntax_valid") }} &nbsp;|&nbsp; ';
+    html += '<i class="fas fa-exclamation-triangle me-1"></i><strong>' + warnings.length + ' {{ t("linter.bp_warnings_found") }}</strong>';
     html += '</div>';
 
     // Uyarıları belge bazında grupla (spec N2)
@@ -453,7 +453,7 @@
   // ---------------------------------------------------------------
   lintBtn.addEventListener('click', function () {
     const yaml = textarea.value;
-    resultDiv.innerHTML = '<span class="text-secondary"><i class="fas fa-spinner fa-spin me-1"></i>Kontrol ediliyor...</span>';
+    resultDiv.innerHTML = '<span class="text-secondary"><i class="fas fa-spinner fa-spin me-1"></i>{{ t("linter.checking") }}</span>';
 
     fetch('/yaml-lint-api', {
       method: 'POST',
@@ -480,7 +480,7 @@
       }
     })
     .catch(function (err) {
-      resultDiv.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-1"></i>API hatası: ' + escapeHtml(String(err)) + '</div>';
+      resultDiv.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-circle me-1"></i>{{ t("linter.api_error") }}: ' + escapeHtml(String(err)) + '</div>';
     });
   });
 

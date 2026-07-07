@@ -11,9 +11,9 @@
         <div class="d-flex align-items-center justify-content-between">
           <div>
             <h1 class="display-5 fw-bold mb-2 text-balance">
-              <i class="fas fa-network-wired me-3"></i>Network Dashboard
+              <i class="fas fa-network-wired me-3"></i>{{ t('network.title') }}
             </h1>
-            <p class="lead mb-0 text-pretty">Real-time monitoring of your Kubernetes network infrastructure</p>
+            <p class="lead mb-0 text-pretty">{{ t('network.subtitle') }}</p>
           </div>
           <!-- Removed the network stats boxes on the right side -->
         </div>
@@ -31,31 +31,31 @@
           <ul class="nav nav-pills nav-fill modern-tabs" id="networkTabs" role="tablist">
             <li class="nav-item" role="presentation">
               <button class="nav-link active rounded-pill" id="services-tab" data-bs-toggle="pill" data-bs-target="#services" type="button" role="tab">
-                <i class="fas fa-cogs me-2"></i>Services
+                <i class="fas fa-cogs me-2"></i>{{ t('network.tab_services') }}
                 <span class="badge bg-primary ms-2" id="servicesBadge">0</span>
               </button>
             </li>
             <li class="nav-item" role="presentation">
               <button class="nav-link rounded-pill" id="endpoints-tab" data-bs-toggle="pill" data-bs-target="#endpoints" type="button" role="tab">
-                <i class="fas fa-plug me-2"></i>Endpoints
+                <i class="fas fa-plug me-2"></i>{{ t('network.tab_endpoints') }}
                 <span class="badge bg-secondary ms-2" id="endpointsBadge">0</span>
               </button>
             </li>
             <li class="nav-item" role="presentation">
               <button class="nav-link rounded-pill" id="ingresses-tab" data-bs-toggle="pill" data-bs-target="#ingresses" type="button" role="tab">
-                <i class="fas fa-door-open me-2"></i>Ingresses
+                <i class="fas fa-door-open me-2"></i>{{ t('network.tab_ingresses') }}
                 <span class="badge bg-info ms-2" id="ingressesBadge">0</span>
               </button>
             </li>
             <li class="nav-item" role="presentation">
               <button class="nav-link rounded-pill" id="ingress-classes-tab" data-bs-toggle="pill" data-bs-target="#ingress-classes" type="button" role="tab">
-                <i class="fas fa-layer-group me-2"></i>Ingress Classes
+                <i class="fas fa-layer-group me-2"></i>{{ t('network.tab_ingress_classes') }}
                 <span class="badge bg-warning ms-2" id="ingressClassesBadge">0</span>
               </button>
             </li>
             <li class="nav-item" role="presentation">
               <button class="nav-link rounded-pill" id="network-policies-tab" data-bs-toggle="pill" data-bs-target="#network-policies" type="button" role="tab">
-                <i class="fas fa-shield-alt me-2"></i>Network Policies
+                <i class="fas fa-shield-alt me-2"></i>{{ t('network.tab_network_policies') }}
                 <span class="badge bg-success ms-2" id="networkPoliciesBadge">0</span>
               </button>
             </li>
@@ -78,7 +78,7 @@
                     <span class="input-group-text bg-light border-end-0">
                       <i class="fas fa-search text-muted"></i>
                     </span>
-                    <input type="text" class="form-control border-start-0" id="servicesSearch" placeholder="Search services...">
+                    <input type="text" class="form-control border-start-0" id="servicesSearch" placeholder="{{ t('network.search_services') }}">
                   </div>
                   <div class="input-group" style="width: 250px;">
                     <span class="input-group-text bg-light border-end-0">
@@ -107,7 +107,7 @@
                   <div class="spinner-border text-primary mb-3" role="status">
                     <span class="visually-hidden">Loading...</span>
                   </div>
-                  <p class="text-muted">Loading services...</p>
+                  <p class="text-muted">{{ t('network.loading_services') }}</p>
                 </div>
               </div>
             </div>
@@ -120,7 +120,7 @@
                     <span class="input-group-text bg-light border-end-0">
                       <i class="fas fa-search text-muted"></i>
                     </span>
-                    <input type="text" class="form-control border-start-0" id="endpointsSearch" placeholder="Search endpoints...">
+                    <input type="text" class="form-control border-start-0" id="endpointsSearch" placeholder="{{ t('network.search_endpoints') }}">
                   </div>
                   <div class="input-group" style="width: 250px;">
                     <span class="input-group-text bg-light border-end-0">
@@ -139,7 +139,7 @@
                   <div class="spinner-border text-primary mb-3" role="status">
                     <span class="visually-hidden">Loading...</span>
                   </div>
-                  <p class="text-muted">Loading endpoints...</p>
+                  <p class="text-muted">{{ t('network.loading_endpoints') }}</p>
                 </div>
               </div>
             </div>
@@ -166,7 +166,7 @@
                   <div class="spinner-border text-primary mb-3" role="status">
                     <span class="visually-hidden">Loading...</span>
                   </div>
-                  <p class="text-muted">Loading ingresses...</p>
+                  <p class="text-muted">{{ t('network.loading_ingresses') }}</p>
                 </div>
               </div>
             </div>
@@ -178,7 +178,7 @@
                   <div class="spinner-border text-primary mb-3" role="status">
                     <span class="visually-hidden">Loading...</span>
                   </div>
-                  <p class="text-muted">Loading ingress classes...</p>
+                  <p class="text-muted">{{ t('network.loading_ingress_classes') }}</p>
                 </div>
               </div>
             </div>
@@ -204,7 +204,7 @@
                   <div class="spinner-border text-primary mb-3" role="status">
                     <span class="visually-hidden">Loading...</span>
                   </div>
-                  <p class="text-muted">Loading network policies...</p>
+                  <p class="text-muted">{{ t('network.loading_policies') }}</p>
                 </div>
               </div>
             </div>
@@ -508,6 +508,33 @@
 </style>
 
 <script>
+  const netI18n = {
+    colType:               {{ t('network.col_type') | tojson }},
+    colClusterIp:          {{ t('network.col_cluster_ip') | tojson }},
+    colPorts:              {{ t('network.col_ports') | tojson }},
+    colSelector:           {{ t('network.col_selector') | tojson }},
+    colAge:                {{ t('network.col_age') | tojson }},
+    colActions:            {{ t('network.col_actions') | tojson }},
+    btnDetail:             {{ t('network.btn_detail') | tojson }},
+    btnEdit:               {{ t('network.btn_edit') | tojson }},
+    btnDelete:             {{ t('network.btn_delete') | tojson }},
+    btnSave:               {{ t('network.btn_save') | tojson }},
+    btnCancel:             {{ t('network.btn_cancel') | tojson }},
+    allPods:               {{ t('network.all_pods') | tojson }},
+    emptyServices:         {{ t('network.empty_services') | tojson }},
+    emptyEndpoints:        {{ t('network.empty_endpoints') | tojson }},
+    emptyIngresses:        {{ t('network.empty_ingresses') | tojson }},
+    emptyIngressClasses:   {{ t('network.empty_ingress_classes') | tojson }},
+    emptyPolicies:         {{ t('network.empty_policies') | tojson }},
+    confirmDeleteService:  {{ t('network.confirm_delete_service') | tojson }},
+    confirmDeleteEndpoint: {{ t('network.confirm_delete_endpoint') | tojson }},
+    toastYamlUpdated:      {{ t('network.toast_yaml_updated') | tojson }},
+    toastYamlSaveError:    {{ t('network.toast_yaml_save_error') | tojson }},
+    toastDeleted:          {{ t('network.toast_deleted') | tojson }},
+    toastDeleteError:      {{ t('network.toast_delete_error') | tojson }},
+    confirmTitle:          {{ t('access.confirm_delete_title') | tojson }},
+  };
+
   let currentData = {
     services: [],
     endpoints: [],
@@ -610,7 +637,7 @@
       filterAndDisplayNetworkPolicies();
     }).catch(error => {
       console.error('Error loading network data:', error);
-      showToast('Failed to load network data', 'error');
+      showToast((window.i18n?.['network.error_load_failed']||{})[window.locale||'tr']||'Ağ verileri yüklenemedi', 'error');
     });
   }
 
@@ -635,36 +662,36 @@
           </div>
           <div class="card-body">
             <div class="metric-item">
-              <span class="metric-label">Type</span>
+              <span class="metric-label">${netI18n.colType}</span>
               <span class="metric-value">${service.type || '-'}</span>
             </div>
             <div class="metric-item">
-              <span class="metric-label">Cluster IP</span>
+              <span class="metric-label">${netI18n.colClusterIp}</span>
               <span class="metric-value font-monospace">${service.cluster_ip || '-'}</span>
             </div>
             <div class="metric-item">
-              <span class="metric-label">Ports</span>
+              <span class="metric-label">${netI18n.colPorts}</span>
               <span class="metric-value font-monospace">${ports || '-'}</span>
             </div>
             <div class="metric-item">
-              <span class="metric-label">Selector</span>
+              <span class="metric-label">${netI18n.colSelector}</span>
               <span class="metric-value font-monospace small">${selector || '-'}</span>
             </div>
             <div class="metric-item">
-              <span class="metric-label">Age</span>
+              <span class="metric-label">${netI18n.colAge}</span>
               <span class="metric-value">${timeAgo(service.creation_timestamp)}</span>
             </div>
             <div class="metric-item">
-              <span class="metric-label">Actions</span>
+              <span class="metric-label">${netI18n.colActions}</span>
               <div class="metric-value">
                 <button class="btn btn-sm btn-info-custom action-btn me-1" onclick="viewServiceDetails('${service.name}', '${service.namespace}')">
-                  <i class="fas fa-eye me-1"></i>Detail
+                  <i class="fas fa-eye me-1"></i>${netI18n.btnDetail}
                 </button>
                 <button class="btn btn-sm btn-warning-custom action-btn me-1" onclick="editServiceYaml('${service.name}', '${service.namespace}')">
-                  <i class="fas fa-edit me-1"></i>Edit
+                  <i class="fas fa-edit me-1"></i>${netI18n.btnEdit}
                 </button>
                 <button class="btn btn-sm btn-danger-custom action-btn" onclick="deleteService('${service.name}', '${service.namespace}')">
-                  <i class="fas fa-trash me-1"></i>Delete
+                  <i class="fas fa-trash me-1"></i>${netI18n.btnDelete}
                 </button>
               </div>
             </div>
@@ -695,21 +722,21 @@
               <span class="metric-value font-monospace small">${subsets || '-'}</span>
             </div>
             <div class="metric-item">
-              <span class="metric-label">Age</span>
+              <span class="metric-label">${netI18n.colAge}</span>
               <span class="metric-value">${timeAgo(endpoint.creation_timestamp)}</span>
             </div>
             <!-- Added detail, edit, and delete buttons for endpoints -->
             <div class="metric-item">
-              <span class="metric-label">Actions</span>
+              <span class="metric-label">${netI18n.colActions}</span>
               <div class="metric-value">
                 <button class="btn btn-sm btn-info-custom action-btn me-1" onclick="viewEndpointDetails('${endpoint.name}', '${endpoint.namespace}')">
-                  <i class="fas fa-eye me-1"></i>Detail
+                  <i class="fas fa-eye me-1"></i>${netI18n.btnDetail}
                 </button>
                 <button class="btn btn-sm btn-warning-custom action-btn me-1" onclick="editEndpoint('${endpoint.name}', '${endpoint.namespace}')">
-                  <i class="fas fa-edit me-1"></i>Edit
+                  <i class="fas fa-edit me-1"></i>${netI18n.btnEdit}
                 </button>
                 <button class="btn btn-sm btn-danger-custom action-btn" onclick="deleteEndpoint('${endpoint.name}', '${endpoint.namespace}')">
-                  <i class="fas fa-trash me-1"></i>Delete
+                  <i class="fas fa-trash me-1"></i>${netI18n.btnDelete}
                 </button>
               </div>
             </div>
@@ -739,7 +766,7 @@
               <span class="metric-value font-monospace">${hosts || '-'}</span>
             </div>
             <div class="metric-item">
-              <span class="metric-label">Age</span>
+              <span class="metric-label">${netI18n.colAge}</span>
               <span class="metric-value">${timeAgo(ingress.creation_timestamp)}</span>
             </div>
           </div>
@@ -765,7 +792,7 @@
               <span class="metric-value">${ingressClass.is_default ? 'Yes' : 'No'}</span>
             </div>
             <div class="metric-item">
-              <span class="metric-label">Age</span>
+              <span class="metric-label">${netI18n.colAge}</span>
               <span class="metric-value">${timeAgo(ingressClass.creation_timestamp)}</span>
             </div>
           </div>
@@ -787,14 +814,14 @@
           <div class="card-body">
             <div class="metric-item">
               <span class="metric-label">Pod Selector</span>
-              <span class="metric-value font-monospace small">${podSelector || 'All pods'}</span>
+              <span class="metric-value font-monospace small">${podSelector || netI18n.allPods}</span>
             </div>
             <div class="metric-item">
               <span class="metric-label">Policy Types</span>
               <span class="metric-value">${(policy.policy_types||[]).join(', ') || '-'}</span>
             </div>
             <div class="metric-item">
-              <span class="metric-label">Age</span>
+              <span class="metric-label">${netI18n.colAge}</span>
               <span class="metric-value">${timeAgo(policy.creation_timestamp)}</span>
             </div>
           </div>
@@ -847,9 +874,9 @@
                 <textarea id="endpointYamlEditor" class="form-control font-monospace" rows="24" spellcheck="false">${escapeHtml(text)}</textarea>
               </div>
               <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal">${netI18n.btnCancel}</button>
                 <button class="btn btn-primary" id="saveEndpointYamlBtn">
-                  <i class="fas fa-save me-1"></i>Save
+                  <i class="fas fa-save me-1"></i>${netI18n.btnSave}
                 </button>
               </div>
             </div>
@@ -868,21 +895,21 @@
           });
           const pj = await pr.json().catch(() => ({}));
           if (!pr.ok || pj.error) throw new Error(pj.error || `HTTP ${pr.status}`);
-          showToast('Endpoint YAML güncellendi', 'success');
+          showToast(netI18n.toastYamlUpdated, 'success');
           bsModal.hide();
           loadNetworkData();
         } catch (e) {
-          showToast('Endpoint YAML kaydedilemedi: ' + e.message, 'error');
+          showToast(netI18n.toastYamlSaveError + ' ' + e.message, 'error');
         }
       });
       bsModal.show();
     } catch (e) {
-      showToast('Endpoint YAML yüklenemedi: ' + e.message, 'error');
+      showToast(((window.i18n?.['network.error_yaml_fetch']||{})[window.locale||'tr']||'YAML yüklenemedi:') + ' ' + e.message, 'error');
     }
   }
 
   function deleteEndpoint(name, namespace) {
-    openConfirmModal({ title: 'Endpoint Sil', message: '"' + name + '" endpoint kaynağını silmek istediğinize emin misiniz?', onConfirm: async () => {
+    openConfirmModal({ title: netI18n.confirmTitle, message: '"' + name + '" ' + netI18n.confirmDeleteEndpoint, onConfirm: async () => {
       try {
         const r = await fetch('/k8s-explorer/delete', {
           method: 'DELETE',
@@ -891,10 +918,10 @@
         });
         const j = await r.json().catch(() => ({}));
         if (!r.ok || j.error) throw new Error(j.error || `HTTP ${r.status}`);
-        showToast('Endpoint silindi', 'success');
+        showToast(name + ' ' + netI18n.toastDeleted, 'success');
         loadNetworkData();
       } catch (e) {
-        showToast('Endpoint silinemedi: ' + e.message, 'error');
+        showToast(name + ' ' + netI18n.toastDeleteError + ' ' + e.message, 'error');
       }
     }});
   }
@@ -955,7 +982,7 @@
       container.innerHTML = `
         <div class="col-12 text-center py-5">
           <i class="fas fa-cogs text-muted mb-3" style="font-size: 3rem;"></i>
-          <p class="text-muted">No services found</p>
+          <p class="text-muted">${netI18n.emptyServices}</p>
         </div>
       `;
       return;
@@ -991,7 +1018,7 @@
       document.body.insertAdjacentHTML('beforeend', modalContent);
       new bootstrap.Modal(document.getElementById(modalId)).show();
     } catch (e) {
-      showToast('Service detayları yüklenemedi: ' + e.message, 'error');
+      showToast(((window.i18n?.['network.error_service_detail']||{})[window.locale||'tr']||'Service detayları yüklenemedi:') + ' ' + e.message, 'error');
     }
   }
 
@@ -1016,9 +1043,9 @@
                 <textarea id="serviceYamlEditor" class="form-control font-monospace" rows="24" spellcheck="false">${escapeHtml(text)}</textarea>
               </div>
               <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-secondary" data-bs-dismiss="modal">${netI18n.btnCancel}</button>
                 <button class="btn btn-primary" id="saveServiceYamlBtn">
-                  <i class="fas fa-save me-1"></i>Save
+                  <i class="fas fa-save me-1"></i>${netI18n.btnSave}
                 </button>
               </div>
             </div>
@@ -1037,21 +1064,21 @@
           });
           const pj = await pr.json().catch(() => ({}));
           if (!pr.ok || pj.error) throw new Error(pj.error || `HTTP ${pr.status}`);
-          showToast('Service YAML güncellendi', 'success');
+          showToast(netI18n.toastYamlUpdated, 'success');
           bsModal.hide();
           loadNetworkData();
         } catch (e) {
-          showToast('YAML kaydedilemedi: ' + e.message, 'error');
+          showToast(netI18n.toastYamlSaveError + ' ' + e.message, 'error');
         }
       });
       bsModal.show();
     } catch (e) {
-      showToast('YAML yüklenemedi: ' + e.message, 'error');
+      showToast(((window.i18n?.['network.error_yaml_fetch']||{})[window.locale||'tr']||'YAML yüklenemedi:') + ' ' + e.message, 'error');
     }
   }
 
   function deleteService(name, namespace) {
-    openConfirmModal({ title: 'Servisi Sil', message: '"' + name + '" servisini silmek istediğinize emin misiniz?', onConfirm: async () => {
+    openConfirmModal({ title: netI18n.confirmTitle, message: '"' + name + '" ' + netI18n.confirmDeleteService, onConfirm: async () => {
       try {
         const r = await fetch('/k8s-explorer/delete', {
           method: 'DELETE',
@@ -1060,10 +1087,10 @@
         });
         const j = await r.json().catch(() => ({}));
         if (!r.ok || j.error) throw new Error(j.error || `HTTP ${r.status}`);
-        showToast('Service silindi', 'success');
+        showToast(name + ' ' + netI18n.toastDeleted, 'success');
         loadNetworkData();
       } catch (e) {
-        showToast('Service silinemedi: ' + e.message, 'error');
+        showToast(name + ' ' + netI18n.toastDeleteError + ' ' + e.message, 'error');
       }
     }});
   }
@@ -1075,7 +1102,7 @@
       container.innerHTML = `
         <div class="col-12 text-center py-5">
           <i class="fas fa-plug text-muted mb-3" style="font-size: 3rem;"></i>
-          <p class="text-muted">No endpoints found</p>
+          <p class="text-muted">${netI18n.emptyEndpoints}</p>
         </div>
       `;
       return;
@@ -1090,7 +1117,7 @@
       container.innerHTML = `
         <div class="col-12 text-center py-5">
           <i class="fas fa-door-open text-muted mb-3" style="font-size: 3rem;"></i>
-          <p class="text-muted">No ingresses found</p>
+          <p class="text-muted">${netI18n.emptyIngresses}</p>
         </div>
       `;
       return;
@@ -1105,7 +1132,7 @@
       container.innerHTML = `
         <div class="col-12 text-center py-5">
           <i class="fas fa-layer-group text-muted mb-3" style="font-size: 3rem;"></i>
-          <p class="text-muted">No ingress classes found</p>
+          <p class="text-muted">${netI18n.emptyIngressClasses}</p>
         </div>
       `;
       return;
@@ -1120,7 +1147,7 @@
       container.innerHTML = `
         <div class="col-12 text-center py-5">
           <i class="fas fa-shield-alt text-muted mb-3" style="font-size: 3rem;"></i>
-          <p class="text-muted">No network policies found</p>
+          <p class="text-muted">${netI18n.emptyPolicies}</p>
         </div>
       `;
       return;

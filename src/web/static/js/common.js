@@ -40,7 +40,8 @@ function showToast(message, type = 'success', delay = 3500) {
   closeBtn.type = 'button';
   closeBtn.className = 'btn-close btn-close-white me-2 m-auto';
   closeBtn.setAttribute('data-bs-dismiss', 'toast');
-  closeBtn.setAttribute('aria-label', 'Kapat');
+  const closeLabel = (window.i18n && window.i18n['base.btn_close'] && window.i18n['base.btn_close'][window.locale || 'tr']) || 'Kapat';
+  closeBtn.setAttribute('aria-label', closeLabel);
 
   inner.appendChild(body);
   inner.appendChild(closeBtn);

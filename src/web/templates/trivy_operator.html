@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Trivy Operator Reports{% endblock %}
-{% block page_title %}Trivy Operator Security Dashboard{% endblock %}
+{% block title %}{{ t('trivy.title') }}{% endblock %}
+{% block page_title %}{{ t('trivy.title') }}{% endblock %}
 {% block content %}
 
 <style>
@@ -406,27 +406,27 @@
 
 <!-- Beautiful header section with gradient background -->
 <div class="trivy-header">
-  <h2><i class="bi bi-shield-check me-2"></i>Trivy Operator Security Dashboard</h2>
-  <p>Real-time vulnerability scanning and security reports for your Kubernetes cluster</p>
+  <h2><i class="bi bi-shield-check me-2"></i>{{ t('trivy.title') }}</h2>
+  <p>{{ t('trivy.subtitle') }}</p>
 </div>
 
 <!-- Modern control panel with improved button styling -->
 <div class="control-card">
   <div class="control-row">
     <button id="btn-install" class="btn btn-install">
-      <i class="bi bi-download me-2"></i>Install Operator
+      <i class="bi bi-download me-2"></i>{{ t('trivy.btn_install') }}
     </button>
     <button id="btn-refresh" class="btn btn-refresh">
-      <i class="bi bi-arrow-clockwise me-2"></i>Refresh Status
+      <i class="bi bi-arrow-clockwise me-2"></i>{{ t('trivy.btn_refresh') }}
     </button>
     <select id="ns-select" class="form-select select-namespace">
-      <option value="">All Namespaces</option>
+      <option value="">{{ t('trivy.all_namespaces') }}</option>
     </select>
     <button id="btn-load" class="btn btn-action">
-      <i class="bi bi-file-earmark-text me-2"></i>Load Reports
+      <i class="bi bi-file-earmark-text me-2"></i>{{ t('trivy.btn_load_reports') }}
     </button>
     <button id="btn-scan" class="btn btn-action">
-      <i class="bi bi-search me-2"></i>Start Scan
+      <i class="bi bi-search me-2"></i>{{ t('trivy.btn_start_scan') }}
     </button>
     <span id="status-text" class="status-badge" style="display:none;"></span>
   </div>
@@ -436,19 +436,19 @@
 <!-- Beautiful stats grid with hover effects -->
 <div class="stats-grid" id="stats-grid" style="display:none;">
   <div class="stat-card">
-    <div class="stat-label"><i class="bi bi-file-earmark-text me-1"></i>Total Reports</div>
+    <div class="stat-label"><i class="bi bi-file-earmark-text me-1"></i>{{ t('trivy.stat_total') }}</div>
     <div class="stat-value" id="stat-total">0</div>
   </div>
   <div class="stat-card stat-card-critical">
-    <div class="stat-label"><i class="bi bi-exclamation-triangle me-1"></i>Critical Issues</div>
+    <div class="stat-label"><i class="bi bi-exclamation-triangle me-1"></i>{{ t('trivy.stat_critical') }}</div>
     <div class="stat-value" id="stat-critical">0</div>
   </div>
   <div class="stat-card stat-card-high">
-    <div class="stat-label"><i class="bi bi-exclamation-circle me-1"></i>High Severity</div>
+    <div class="stat-label"><i class="bi bi-exclamation-circle me-1"></i>{{ t('trivy.stat_high') }}</div>
     <div class="stat-value" id="stat-high">0</div>
   </div>
   <div class="stat-card stat-card-medium">
-    <div class="stat-label"><i class="bi bi-info-circle me-1"></i>Medium Severity</div>
+    <div class="stat-label"><i class="bi bi-info-circle me-1"></i>{{ t('trivy.stat_medium') }}</div>
     <div class="stat-value" id="stat-medium">0</div>
   </div>
 </div>
@@ -459,15 +459,15 @@
     <table class="table table-modern" id="reports-table">
       <thead>
         <tr>
-          <th><i class="bi bi-folder me-1"></i>Namespace</th>
-          <th><i class="bi bi-box me-1"></i>Repository:Tag</th>
-          <th><i class="bi bi-search me-1"></i>Scanner</th>
+          <th><i class="bi bi-folder me-1"></i>{{ t('trivy.col_namespace') }}</th>
+          <th><i class="bi bi-box me-1"></i>{{ t('trivy.col_repo_tag') }}</th>
+          <th><i class="bi bi-search me-1"></i>{{ t('trivy.col_scanner') }}</th>
           <th><i class="bi bi-exclamation-triangle me-1"></i>Critical</th>
           <th><i class="bi bi-exclamation-circle me-1"></i>High</th>
           <th><i class="bi bi-info-circle me-1"></i>Medium</th>
           <th><i class="bi bi-dash-circle me-1"></i>Low</th>
           <th><i class="bi bi-question-circle me-1"></i>Unknown</th>
-          <th><i class="bi bi-clock me-1"></i>Last Updated</th>
+          <th><i class="bi bi-clock me-1"></i>{{ t('trivy.col_last_updated') }}</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -478,7 +478,7 @@
     <span class="icon-wrapper">
       <i class="bi bi-info-circle-fill"></i>
     </span>
-    <span>No vulnerability reports found. Try loading reports or starting a scan.</span>
+    <span>{{ t('trivy.empty_reports') }}</span>
   </div>
   
   <div id="error" class="alert-modern alert-danger" style="display:none;">
@@ -490,13 +490,13 @@
   
   <div id="loading" class="alert-modern alert-info" style="display:none;">
     <span class="loading-spinner"></span>
-    <span>Loading vulnerability reports...</span>
+    <span>{{ t('trivy.loading_reports') }}</span>
   </div>
   
   <div id="pager" class="pagination-modern"></div>
   
   <div class="note-box">
-    <strong><i class="bi bi-lightbulb me-1"></i>Note:</strong> For detailed CVE information, inspect the Custom Resource directly using:<br>
+    <strong><i class="bi bi-lightbulb me-1"></i>Note:</strong> {{ t('trivy.note_text') }}<br>
     <code>kubectl get vulnerabilityreports.aquasecurity.github.io -A</code>
   </div>
 </div>
@@ -506,7 +506,7 @@
   <div class="modal-dialog modal-xl modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="vulnModalLabel"><i class="bi bi-bug me-2"></i>Vulnerability Details</h5>
+        <h5 class="modal-title" id="vulnModalLabel"><i class="bi bi-bug me-2"></i>{{ t('trivy.modal_title') }}</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
@@ -515,13 +515,13 @@
           <table class="table table-sm table-striped">
             <thead>
               <tr>
-                <th style="width:140px;">ID</th>
-                <th>Title</th>
-                <th style="width:100px;">Severity</th>
-                <th style="width:140px;">Installed</th>
-                <th style="width:140px;">Fixed</th>
-                <th style="width:70px;">Score</th>
-                <th>Link</th>
+                <th style="width:140px;">{{ t('trivy.modal_col_id') }}</th>
+                <th>{{ t('trivy.modal_col_title') }}</th>
+                <th style="width:100px;">{{ t('trivy.modal_col_severity') }}</th>
+                <th style="width:140px;">{{ t('trivy.modal_col_installed') }}</th>
+                <th style="width:140px;">{{ t('trivy.modal_col_fixed') }}</th>
+                <th style="width:70px;">{{ t('trivy.modal_col_score') }}</th>
+                <th>{{ t('trivy.modal_col_link') }}</th>
               </tr>
             </thead>
             <tbody id="vulnModalTbody"></tbody>
@@ -529,7 +529,7 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('trivy.modal_btn_close') }}</button>
       </div>
     </div>
   </div>
@@ -649,7 +649,7 @@ async function openVulnModal(namespace, name, severity){
     const vulns = Array.isArray(data.vulnerabilities)? data.vulnerabilities : [];
     const filtered = severity? vulns.filter(v=>v.severity===severity) : vulns;
     const info = document.getElementById('vulnModalInfo');
-    info.innerHTML = `<strong>${namespace}</strong> / <code>${name}</code> — Showing <strong>${severity||'ALL'}</strong> (${filtered.length} items)`;
+    info.innerHTML = `<strong>${namespace}</strong> / <code>${name}</code> — {{ t("trivy.showing_filtered") }} <strong>${severity||'{{ t("trivy.filter_all_severity") }}'}</strong> (${filtered.length} {{ t("trivy.unit_items") }})`;
     const tb = document.getElementById('vulnModalTbody');
     tb.innerHTML = filtered.map(v=>{
       const link = v.primaryLink ? `<a href="${v.primaryLink}" target="_blank">link</a>` : '';
@@ -675,15 +675,16 @@ function loadNamespaces(){
   fetch('/k8s-explorer/namespaces').then(r=>r.json()).then(d=>{
     const sel = document.getElementById('ns-select');
   const items = Array.isArray(d.namespaces) ? d.namespaces : [];
-  sel.innerHTML = '<option value="">All Namespaces (-A)</option>' + items.map(ns=>`<option value="${ns}">${ns}</option>`).join('');
+  const _allNsLbl = window.i18n?.['trivy.all_namespaces']?.[window.locale||'tr']||'All Namespaces';
+  sel.innerHTML = `<option value="">${_allNsLbl}</option>` + items.map(ns=>`<option value="${ns}">${ns}</option>`).join('');
   }).catch(()=>{});
 }
 
 function refreshStatus(){
-  setStatus('Checking status...');
+  setStatus(window.i18n?.['trivy.status_checking']?.[window.locale||'tr']||'Checking status...');
   fetch('/trivy-operator/status').then(r=>r.json()).then(d=>{
     if(d.error){ setStatus('Error: '+d.error); return; }
-  if(!d.installed){ setStatus('Not Installed'); return; }
+  if(!d.installed){ setStatus(window.i18n?.['trivy.status_not_installed']?.[window.locale||'tr']||'Not Installed'); return; }
   const ns = d.namespace || 'trivy-system';
   const ready = d.deployment_ready ? 'Ready' : 'Not Ready';
   const hint = (!d.deployment_ready && d.crd_present) ? ' — CRD present' : '';

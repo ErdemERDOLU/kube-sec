@@ -538,13 +538,13 @@
                     <button class="btn btn-link d-md-none me-2" id="mobileSidebarToggle">
                         <i class="bi bi-list"></i>
                     </button>
-                    <h1 class="h4 mb-0">{% block page_title %}Dashboard{% endblock %}</h1>
+                    <h1 class="h4 mb-0">{% block page_title %}{{ t('base.page_dashboard') }}{% endblock %}</h1>
                 </div>
                 
                 <div class="d-flex align-items-center gap-3">
                     <!-- Active Kubernetes Context Badge -->
                     <span id="activeContextBadge" class="badge rounded-pill bg-info text-dark" style="font-size:0.75rem; display:none;">
-                        <span id="activeContextName">(yok)</span>
+                        <span id="activeContextName">{{ t('base.context_none') }}</span>
                     </span>
 
                     <!-- Language switcher -->
@@ -570,7 +570,7 @@
                 <div class="container text-center">
                     <p class="mb-0">
                         <i class="bi bi-code-slash me-2"></i>
-                        Created by <strong>One Plus Mon</strong> - Kubernetes Security Checker
+                        {{ t('footer.created') }} <strong>One Plus Mon</strong> - {{ t('footer.app') }}
                     </p>
                 </div>
             </footer>
@@ -687,10 +687,10 @@
         <div id="clusterHealthToast" class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="false" style="display:none;">
             <div class="d-flex">
                 <div class="toast-body">
-                    <strong id="clusterHealthTitle">Kubernetes bağlantı hatası</strong>
-                    <div id="clusterHealthMessage" class="small">Cluster'a bağlanılamıyor.</div>
+                    <strong id="clusterHealthTitle">{{ t('base.cluster_connection_error') }}</strong>
+                    <div id="clusterHealthMessage" class="small">{{ t('base.cluster_connection_msg') }}</div>
                 </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Kapat"></button>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="{{ t('base.btn_close') }}"></button>
             </div>
         </div>
     </div>
@@ -712,8 +712,10 @@
                 if (!toastEl || !titleEl || !msgEl) return;
                 toastEl.classList.remove('text-bg-warning');
                 toastEl.classList.add('text-bg-danger');
-                titleEl.textContent = `Kubernetes cluster'a bağlanılamadı${contextName ? ` (${contextName})` : ''}`;
-                msgEl.textContent = error ? String(error) : `30 saniye içinde bu cluster'a bağlanamadı.`;
+                const _i18n = window.i18n || {};
+                const _locale = window.locale || 'tr';
+                titleEl.textContent = ((_i18n['base.cluster_connection_error'] && _i18n['base.cluster_connection_error'][_locale]) || 'Kubernetes bağlantı hatası') + (contextName ? ` (${contextName})` : '');
+                msgEl.textContent = error ? String(error) : ((_i18n['base.cluster_connection_msg'] && _i18n['base.cluster_connection_msg'][_locale]) || "Cluster'a bağlanılamıyor.");
                 toastEl.style.display = 'block';
                 if (!toastInstance) toastInstance = bootstrap.Toast.getOrCreateInstance(toastEl, { autohide: false });
                 toastInstance.show();
@@ -766,7 +768,9 @@
                 } catch (e) {
                     clearTimeout(id);
                     ok = false;
-                    error = e && e.name === 'AbortError' ? 'İstek zaman aşımına uğradı' : String(e);
+                    const _i18n2 = window.i18n || {};
+                    const _locale2 = window.locale || 'tr';
+                    error = e && e.name === 'AbortError' ? ((_i18n2['base.request_timeout'] && _i18n2['base.request_timeout'][_locale2]) || 'İstek zaman aşımına uğradı') : String(e);
                 }
 
                 // Update context badge
@@ -778,7 +782,9 @@
                             nameEl.textContent = context;
                             badge.style.display = 'inline-block';
                         } else {
-                            nameEl.textContent = '(yok)';
+                            const _i18n3 = window.i18n || {};
+                            const _locale3 = window.locale || 'tr';
+                            nameEl.textContent = (_i18n3['base.context_none'] && _i18n3['base.context_none'][_locale3]) || '(yok)';
                             badge.style.display = 'inline-block';
                         }
                     }
@@ -831,8 +837,8 @@
     <div aria-live="polite" aria-atomic="true" class="position-fixed top-0 end-0 p-3" style="z-index: 2099;">
         <div id="globalUserToast" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="4000" style="display:none;">
             <div class="d-flex">
-                <div class="toast-body" id="globalUserToastBody">İşleminiz başarılı.</div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Kapat"></button>
+                <div class="toast-body" id="globalUserToastBody">{{ t('base.toast_success_default') }}</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="{{ t('base.btn_close') }}"></button>
             </div>
         </div>
     </div>
@@ -843,7 +849,11 @@
                 const toastEl = document.getElementById('globalUserToast');
                 const body = document.getElementById('globalUserToastBody');
                 if (!toastEl || !body) return;
-                body.textContent = message || (success ? 'İşleminiz başarıyla yapıldı.' : 'Bir hata oluştu.');
+                const _i18n4 = window.i18n || {};
+                const _locale4 = window.locale || 'tr';
+                body.textContent = message || (success
+                    ? ((_i18n4['base.toast_success_default'] && _i18n4['base.toast_success_default'][_locale4]) || 'İşleminiz başarıyla yapıldı.')
+                    : ((_i18n4['base.toast_error_default'] && _i18n4['base.toast_error_default'][_locale4]) || 'Bir hata oluştu.'));
                 toastEl.className = 'toast align-items-center text-bg-' + (success ? 'success' : 'danger') + ' border-0';
                 toastEl.style.display = 'block';
                 const t = bootstrap.Toast.getOrCreateInstance(toastEl);
@@ -890,10 +900,9 @@
                 var dismissBtn = document.getElementById('kubesecUpdateDismiss');
                 if (!toastEl || !msgEl || !linkEl) return;
 
-                var label = (locale === 'en')
-                    ? 'New version available: v' + latestVersion
-                    : 'Yeni sürüm mevcut: v' + latestVersion;
-                var downloadLabel = (locale === 'en') ? 'Click to download' : 'İndirmek için tıklayın';
+                var _i18n = window.i18n || {};
+                var label = ((_i18n['update.new_version_available'] && _i18n['update.new_version_available'][locale]) || (locale === 'en' ? 'New version available' : 'Yeni sürüm mevcut')) + ': v' + latestVersion;
+                var downloadLabel = (_i18n['update.download'] && _i18n['update.download'][locale]) || (locale === 'en' ? 'Click to download' : 'İndirmek için tıklayın');
 
                 msgEl.textContent = label;
                 linkEl.textContent = downloadLabel;

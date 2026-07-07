@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Node'lar{% endblock %}
-{% block page_title %}Kubernetes Node'ları{% endblock %}
+{% block title %}{{ t('nodes.title') }}{% endblock %}
+{% block page_title %}{{ t('nodes.title') }}{% endblock %}
 {% block content %}
 
 <!-- Page Header -->
@@ -11,18 +11,18 @@
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
           <div>
             <h2 class="card-title mb-2 fw-bold text-white">
-              <i class="bi bi-hdd-stack me-3"></i>Kubernetes Node Yönetimi
+              <i class="bi bi-hdd-stack me-3"></i>{{ t('nodes.title') }}
             </h2>
             <p class="card-text mb-0 text-white opacity-90">
-              Cluster'ınızdaki tüm node'ları görüntüleyin ve yönetin
+              {{ t('nodes.subtitle') }}
             </p>
           </div>
           <div class="d-flex gap-2">
             <button class="btn btn-light btn-lg" onclick="renderNodes()" id="refreshBtn">
-              <i class="bi bi-arrow-clockwise me-2"></i>Yenile
+              <i class="bi bi-arrow-clockwise me-2"></i>{{ t('nodes.btn_refresh') }}
             </button>
             <button class="btn btn-outline-light btn-lg" onclick="exportNodes()">
-              <i class="bi bi-download me-2"></i>CSV İndir
+              <i class="bi bi-download me-2"></i>{{ t('nodes.btn_export_csv') }}
             </button>
           </div>
         </div>
@@ -42,7 +42,7 @@
               <i class="bi bi-check-circle-fill" style="font-size: 2rem;"></i>
             </div>
             <h4 class="card-title text-success mb-1" id="readyNodes">0</h4>
-            <p class="card-text text-muted small mb-0">Hazır Node'lar</p>
+            <p class="card-text text-muted small mb-0">{{ t('nodes.stat_ready') }}</p>
           </div>
         </div>
       </div>
@@ -53,7 +53,7 @@
               <i class="bi bi-x-circle-fill" style="font-size: 2rem;"></i>
             </div>
             <h4 class="card-title text-danger mb-1" id="notReadyNodes">0</h4>
-            <p class="card-text text-muted small mb-0">Hazır Olmayan</p>
+            <p class="card-text text-muted small mb-0">{{ t('nodes.stat_not_ready') }}</p>
           </div>
         </div>
       </div>
@@ -64,7 +64,7 @@
               <i class="bi bi-pause-circle-fill" style="font-size: 2rem;"></i>
             </div>
             <h4 class="card-title text-warning mb-1" id="cordonedNodes">0</h4>
-            <p class="card-text text-muted small mb-0">Cordoned Node'lar</p>
+            <p class="card-text text-muted small mb-0">{{ t('nodes.stat_cordoned') }}</p>
           </div>
         </div>
       </div>
@@ -75,7 +75,7 @@
               <i class="bi bi-hdd-stack-fill" style="font-size: 2rem;"></i>
             </div>
             <h4 class="card-title text-primary mb-1" id="totalNodes">0</h4>
-            <p class="card-text text-muted small mb-0">Toplam Node</p>
+            <p class="card-text text-muted small mb-0">{{ t('nodes.stat_total') }}</p>
           </div>
         </div>
       </div>
@@ -90,13 +90,13 @@
       <div class="card-header bg-white border-bottom py-3">
         <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
           <h5 class="card-title mb-0">
-            <i class="bi bi-list-ul me-2 text-primary"></i>Node Listesi
+            <i class="bi bi-list-ul me-2 text-primary"></i>{{ t('nodes.list_title') }}
           </h5>
           <div class="input-group" style="max-width: 300px;">
             <span class="input-group-text bg-light border-end-0">
               <i class="bi bi-search"></i>
             </span>
-            <input type="text" class="form-control border-start-0" placeholder="Node ara..." id="nodeSearch">
+            <input type="text" class="form-control border-start-0" placeholder="{{ t('nodes.search_placeholder') }}" id="nodeSearch">
           </div>
         </div>
       </div>
@@ -115,7 +115,7 @@
     <div class="modal-content">
       <div class="modal-header bg-primary text-white">
         <h5 class="modal-title" id="yamlEditModalLabel">
-          <i class="bi bi-code-slash me-2"></i>YAML Görüntüle
+          <i class="bi bi-code-slash me-2"></i>{{ t('nodes.modal_yaml_title') }}
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
@@ -125,7 +125,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          <i class="bi bi-x-circle me-1"></i>Kapat
+          <i class="bi bi-x-circle me-1"></i>{{ t('base.btn_close') }}
         </button>
       </div>
     </div>
@@ -138,7 +138,7 @@
     <div class="modal-content">
       <div class="modal-header bg-warning text-dark">
         <h5 class="modal-title" id="drainLogModalLabel">
-          <i class="bi bi-terminal me-2"></i>Drain Logları
+          <i class="bi bi-terminal me-2"></i>{{ t('nodes.modal_drain_title') }}
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
@@ -147,7 +147,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          <i class="bi bi-x-circle me-1"></i>Kapat
+          <i class="bi bi-x-circle me-1"></i>{{ t('base.btn_close') }}
         </button>
       </div>
     </div>
@@ -491,8 +491,8 @@ function renderNodesTable(nodes) {
     root.innerHTML = `
       <div class="empty-state">
         <i class="bi bi-hdd-stack text-muted"></i>
-        <h4>Node bulunamadı</h4>
-        <p class="text-muted">Cluster'da hiç node bulunamadı veya arama kriterlerinize uygun node yok.</p>
+        <h4>{{ t('nodes.empty_state') }}</h4>
+        <p class="text-muted">{{ t('nodes.empty_state_desc') }}</p>
       </div>
     `;
     return;
@@ -504,9 +504,9 @@ function renderNodesTable(nodes) {
   const thead = document.createElement('thead');
   thead.innerHTML = `
     <tr>
-      <th><i class="bi bi-server me-2"></i>Node Adı</th>
-      <th><i class="bi bi-activity me-2"></i>Durum</th>
-      <th><i class="bi bi-gear me-2"></i>İşlemler</th>
+      <th><i class="bi bi-server me-2"></i>{{ t('nodes.col_name') }}</th>
+      <th><i class="bi bi-activity me-2"></i>{{ t('nodes.col_status') }}</th>
+      <th><i class="bi bi-gear me-2"></i>{{ t('nodes.col_actions') }}</th>
     </tr>
   `;
   table.appendChild(thead);
@@ -545,14 +545,14 @@ async function renderNodes() {
   root.innerHTML = `
     <div class="loading-container">
       <div class="loading-spinner-large"></div>
-      <h5 class="text-muted">Node listesi yükleniyor...</h5>
-      <p class="text-muted small">Kubernetes cluster'ından node bilgileri alınıyor</p>
+      <h5 class="text-muted">{{ t('nodes.loading') }}</h5>
+      <p class="text-muted small">{{ t('nodes.loading_desc') }}</p>
     </div>
   `;
   
   // Disable refresh button
   refreshBtn.disabled = true;
-  refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-2 loading-spinner"></i>Yükleniyor...';
+  refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-2 loading-spinner"></i>{{ t("nodes.loading") }}';
   
   try {
     const data = await fetchNodes();
@@ -565,17 +565,17 @@ async function renderNodes() {
     root.innerHTML = `
       <div class="empty-state">
         <i class="bi bi-exclamation-triangle text-danger"></i>
-        <h4 class="text-danger">Hata Oluştu</h4>
-        <p class="text-muted">Node listesi yüklenirken bir hata oluştu: ${error.message}</p>
+        <h4 class="text-danger">{{ t('nodes.error_title') }}</h4>
+        <p class="text-muted">{{ t('nodes.error_title') }}: ${error.message}</p>
         <button class="btn btn-primary mt-3" onclick="renderNodes()">
-          <i class="bi bi-arrow-clockwise me-2"></i>Tekrar Dene
+          <i class="bi bi-arrow-clockwise me-2"></i>{{ t('nodes.btn_retry') }}
         </button>
       </div>
     `;
   } finally {
     // Re-enable refresh button
     refreshBtn.disabled = false;
-    refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>Yenile';
+    refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-2"></i>{{ t("nodes.btn_refresh") }}';
   }
 }
 
@@ -594,11 +594,12 @@ async function nodeAction(nodeName, action) {
   
   if (!endpoint) return;
   
-  if (!confirm(`${nodeName} için '${action}' işlemi yapılsın mı?`)) return;
+  const _confirmMsg = (window.i18n?.['nodes.confirm_action']?.[window.locale || 'tr']) || `${nodeName} için '${action}' işlemi yapılsın mı?`;
+  if (!confirm(_confirmMsg)) return;
 
   if (action === 'drain') {
     const modal = new bootstrap.Modal(document.getElementById('drainLogModal'));
-    document.getElementById('drain-log-content').textContent = 'Drain işlemi başlatılıyor...\n';
+    document.getElementById('drain-log-content').textContent = '{{ t("nodes.drain_starting") }}\n';
     modal.show();
     
     try {
@@ -619,7 +620,7 @@ async function nodeAction(nodeName, action) {
       document.getElementById('drain-log-content').textContent = logStr;
       await renderNodes();
     } catch (e) {
-      document.getElementById('drain-log-content').textContent = 'Drain işlemi sırasında hata: ' + e;
+      document.getElementById('drain-log-content').textContent = '{{ t("nodes.drain_error") }}: ' + e;
     }
     return;
   }
@@ -634,17 +635,19 @@ async function nodeAction(nodeName, action) {
     const result = await resp.text();
     
     if (window.showUserToast) {
-      window.showUserToast(`${nodeName} için ${action} işlemi başarıyla tamamlandı`, true);
+      const _successMsg = (window.i18n?.['nodes.action_success']?.[window.locale || 'tr']) || `${nodeName} için ${action} işlemi başarıyla tamamlandı`;
+      window.showUserToast(_successMsg, true);
     } else {
       alert(result);
     }
-    
+
     await renderNodes();
   } catch (e) {
     if (window.showUserToast) {
-      window.showUserToast(`${action} işlemi sırasında hata: ` + e, false);
+      const _errMsg = (window.i18n?.['nodes.action_error']?.[window.locale || 'tr']) || `${action} işlemi sırasında hata: `;
+      window.showUserToast(_errMsg + e, false);
     } else {
-      alert(`${action} işlemi sırasında hata: ` + e);
+      alert(((window.i18n?.['nodes.action_error']?.[window.locale || 'tr']) || `${action} işlemi sırasında hata: `) + e);
     }
   }
 }
@@ -663,7 +666,7 @@ function showYamlModal(objType, namespace, name) {
   
   fetch(url)
     .then(resp => {
-      if (!resp.ok) throw new Error('YAML alınamadı');
+      if (!resp.ok) throw new Error((window.i18n?.['nodes.yaml_error']||{})[window.locale||'tr']||'YAML alınamadı');
       return resp.text();
     })
     .then(yaml => {
@@ -671,19 +674,19 @@ function showYamlModal(objType, namespace, name) {
       modal.show();
     })
     .catch(e => {
-      errorEl.textContent = 'YAML alınamadı: ' + e;
+      errorEl.textContent = ((window.i18n?.['nodes.yaml_error']||{})[window.locale||'tr']||'YAML alınamadı') + ': ' + e;
       errorEl.classList.remove('d-none');
       modal.show();
     });
 }
 
 function exportNodes() {
-  if (!nodesData.length) { showToast('Henuz veri yuklenmedi', 'warning'); return; }
+  if (!nodesData.length) { showToast('{{ t("nodes.no_data_export") }}', 'warning'); return; }
   const searchTerm = document.getElementById('nodeSearch').value.toLowerCase();
   const filtered = searchTerm
     ? nodesData.filter(function(node) { return node.name.toLowerCase().includes(searchTerm); })
     : nodesData;
-  if (!filtered.length) { showToast('Filtreye uyan node bulunamadi', 'warning'); return; }
+  if (!filtered.length) { showToast((window.i18n?.['nodes.empty_filter']||{})[window.locale||'tr']||'Filtreye uyan node bulunamadı', 'warning'); return; }
 
   const headers = ['Node Adi', 'Durum', 'Zamanlanabilir'];
   const rows = filtered.map(function(node) {
@@ -699,7 +702,7 @@ function exportNodes() {
   });
 
   exportToCsv('nodes_export.csv', headers, rows);
-  showToast('CSV indirildi', 'success');
+  showToast('{{ t("nodes.csv_downloaded") }}', 'success');
 }
 
 // Initialize page

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Privileged/Root/RBAC Kontrolü{% endblock %}
+{% block title %}{{ t('privsec.title') }}{% endblock %}
 {% block content %}
 <div class="container-fluid">
     <!-- Page Header -->
@@ -9,13 +9,13 @@
                 <div>
                     <h1 class="h3 mb-0 text-gray-800">
                         <i class="fas fa-shield-alt text-danger me-2"></i>
-                        Güvenlik Kontrolleri
+                        {{ t('privsec.title') }}
                     </h1>
-                    <p class="text-muted mb-0">Privileged Container, Root Kullanımı ve RBAC Analizi</p>
+                    <p class="text-muted mb-0">{{ t('privsec.subtitle') }}</p>
                 </div>
                 <div class="text-end">
                     <button class="btn btn-outline-primary btn-sm" onclick="location.reload()">
-                        <i class="fas fa-sync-alt me-1"></i>Yenile
+                        <i class="fas fa-sync-alt me-1"></i>{{ t('privsec.btn_refresh') }}
                     </button>
                 </div>
             </div>
@@ -30,7 +30,7 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                                Riskli RBAC Rolleri
+                                {{ t('privsec.stat_risky_rbac') }}
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800" id="rbac-count">-</div>
                         </div>
@@ -47,7 +47,7 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Privileged Container'lar
+                                {{ t('privsec.stat_privileged') }}
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800" id="privileged-count">-</div>
                         </div>
@@ -64,7 +64,7 @@
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
                             <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                Root Kullanımı
+                                {{ t('privsec.stat_root') }}
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800" id="root-count">-</div>
                         </div>
@@ -81,7 +81,7 @@
     <div class="card shadow mb-4">
         <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
             <h6 class="m-0 font-weight-bold text-danger">
-                <i class="fas fa-user-shield me-2"></i>Aşırı Yetkili RBAC Rolleri
+                <i class="fas fa-user-shield me-2"></i>{{ t('privsec.section_rbac') }}
             </h6>
             <div class="dropdown no-arrow">
                 <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink" data-bs-toggle="dropdown">
@@ -89,7 +89,7 @@
                 </a>
                 <div class="dropdown-menu dropdown-menu-right shadow">
                     <a class="dropdown-item" href="#" onclick="exportTable('rbac-table')">
-                        <i class="fas fa-download fa-sm fa-fw mr-2 text-gray-400"></i>Export
+                        <i class="fas fa-download fa-sm fa-fw mr-2 text-gray-400"></i>{{ t('privsec.btn_export') }}
                     </a>
                 </div>
             </div>
@@ -100,16 +100,16 @@
                 <table class="table table-bordered table-hover d-none" id="rbac-table">
                     <thead class="table-dark">
                         <tr>
-                            <th><i class="fas fa-layer-group me-1"></i>Namespace</th>
-                            <th><i class="fas fa-user-tag me-1"></i>Role/ClusterRole</th>
-                            <th><i class="fas fa-tag me-1"></i>Type</th>
-                            <th><i class="fas fa-exclamation-circle me-1"></i>Riskli Kurallar</th>
+                            <th><i class="fas fa-layer-group me-1"></i>{{ t('privsec.col_namespace') }}</th>
+                            <th><i class="fas fa-user-tag me-1"></i>{{ t('privsec.col_role') }}</th>
+                            <th><i class="fas fa-tag me-1"></i>{{ t('privsec.col_type') }}</th>
+                            <th><i class="fas fa-exclamation-circle me-1"></i>{{ t('privsec.col_risky_rules') }}</th>
                         </tr>
                         <tr class="bg-light">
-                            <th><select class="form-select form-select-sm" data-col="0"><option value="">Tümü</option></select></th>
-                            <th><select class="form-select form-select-sm" data-col="1"><option value="">Tümü</option></select></th>
-                            <th><select class="form-select form-select-sm" data-col="2"><option value="">Tümü</option></select></th>
-                            <th><select class="form-select form-select-sm" data-col="3"><option value="">Tümü</option></select></th>
+                            <th><select class="form-select form-select-sm" data-col="0"><option value="">{{ t('privsec.filter_all') }}</option></select></th>
+                            <th><select class="form-select form-select-sm" data-col="1"><option value="">{{ t('privsec.filter_all') }}</option></select></th>
+                            <th><select class="form-select form-select-sm" data-col="2"><option value="">{{ t('privsec.filter_all') }}</option></select></th>
+                            <th><select class="form-select form-select-sm" data-col="3"><option value="">{{ t('privsec.filter_all') }}</option></select></th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -125,7 +125,7 @@
     <div class="card shadow mb-4">
         <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
             <h6 class="m-0 font-weight-bold text-warning">
-                <i class="fas fa-exclamation-triangle me-2"></i>Privileged Container Kullanımı
+                <i class="fas fa-exclamation-triangle me-2"></i>{{ t('privsec.section_privileged') }}
             </h6>
             <div class="dropdown no-arrow">
                 <a class="dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
@@ -133,7 +133,7 @@
                 </a>
                 <div class="dropdown-menu dropdown-menu-right shadow">
                     <a class="dropdown-item" href="#" onclick="exportTable('privileged-table')">
-                        <i class="fas fa-download fa-sm fa-fw mr-2 text-gray-400"></i>Export
+                        <i class="fas fa-download fa-sm fa-fw mr-2 text-gray-400"></i>{{ t('privsec.btn_export') }}
                     </a>
                 </div>
             </div>
@@ -144,16 +144,16 @@
                 <table class="table table-bordered table-hover d-none" id="privileged-table">
                     <thead class="table-dark">
                         <tr>
-                            <th><i class="fas fa-layer-group me-1"></i>Namespace</th>
-                            <th><i class="fas fa-cube me-1"></i>Pod</th>
-                            <th><i class="fas fa-shield-alt me-1"></i>Privileged Durumu</th>
-                            <th><i class="fas fa-list me-1"></i>Privileged Container(lar)</th>
+                            <th><i class="fas fa-layer-group me-1"></i>{{ t('privsec.col_namespace') }}</th>
+                            <th><i class="fas fa-cube me-1"></i>{{ t('privsec.col_pod') }}</th>
+                            <th><i class="fas fa-shield-alt me-1"></i>{{ t('privsec.col_privileged_status') }}</th>
+                            <th><i class="fas fa-list me-1"></i>{{ t('privsec.col_privileged_containers') }}</th>
                         </tr>
                         <tr class="bg-light">
-                            <th><select class="form-select form-select-sm" data-col="0"><option value="">Tümü</option></select></th>
-                            <th><select class="form-select form-select-sm" data-col="1"><option value="">Tümü</option></select></th>
-                            <th><select class="form-select form-select-sm" data-col="2"><option value="">Tümü</option></select></th>
-                            <th><select class="form-select form-select-sm" data-col="3"><option value="">Tümü</option></select></th>
+                            <th><select class="form-select form-select-sm" data-col="0"><option value="">{{ t('privsec.filter_all') }}</option></select></th>
+                            <th><select class="form-select form-select-sm" data-col="1"><option value="">{{ t('privsec.filter_all') }}</option></select></th>
+                            <th><select class="form-select form-select-sm" data-col="2"><option value="">{{ t('privsec.filter_all') }}</option></select></th>
+                            <th><select class="form-select form-select-sm" data-col="3"><option value="">{{ t('privsec.filter_all') }}</option></select></th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -169,7 +169,7 @@
     <div class="card shadow mb-4">
         <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
             <h6 class="m-0 font-weight-bold text-info">
-                <i class="fas fa-user-cog me-2"></i>runAsUser: 0 veya runAsNonRoot: false Kullanımı
+                <i class="fas fa-user-cog me-2"></i>{{ t('privsec.section_root') }}
             </h6>
             <div class="dropdown no-arrow">
                 <a class="dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
@@ -177,7 +177,7 @@
                 </a>
                 <div class="dropdown-menu dropdown-menu-right shadow">
                     <a class="dropdown-item" href="#" onclick="exportTable('root-table')">
-                        <i class="fas fa-download fa-sm fa-fw mr-2 text-gray-400"></i>Export
+                        <i class="fas fa-download fa-sm fa-fw mr-2 text-gray-400"></i>{{ t('privsec.btn_export') }}
                     </a>
                 </div>
             </div>
@@ -188,16 +188,16 @@
                 <table class="table table-bordered table-hover d-none" id="root-table">
                     <thead class="table-dark">
                         <tr>
-                            <th><i class="fas fa-layer-group me-1"></i>Namespace</th>
-                            <th><i class="fas fa-cube me-1"></i>Pod</th>
-                            <th><i class="fas fa-user-cog me-1"></i>Root Durumu</th>
-                            <th><i class="fas fa-list me-1"></i>İhlalli Container(lar)</th>
+                            <th><i class="fas fa-layer-group me-1"></i>{{ t('privsec.col_namespace') }}</th>
+                            <th><i class="fas fa-cube me-1"></i>{{ t('privsec.col_pod') }}</th>
+                            <th><i class="fas fa-user-cog me-1"></i>{{ t('privsec.col_root_status') }}</th>
+                            <th><i class="fas fa-list me-1"></i>{{ t('privsec.col_root_containers') }}</th>
                         </tr>
                         <tr class="bg-light">
-                            <th><select class="form-select form-select-sm" data-col="0"><option value="">Tümü</option></select></th>
-                            <th><select class="form-select form-select-sm" data-col="1"><option value="">Tümü</option></select></th>
-                            <th><select class="form-select form-select-sm" data-col="2"><option value="">Tümü</option></select></th>
-                            <th><select class="form-select form-select-sm" data-col="3"><option value="">Tümü</option></select></th>
+                            <th><select class="form-select form-select-sm" data-col="0"><option value="">{{ t('privsec.filter_all') }}</option></select></th>
+                            <th><select class="form-select form-select-sm" data-col="1"><option value="">{{ t('privsec.filter_all') }}</option></select></th>
+                            <th><select class="form-select form-select-sm" data-col="2"><option value="">{{ t('privsec.filter_all') }}</option></select></th>
+                            <th><select class="form-select form-select-sm" data-col="3"><option value="">{{ t('privsec.filter_all') }}</option></select></th>
                         </tr>
                     </thead>
                     <tbody></tbody>
@@ -292,7 +292,7 @@ function showLoadingState(elementId) {
     element.innerHTML = `
         <div class="d-flex justify-content-center align-items-center py-4">
             <div class="loading-spinner me-2"></div>
-            <span class="text-muted">Veriler yükleniyor...</span>
+            <span class="text-muted">{{ t('privsec.loading_data') }}</span>
         </div>
     `;
 }
@@ -370,7 +370,7 @@ function buildFilterOptions(tableId) {
         // rebuild options
         const current = select.value || '';
         select.innerHTML = '';
-        const optAll = document.createElement('option'); optAll.value = ''; optAll.textContent = 'Tümü';
+        const optAll = document.createElement('option'); optAll.value = ''; optAll.textContent = '{{ t("privsec.filter_all") }}';
         select.appendChild(optAll);
         Array.from(values).filter(x => x !== 'undefined' && x !== 'null' && x !== '').sort((a,b)=>a.localeCompare(b)).forEach(v => {
             const o = document.createElement('option'); o.value = v; o.textContent = v; select.appendChild(o);
@@ -428,7 +428,7 @@ function renderTablePage(tableId, page) {
         table.classList.add('d-none');
         // keep existing resultDiv text (populated by caller) or show fallback
         if (resultDiv && resultDiv.innerHTML.trim() === '') {
-            resultDiv.innerHTML = `<div class='alert alert-warning'><i class="fas fa-info-circle me-2"></i>Hiç satır bulunamadı.</div>`;
+            resultDiv.innerHTML = `<div class='alert alert-warning'><i class="fas fa-info-circle me-2"></i>{{ t('privsec.empty_rows') }}</div>`;
         }
     } else {
         table.classList.remove('d-none');
@@ -483,7 +483,7 @@ function rbacRenderer(row) {
 
 function privilegedRenderer(row) {
     const isPriv = row.privileged_containers && row.privileged_containers.length > 0;
-    const status = isPriv ? '<span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i>VAR</span>' : '<span class="badge bg-success"><i class="fas fa-check me-1"></i>YOK</span>';
+    const status = isPriv ? '<span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i>{{ t("privsec.badge_exists") }}</span>' : '<span class="badge bg-success"><i class="fas fa-check me-1"></i>{{ t("privsec.badge_none") }}</span>';
     const containers = isPriv ? `<span class="text-danger">${row.privileged_containers.join(', ')}</span>` : '<span class="text-muted">-</span>';
     return `<tr class="${isPriv ? 'table-danger' : ''}">
                 <td><span class="badge bg-secondary">${row.namespace}</span></td>
@@ -495,7 +495,7 @@ function privilegedRenderer(row) {
 
 function rootRenderer(row) {
     const isRoot = row.root_containers && row.root_containers.length > 0;
-    const status = isRoot ? '<span class="badge bg-danger"><i class="fas fa-user-cog me-1"></i>VAR</span>' : '<span class="badge bg-success"><i class="fas fa-check me-1"></i>YOK</span>';
+    const status = isRoot ? '<span class="badge bg-danger"><i class="fas fa-user-cog me-1"></i>{{ t("privsec.badge_exists") }}</span>' : '<span class="badge bg-success"><i class="fas fa-check me-1"></i>{{ t("privsec.badge_none") }}</span>';
     const containers = isRoot ? `<span class="text-danger">${row.root_containers.join(', ')}</span>` : '<span class="text-muted">-</span>';
     return `<tr class="${isRoot ? 'table-danger' : ''}">
             <td><span class="badge bg-secondary">${row.namespace}</span></td>
@@ -530,13 +530,13 @@ function loadRBACData() {
         const rbacCount = data.risky_roles ? data.risky_roles.length : 0;
         
         if (!data.risky_roles || data.risky_roles.length === 0) {
-          resultDiv.innerHTML = `<div class='alert alert-success'><i class="fas fa-check-circle me-2"></i>Aşırı yetkili RBAC rolü <b>YOK</b>.</div>`;
+          resultDiv.innerHTML = `<div class='alert alert-success'><i class="fas fa-check-circle me-2"></i>{{ t('privsec.rbac_ok') }}</div>`;
           table.classList.add('d-none');
           updateSummaryCards(0, '-', '-');
           return;
         }
         
-        resultDiv.innerHTML = `<div class='alert alert-info'><i class="fas fa-info-circle me-2"></i><strong>${rbacCount}</strong> adet riskli RBAC rolü tespit edildi.</div>`;
+        resultDiv.innerHTML = `<div class='alert alert-info'><i class="fas fa-info-circle me-2"></i><strong>${rbacCount}</strong> {{ t('privsec.rbac_count_info') }}</div>`;
         table.classList.remove('d-none');
         
     // Populate table using shared helpers (enables filtering & pagination)
@@ -544,9 +544,9 @@ function loadRBACData() {
     updateSummaryCards(rbacCount, '-', '-');
       })
       .catch(err => {
-        document.getElementById('result-rbac').innerHTML = `<div class='alert alert-danger'><i class="fas fa-exclamation-triangle me-2"></i>API hatası: ${err}</div>`;
+        document.getElementById('result-rbac').innerHTML = `<div class='alert alert-danger'><i class="fas fa-exclamation-triangle me-2"></i>{{ t('privsec.error_api') }}: ${err}</div>`;
         document.getElementById('rbac-table').classList.add('d-none');
-        updateSummaryCards('Hata', '-', '-');
+        updateSummaryCards('{{ t("privsec.error_generic") }}', '-', '-');
       });
 }
 
@@ -583,7 +583,7 @@ function loadPrivilegedData() {
                         if (!podsList || podsList.length === 0) {
                             console.warn('loadPrivilegedData: podsList empty after normalization', {podsList, data});
                             // Show debug info to help identify why UI is empty
-                            let debugHtml = `<div class='alert alert-warning'><i class="fas fa-info-circle me-2"></i>Hiç pod bulunamadı.</div>`;
+                            let debugHtml = `<div class='alert alert-warning'><i class="fas fa-info-circle me-2"></i>{{ t('privsec.empty_pods') }}</div>`;
                             try {
                                 const pretty = JSON.stringify(data, null, 2).slice(0, 4000);
                                 debugHtml += `<details class='mt-2'><summary class='small'>Raw API response (truncated)</summary><pre style='max-height:300px;overflow:auto;font-size:0.8em;'>${escapeHtml(pretty)}</pre></details>`;
@@ -598,18 +598,18 @@ function loadPrivilegedData() {
                 const privilegedCount = podsList.filter(pod => pod.privileged_containers && pod.privileged_containers.length > 0).length;
                 const totalPods = podsList.length;
 
-                resultDiv.innerHTML = `<div class='alert alert-info'><i class="fas fa-info-circle me-2"></i><strong>${totalPods}</strong> pod tarandı, <strong>${privilegedCount}</strong> privileged container tespit edildi.</div>`;
+                resultDiv.innerHTML = `<div class='alert alert-info'><i class="fas fa-info-circle me-2"></i><strong>${totalPods}</strong> {{ t('privsec.scan_result_privileged') }}, <strong>${privilegedCount}</strong> {{ t('privsec.scan_result_privileged_count') }}</div>`;
                 table.classList.remove('d-none');
 
                 // Populate table using shared helpers (enables filtering & pagination)
-                setTableData('privileged-table', podsList, privilegedRenderer, [r => r.namespace, r => r.pod, r => (r.privileged_containers && r.privileged_containers.length>0) ? 'VAR' : 'YOK', r => r.privileged_containers || []]);
+                setTableData('privileged-table', podsList, privilegedRenderer, [r => r.namespace, r => r.pod, r => (r.privileged_containers && r.privileged_containers.length>0) ? '{{ t("privsec.badge_exists") }}' : '{{ t("privsec.badge_none") }}', r => r.privileged_containers || []]);
 
                 // Update summary card
                 const currentRbacCount = document.getElementById('rbac-count').textContent;
                 updateSummaryCards(currentRbacCount, privilegedCount, '-');
       })
       .catch(err => {
-        document.getElementById('result').innerHTML = `<div class='alert alert-danger'><i class="fas fa-exclamation-triangle me-2"></i>API hatası: ${err}</div>`;
+        document.getElementById('result').innerHTML = `<div class='alert alert-danger'><i class="fas fa-exclamation-triangle me-2"></i>{{ t('privsec.error_api') }}: ${err}</div>`;
         document.getElementById('privileged-table').classList.add('d-none');
       });
 }
@@ -629,7 +629,7 @@ function loadRootData() {
         }
         
         if (!data.pods || data.pods.length === 0) {
-          resultDiv.innerHTML = `<div class='alert alert-warning'><i class="fas fa-info-circle me-2"></i>Hiç pod bulunamadı.</div>`;
+          resultDiv.innerHTML = `<div class='alert alert-warning'><i class="fas fa-info-circle me-2"></i>{{ t('privsec.empty_pods') }}</div>`;
           table.classList.add('d-none');
           return;
         }
@@ -637,11 +637,11 @@ function loadRootData() {
         const rootCount = data.pods.filter(pod => pod.root_containers && pod.root_containers.length > 0).length;
         const totalPods = data.pods.length;
         
-        resultDiv.innerHTML = `<div class='alert alert-info'><i class="fas fa-info-circle me-2"></i><strong>${totalPods}</strong> pod tarandı, <strong>${rootCount}</strong> root kullanımı tespit edildi.</div>`;
+        resultDiv.innerHTML = `<div class='alert alert-info'><i class="fas fa-info-circle me-2"></i><strong>${totalPods}</strong> {{ t('privsec.scan_result_privileged') }}, <strong>${rootCount}</strong> {{ t('privsec.scan_result_root_count') }}</div>`;
         table.classList.remove('d-none');
         
     // Populate table using shared helpers (enables filtering & pagination)
-    setTableData('root-table', data.pods, rootRenderer, [r => r.namespace, r => r.pod, r => (r.root_containers && r.root_containers.length>0) ? 'VAR' : 'YOK', r => r.root_containers || []]);
+    setTableData('root-table', data.pods, rootRenderer, [r => r.namespace, r => r.pod, r => (r.root_containers && r.root_containers.length>0) ? '{{ t("privsec.badge_exists") }}' : '{{ t("privsec.badge_none") }}', r => r.root_containers || []]);
 
     // Update summary card
     const currentRbacCount = document.getElementById('rbac-count').textContent;
@@ -649,7 +649,7 @@ function loadRootData() {
     updateSummaryCards(currentRbacCount, currentPrivilegedCount, rootCount);
       })
       .catch(err => {
-        document.getElementById('result-root').innerHTML = `<div class='alert alert-danger'><i class="fas fa-exclamation-triangle me-2"></i>API hatası: ${err}</div>`;
+        document.getElementById('result-root').innerHTML = `<div class='alert alert-danger'><i class="fas fa-exclamation-triangle me-2"></i>{{ t('privsec.error_api') }}: ${err}</div>`;
         document.getElementById('root-table').classList.add('d-none');
       });
 }

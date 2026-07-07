@@ -645,8 +645,7 @@ def update_netpol_coverage_cache():
     Toplam süre 5 saniyeyi aşarsa stderr'e uyarı yazar.
     """
     global netpol_coverage_cache, netpol_coverage_cache_time
-    import time as _time
-    _start = _time.time()
+    _start = time.time()
     try:
         load_kube_config_active()
         c = client.Configuration.get_default_copy()
@@ -752,9 +751,9 @@ def update_netpol_coverage_cache():
             },
             'namespaces': ns_results,
         }
-        netpol_coverage_cache_time = _time.time()
+        netpol_coverage_cache_time = time.time()
 
-        elapsed = _time.time() - _start
+        elapsed = time.time() - _start
         if elapsed > 5:
             print(
                 f'NETPOL COVERAGE CACHE WARNING: hesaplama süresi {elapsed:.1f}s (>5s)',

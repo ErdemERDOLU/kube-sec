@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Pod Exec Olayları{% endblock %}
+{% block title %}{{ t('exec.title') }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
@@ -12,13 +12,13 @@
                 <div>
                     <h1 class="h3 mb-0 text-gray-800">
                         <i class="fas fa-terminal text-warning me-2"></i>
-                        Kubernetes Olayları
+                        {{ t('exec.title') }}
                     </h1>
-                    <p class="text-muted mb-0">Pod Exec ve Küme Olayları</p>
+                    <p class="text-muted mb-0">{{ t('exec.subtitle') }}</p>
                 </div>
                 <div class="text-end">
                     <button class="btn btn-outline-primary btn-sm" onclick="loadExecEvents()">
-                        <i class="fas fa-sync-alt me-1"></i>Yenile
+                        <i class="fas fa-sync-alt me-1"></i>{{ t('exec.btn_refresh') }}
                     </button>
                 </div>
             </div>
@@ -30,9 +30,9 @@
         <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between"
              style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: #fff;">
             <h6 class="m-0 font-weight-bold text-white">
-                <i class="fas fa-list-alt me-2"></i>Son Kubernetes Olayları
+                <i class="fas fa-list-alt me-2"></i>{{ t('exec.card_title') }}
             </h6>
-            <small class="opacity-75">Son 100 olay gösteriliyor</small>
+            <small class="opacity-75">{{ t('exec.card_subtitle') }}</small>
         </div>
         <div class="card-body">
             <!-- Özet satırı (AC14) -->
@@ -47,31 +47,31 @@
                     <thead class="table-dark">
                         <!-- Başlık satırı -->
                         <tr>
-                            <th><i class="fas fa-clock me-1"></i>Zaman</th>
-                            <th><i class="fas fa-layer-group me-1"></i>Namespace</th>
-                            <th><i class="fas fa-cube me-1"></i>Kaynak Adı</th>
-                            <th><i class="fas fa-tag me-1"></i>Tür</th>
-                            <th><i class="fas fa-exclamation-circle me-1"></i>Tip</th>
-                            <th><i class="fas fa-question-circle me-1"></i>Sebep</th>
-                            <th><i class="fas fa-comment-alt me-1"></i>Mesaj</th>
+                            <th><i class="fas fa-clock me-1"></i>{{ t('exec.col_time') }}</th>
+                            <th><i class="fas fa-layer-group me-1"></i>{{ t('exec.col_namespace') }}</th>
+                            <th><i class="fas fa-cube me-1"></i>{{ t('exec.col_name') }}</th>
+                            <th><i class="fas fa-tag me-1"></i>{{ t('exec.col_kind') }}</th>
+                            <th><i class="fas fa-exclamation-circle me-1"></i>{{ t('exec.col_type') }}</th>
+                            <th><i class="fas fa-question-circle me-1"></i>{{ t('exec.col_reason') }}</th>
+                            <th><i class="fas fa-comment-alt me-1"></i>{{ t('exec.col_message') }}</th>
                         </tr>
                         <!-- Filtre satırı (AC7, AC15) -->
                         <tr class="bg-light">
                             <th></th>
                             <th>
                                 <select class="form-select form-select-sm" id="filter-ns">
-                                    <option value="">Tümü</option>
+                                    <option value="">{{ t('exec.filter_all') }}</option>
                                 </select>
                             </th>
                             <th></th>
                             <th>
                                 <select class="form-select form-select-sm" id="filter-kind">
-                                    <option value="">Tümü</option>
+                                    <option value="">{{ t('exec.filter_all') }}</option>
                                 </select>
                             </th>
                             <th>
                                 <select class="form-select form-select-sm" id="filter-type">
-                                    <option value="">Tümü</option>
+                                    <option value="">{{ t('exec.filter_all') }}</option>
                                     <option value="Warning">Warning</option>
                                     <option value="Normal">Normal</option>
                                 </select>
@@ -105,6 +105,14 @@
    yükleniyor; bu dosyada YENIDEN TANIMLANMADI.
 --------------------------------------------------------------- */
 
+const execI18n = {
+  loadingData:    {{ t('exec.loading_data') | tojson }},
+  summaryNoRecs:  {{ t('exec.summary_no_records') | tojson }},
+  summaryLoaded:  {{ t('exec.summary_loaded') | tojson }},
+  summaryShowing: {{ t('exec.summary_showing') | tojson }},
+  filterAll:      {{ t('exec.filter_all') | tojson }},
+};
+
 const ROWS_PER_PAGE = 20;
 let allEvents    = [];
 let currentPage  = 1;
@@ -124,7 +132,7 @@ function loadExecEvents() {
     container.innerHTML = `
         <div class="d-flex justify-content-center align-items-center py-4">
             <div class="loading-spinner me-2"></div>
-            <span class="text-muted">Veriler yükleniyor...</span>
+            <span class="text-muted">${execI18n.loadingData}</span>
         </div>`;
 
     document.getElementById('events-table').classList.add('d-none');
@@ -147,7 +155,7 @@ function loadExecEvents() {
         .then(data => {
             if (data.error) {
                 /* M5: escapeHtml ile XSS koruması */
-                container.innerHTML = 'Backend Hatası: ' + escapeHtml(data.error);
+                container.innerHTML = ((window.i18n?.['exec.error_backend']||{})[window.locale||'tr']||'Backend Hatası:') + ' ' + escapeHtml(data.error);
                 return;
             }
 
@@ -181,14 +189,14 @@ function populateFilterOptions() {
     const namespaces = [...new Set(allEvents.map(ev => ev.namespace || '').filter(Boolean))].sort();
     const kinds      = [...new Set(allEvents.map(ev => ev.kind      || '').filter(Boolean))].sort();
 
-    nsFilter.innerHTML = '<option value="">Tümü</option>';
+    nsFilter.innerHTML = `<option value="">${execI18n.filterAll}</option>`;
     namespaces.forEach(ns => {
         const opt = document.createElement('option');
         opt.value = ns; opt.textContent = ns;
         nsFilter.appendChild(opt);
     });
 
-    kindFilter.innerHTML = '<option value="">Tümü</option>';
+    kindFilter.innerHTML = `<option value="">${execI18n.filterAll}</option>`;
     kinds.forEach(k => {
         const opt = document.createElement('option');
         opt.value = k; opt.textContent = k;
@@ -232,11 +240,11 @@ function renderTablePage(page) {
 
     /* AC14: özet mesajı */
     if (total === 0) {
-        summaryDiv.innerHTML = '<div class="alert alert-warning py-2"><i class="fas fa-info-circle me-2"></i>Kayıt yok.</div>';
+        summaryDiv.innerHTML = `<div class="alert alert-warning py-2"><i class="fas fa-info-circle me-2"></i>${execI18n.summaryNoRecs}</div>`;
     } else if (filteredTotal !== total) {
-        summaryDiv.innerHTML = `<div class="alert alert-info py-2"><i class="fas fa-info-circle me-2"></i><strong>${total}</strong> olay yüklendi, <strong>${filteredTotal}</strong> tanesi gösteriliyor.</div>`;
+        summaryDiv.innerHTML = `<div class="alert alert-info py-2"><i class="fas fa-info-circle me-2"></i><strong>${total}</strong> ${execI18n.summaryLoaded} <strong>${filteredTotal}</strong> ${execI18n.summaryShowing}</div>`;
     } else {
-        summaryDiv.innerHTML = `<div class="alert alert-info py-2"><i class="fas fa-info-circle me-2"></i><strong>${total}</strong> olay yüklendi.</div>`;
+        summaryDiv.innerHTML = `<div class="alert alert-info py-2"><i class="fas fa-info-circle me-2"></i><strong>${total}</strong> ${execI18n.summaryLoaded.replace(/,\s*$/, '.')}</div>`;
     }
 
     if (filteredTotal === 0) {

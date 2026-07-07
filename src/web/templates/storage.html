@@ -5,8 +5,8 @@
   <div class="row mb-4">
     <div class="col-12">
       <div class="hero-section bg-gradient-primary text-white rounded-4 p-4 mb-4">
-        <h1 class="display-6 mb-0"><i class="bi bi-database me-2"></i>Storage</h1>
-        <p class="mb-0 opacity-75">PersistentVolumeClaims, PersistentVolumes ve StorageClasses görünümü</p>
+        <h1 class="display-6 mb-0"><i class="bi bi-database me-2"></i>{{ t('storage.title') }}</h1>
+        <p class="mb-0 opacity-75">{{ t('storage.subtitle') }}</p>
       </div>
     </div>
   </div>
@@ -15,13 +15,13 @@
     <div class="card-header bg-transparent border-0 px-4 pt-4">
       <ul class="nav nav-pills modern-tabs" id="storageTabs" role="tablist">
         <li class="nav-item" role="presentation">
-          <button class="nav-link active" id="pvcs-tab" data-bs-toggle="pill" data-bs-target="#pvcs" type="button" role="tab">PVCs <span class="badge bg-primary ms-1" id="pvcsBadge">0</span></button>
+          <button class="nav-link active" id="pvcs-tab" data-bs-toggle="pill" data-bs-target="#pvcs" type="button" role="tab">{{ t('storage.tab_pvcs') }} <span class="badge bg-primary ms-1" id="pvcsBadge">0</span></button>
         </li>
         <li class="nav-item" role="presentation">
-          <button class="nav-link" id="pvs-tab" data-bs-toggle="pill" data-bs-target="#pvs" type="button" role="tab">PVs <span class="badge bg-secondary ms-1" id="pvsBadge">0</span></button>
+          <button class="nav-link" id="pvs-tab" data-bs-toggle="pill" data-bs-target="#pvs" type="button" role="tab">{{ t('storage.tab_pvs') }} <span class="badge bg-secondary ms-1" id="pvsBadge">0</span></button>
         </li>
         <li class="nav-item" role="presentation">
-          <button class="nav-link" id="storage-classes-tab" data-bs-toggle="pill" data-bs-target="#storage-classes" type="button" role="tab">Storage Classes <span class="badge bg-info ms-1" id="scBadge">0</span></button>
+          <button class="nav-link" id="storage-classes-tab" data-bs-toggle="pill" data-bs-target="#storage-classes" type="button" role="tab">{{ t('storage.tab_storage_classes') }} <span class="badge bg-info ms-1" id="scBadge">0</span></button>
         </li>
       </ul>
     </div>
@@ -36,7 +36,7 @@
         </div>
         <div class="input-group" style="width:260px;">
           <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
-          <input id="storageSearch" type="text" class="form-control border-start-0" placeholder="Search name..." />
+          <input id="storageSearch" type="text" class="form-control border-start-0" placeholder="{{ t('storage.search_placeholder') }}" />
         </div>
         <button class="btn btn-sm btn-outline-primary" onclick="reloadStorage()"><i class="bi bi-arrow-clockwise"></i></button>
       </div>
@@ -68,6 +68,10 @@
 </style>
 
 <script>
+  function _st(key, fallback) {
+    return (window.i18n && window.i18n[key] && window.i18n[key][window.locale || 'tr']) || fallback || key;
+  }
+
   let storageData = { pvcs: [], pvs: [], sc: [] };
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -103,7 +107,7 @@
       storageData.sc = scRes.storage_classes||[];
       updateBadges();
       filterAllStorage();
-    }).catch(e=> showToast('Storage verileri yüklenemedi: '+e.message,'error'));
+    }).catch(e=> showToast(_st('storage.loading_error', 'Storage verileri yüklenemedi:')+' '+e.message,'error'));
   }
 
   function updateBadges(){
@@ -137,12 +141,12 @@
     el.innerHTML = list.map(p=>{
       const actions = actionButtons('pvc', p.namespace, p.name);
       return card('', '', p.name, p.namespace, [
-      ['Status', p.status],
-      ['Volume', p.volume],
-      ['Class', p.storage_class],
-      ['Access', (p.access_modes||[]).join(',')],
-      ['Capacity', p.capacity],
-      ['Age', timeAgo(p.creation_timestamp)]
+      [_st('storage.col_status', 'Durum'), p.status],
+      [_st('storage.col_volume', 'Volume'), p.volume],
+      [_st('storage.col_class', 'Sınıf'), p.storage_class],
+      [_st('storage.col_access', 'Erişim'), (p.access_modes||[]).join(',')],
+      [_st('storage.col_capacity', 'Kapasite'), p.capacity],
+      [_st('storage.col_age', 'Yaş'), timeAgo(p.creation_timestamp)]
     ], actions);
     }).join('');
   }
@@ -153,13 +157,13 @@
     el.innerHTML = list.map(p=>{
       const actions = actionButtons('pv', null, p.name);
       return card('', 'pv-card', p.name, '', [
-      ['Status', p.status],
-      ['Capacity', p.capacity],
-      ['Access', (p.access_modes||[]).join(',')],
+      [_st('storage.col_status', 'Durum'), p.status],
+      [_st('storage.col_capacity', 'Kapasite'), p.capacity],
+      [_st('storage.col_access', 'Erişim'), (p.access_modes||[]).join(',')],
       ['Reclaim', p.reclaim_policy],
-      ['Class', p.storage_class],
+      [_st('storage.col_class', 'Sınıf'), p.storage_class],
       ['Claim', p.claim],
-      ['Age', timeAgo(p.creation_timestamp)]
+      [_st('storage.col_age', 'Yaş'), timeAgo(p.creation_timestamp)]
     ], actions);
     }).join('');
   }
@@ -174,22 +178,22 @@
       ['Reclaim', s.reclaim_policy],
       ['Binding', s.volume_binding_mode],
       ['Expansion', s.allow_expansion],
-      ['Age', timeAgo(s.creation_timestamp)]
+      [_st('storage.col_age', 'Yaş'), timeAgo(s.creation_timestamp)]
     ], actions);
     }).join('');
   }
 
   function emptyState(label){
-    return `<div class='col-12 text-center py-5'><i class="bi bi-inboxes text-muted" style='font-size:3rem;'></i><p class='text-muted mb-0'>No ${label} found</p></div>`;
+    const notFound = _st('storage.empty_state', 'bulunamadı');
+    return `<div class='col-12 text-center py-5'><i class="bi bi-inboxes text-muted" style='font-size:3rem;'></i><p class='text-muted mb-0'>${label} ${notFound}</p></div>`;
   }
 
   // ACTIONS
   function actionButtons(kind, namespace, name){
-    const nsAttr = namespace?`data-namespace="${namespace}"`:'';
     return `
-      <button class='btn btn-sm btn-outline-secondary' title='Detail' onclick="openDetail('${kind}','${namespace||''}','${name}')"><i class='bi bi-info-circle'></i></button>
-      <button class='btn btn-sm btn-outline-primary' title='YAML' onclick="openYamlEdit('${kind}','${namespace||''}','${name}')"><i class='bi bi-code-slash'></i></button>
-      <button class='btn btn-sm btn-outline-danger' title='Delete' onclick="confirmDelete('${kind}','${namespace||''}','${name}')"><i class='bi bi-trash'></i></button>
+      <button class='btn btn-sm btn-outline-secondary' title='${_st('explorer.btn_detail','Detayları görüntüle')}' onclick="openDetail('${kind}','${namespace||''}','${name}')"><i class='bi bi-info-circle'></i></button>
+      <button class='btn btn-sm btn-outline-primary' title='${_st('explorer.btn_yaml_view','YAML Görüntüle')}' onclick="openYamlEdit('${kind}','${namespace||''}','${name}')"><i class='bi bi-code-slash'></i></button>
+      <button class='btn btn-sm btn-outline-danger' title='${_st('explorer.btn_delete','Sil')}' onclick="confirmDelete('${kind}','${namespace||''}','${name}')"><i class='bi bi-trash'></i></button>
     `;
   }
 
@@ -200,13 +204,13 @@
     else if(kind==='storageclass') url = `/k8s-explorer/storage-class-details?name=${encodeURIComponent(name)}`;
     else return;
     fetch(url).then(r=>r.json()).then(j=>{
-      if(j.error){ showToast('Detail alınamadı: '+j.error,'error'); return; }
+      if(j.error){ showToast(_st('explorer.error_loading','yüklenirken hata oluştu:')+' '+j.error,'error'); return; }
       const data = j.pvc||j.pv||j.storage_class;
       const pre = `<pre class='border rounded p-2 small bg-light text-dark' style='max-height:400px;overflow:auto;'>${escapeHtml(JSON.stringify(data,null,2))}</pre>`;
       document.getElementById('detailModalLabel').textContent = `${kind.toUpperCase()} ${name}`;
       document.getElementById('detailModalBody').innerHTML = pre;
       new bootstrap.Modal(document.getElementById('detailModal')).show();
-    }).catch(e=>showToast('Detail hata: '+e.message,'error'));
+    }).catch(e=>showToast(_st('explorer.error_loading','yüklenirken hata oluştu:')+' '+e.message,'error'));
   }
 
   function openYamlEdit(kind, namespace, name){
@@ -215,9 +219,9 @@
     const params = new URLSearchParams({type:t,name});
     if(namespace) params.append('namespace',namespace);
     fetch('/k8s-explorer/yaml?'+params.toString())
-      .then(r=>{ if(!r.ok) throw new Error('YAML alınamadı'); return r.text();})
+      .then(r=>{ if(!r.ok) throw new Error(_st('explorer.error_yaml_fetch','YAML alınamadı')); return r.text();})
       .then(txt=>{
-        document.getElementById('yamlEditTitle').textContent = `${kind.toUpperCase()} ${name} YAML`; 
+        document.getElementById('yamlEditTitle').textContent = `${kind.toUpperCase()} ${name} YAML`;
         document.getElementById('yamlEditTextarea').value = txt;
         document.getElementById('yamlEditSaveBtn').onclick = () => saveYaml(kind, namespace, name);
         new bootstrap.Modal(document.getElementById('yamlEditModal')).show();
@@ -230,15 +234,15 @@
     if(namespace) body.namespace = namespace;
     fetch('/k8s-explorer/yaml',{method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
       .then(r=>{ if(!r.ok) return r.text().then(t=>{throw new Error(t)}); return r.text();})
-      .then(()=>{ showToast('YAML güncellendi'); reloadStorage(); bootstrap.Modal.getInstance(document.getElementById('yamlEditModal')).hide(); })
-      .catch(e=>showToast('Kaydetme hatası: '+e.message,'error'));
+      .then(()=>{ showToast(_st('network.toast_yaml_updated','YAML güncellendi')); reloadStorage(); bootstrap.Modal.getInstance(document.getElementById('yamlEditModal')).hide(); })
+      .catch(e=>showToast(_st('network.toast_yaml_save_error','YAML kaydedilemedi:')+' '+e.message,'error'));
   }
 
   function confirmDelete(kind, namespace, name){
     openConfirmModal({
-      title: 'Onay',
-      message: kind.toUpperCase() + ' ' + name + ' silinsin mi?',
-      confirmText: 'Sil',
+      title: _st('access.confirm_delete_title', 'Onay'),
+      message: kind.toUpperCase() + ' ' + name + ' ' + _st('storage.confirm_delete', 'silinsin mi?'),
+      confirmText: _st('explorer.btn_delete', 'Sil'),
       confirmBtnClass: 'btn-danger',
       onConfirm: () => doDelete(kind, namespace, name)
     });
@@ -251,9 +255,9 @@
     return fetch('/k8s-explorer/delete',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)})
       .then(r=>r.json())
       .then(j=>{
-        if(j.error){ showToast('Silme hatası: '+j.error,'error'); return; }
-        showToast('Silindi'); reloadStorage();
-      }).catch(e=>showToast('Silme hatası: '+e.message,'error'));
+        if(j.error){ showToast(_st('network.toast_delete_error','silinemedi:')+' '+j.error,'error'); return; }
+        showToast(_st('network.toast_deleted','silindi')); reloadStorage();
+      }).catch(e=>showToast(_st('network.toast_delete_error','silinemedi:')+' '+e.message,'error'));
   }
 </script>
 <!-- Detail Modal -->
@@ -264,9 +268,9 @@
         <h5 class="modal-title" id="detailModalLabel">Detail</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <div class="modal-body" id="detailModalBody">Yükleniyor...</div>
+      <div class="modal-body" id="detailModalBody">{{ t('loading') }}</div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('base.btn_close') }}</button>
       </div>
     </div>
   </div>
@@ -277,15 +281,15 @@
   <div class="modal-dialog modal-xl modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="yamlEditTitle">YAML Edit</h5>
+        <h5 class="modal-title" id="yamlEditTitle">{{ t('explorer.modal_yaml_title') }}</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
         <textarea id="yamlEditTextarea" class="form-control font-monospace" style="min-height:500px;"></textarea>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-        <button type="button" id="yamlEditSaveBtn" class="btn btn-primary">Kaydet</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('base.btn_close') }}</button>
+        <button type="button" id="yamlEditSaveBtn" class="btn btn-primary">{{ t('explorer.btn_save') }}</button>
       </div>
     </div>
   </div>

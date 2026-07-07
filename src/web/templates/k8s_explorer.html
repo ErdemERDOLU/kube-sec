@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Kubernetes Explorer{% endblock %}
+{% block title %}{{ t('explorer.title') }}{% endblock %}
 {% block content %}
 <div class="container-fluid">
   <!-- Added modern header section with gradient background and icons -->
@@ -12,8 +12,8 @@
               <i class="fas fa-dharmachakra fa-3x opacity-75"></i>
             </div>
             <div>
-              <h2 class="mb-1 fw-bold">Kubernetes Explorer</h2>
-              <p class="mb-0 opacity-90">Kubernetes kaynaklarınızı keşfedin ve yönetin</p>
+              <h2 class="mb-1 fw-bold">{{ t('explorer.title') }}</h2>
+              <p class="mb-0 opacity-90">{{ t('explorer.subtitle') }}</p>
             </div>
           </div>
         </div>
@@ -127,6 +127,10 @@
 </style>
 
 <script>
+function _t(key, fallback) {
+  return (window.i18n && window.i18n[key] && window.i18n[key][window.locale || 'tr']) || fallback || key;
+}
+
 // YAML modalı oluştur
 function showYamlModal(type, namespace, name, editable = false) {
   // Modalı sadece statik HTML'den kullanıyoruz, JS ile eklemiyoruz.
@@ -135,7 +139,7 @@ function showYamlModal(type, namespace, name, editable = false) {
   if (errorDiv) errorDiv.textContent = '';
   // YAML'ı getir
   fetch(`/k8s-explorer/yaml?type=${type}&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`)
-    .then(r => r.ok ? r.text() : Promise.reject('YAML alınamadı'))
+    .then(r => r.ok ? r.text() : Promise.reject(_t('explorer.error_yaml_fetch', 'YAML alınamadı')))
     .then(yaml => {
       // Bootstrap modal instance'ı global olarak bir kez oluştur
       if (!window.k8sYamlModalInstance) {
@@ -160,7 +164,11 @@ function showYamlModal(type, namespace, name, editable = false) {
             });
             if (resp.ok) {
               window.k8sYamlModalInstance.hide();
-              alert('Güncellendi!');
+              if (window.showUserToast) {
+                window.showUserToast(_t('explorer.alert_updated', 'Güncellendi!'), true);
+              } else {
+                alert(_t('explorer.alert_updated', 'Güncellendi!'));
+              }
             } else {
               const msg = await resp.text();
               const errorDiv2 = document.getElementById('k8s-yaml-modal-error');
@@ -186,18 +194,29 @@ function showYamlModal(type, namespace, name, editable = false) {
 }
 // K8s obje silme fonksiyonu
 async function deleteK8sObj(type, namespace, name) {
-  if (!confirm(`${type} '${name}' silinsin mi?`)) return false;
+  const confirmMsg = _t('explorer.confirm_delete', 'silinsin mi?');
+  if (!confirm(`${type} '${name}' ${confirmMsg}`)) return false;
   const resp = await fetch(`/k8s-explorer/delete`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ type, namespace, name })
   });
   if (resp.ok) {
-    alert(`${type} '${name}' silindi!`);
+    const deletedMsg = _t('explorer.alert_deleted', 'silindi!');
+    if (window.showUserToast) {
+      window.showUserToast(`${type} '${name}' ${deletedMsg}`, true);
+    } else {
+      alert(`${type} '${name}' ${deletedMsg}`);
+    }
     return true;
   } else {
     const msg = await resp.text();
-    alert(`Silinemedi: ${msg}`);
+    const failedMsg = _t('explorer.alert_delete_failed', 'Silinemedi:');
+    if (window.showUserToast) {
+      window.showUserToast(`${failedMsg} ${msg}`, false);
+    } else {
+      alert(`${failedMsg} ${msg}`);
+    }
     return false;
   }
 }
@@ -272,10 +291,10 @@ function createLink(text, onClick) {
 async function showIngresses() {
   let root = document.getElementById('k8s-explorer-root');
   root.innerHTML = '';
-  k8sBreadcrumb = [{ type: 'ingresses', label: 'Ingress Listesi' }];
+  k8sBreadcrumb = [{ type: 'ingresses', label: _t('explorer.ingress_list', 'Ingress Listesi') }];
   renderBreadcrumb(root);
-  
-  showLoading(root, 'Ingressler yükleniyor...');
+
+  showLoading(root, _t('explorer.loading_ingresses', 'Ingressler yükleniyor...'));
   
   try {
     const data = await fetchApi('/k8s-explorer/ingresses');
@@ -288,8 +307,8 @@ async function showIngresses() {
       <div class="d-flex align-items-center mb-3">
         <i class="fas fa-route fa-2x text-primary me-3"></i>
         <div>
-          <h4 class="fw-bold mb-1">Ingress Listesi</h4>
-          <p class="text-muted mb-0">Tüm namespace'lerdeki ingress kaynakları</p>
+          <h4 class="fw-bold mb-1">${_t('explorer.ingress_list', 'Ingress Listesi')}</h4>
+          <p class="text-muted mb-0">${_t('explorer.ingress_list_desc', "Tüm namespace'lerdeki ingress kaynakları")}</p>
         </div>
       </div>
     `;
@@ -301,28 +320,28 @@ async function showIngresses() {
       root.innerHTML += `
         <div class="text-center py-5">
           <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-          <h5 class="text-muted">Ingress bulunamadı</h5>
-          <p class="text-muted">Sistemde herhangi bir ingress kaynağı bulunamadı.</p>
+          <h5 class="text-muted">${_t('explorer.empty_ingresses', 'Ingress bulunamadı')}</h5>
+          <p class="text-muted">${_t('explorer.empty_ingresses_desc', 'Sistemde herhangi bir ingress kaynağı bulunamadı.')}</p>
         </div>
       `;
       return;
     }
-    
+
     const container = document.createElement('div');
     container.className = 'row';
-    
+
     ingressList.forEach((ing, idx) => {
       const actions = [
         {
           icon: '<i class="fas fa-eye"></i>',
           class: 'btn-outline-primary',
-          title: 'Detayları görüntüle',
+          title: _t('explorer.btn_detail', 'Detayları görüntüle'),
           onclick: () => showIngressDetail(ing.namespace, ing.name)
         },
         {
           icon: '<i class="fas fa-edit"></i>',
           class: 'btn-outline-warning',
-          title: 'YAML düzenle',
+          title: _t('explorer.btn_yaml_edit', 'YAML düzenle'),
           onclick: (e) => {
             e.stopPropagation();
             showYamlModal('ingress', ing.namespace, ing.name, true);
@@ -331,28 +350,28 @@ async function showIngresses() {
         {
           icon: '<i class="fas fa-trash"></i>',
           class: 'btn-outline-danger',
-          title: 'Sil',
+          title: _t('explorer.btn_delete', 'Sil'),
           onclick: async (e) => {
             e.stopPropagation();
             const ok = await deleteK8sObj('ingress', ing.namespace, ing.name);
             if (ok) {
               ingressList.splice(idx, 1);
-              showIngresses(); // Refresh the list
+              showIngresses();
             }
           }
         }
       ];
-      
+
       const card = createResourceCard(ing, 'ingress', actions);
       container.appendChild(card);
     });
-    
+
     root.appendChild(container);
   } catch (error) {
     root.innerHTML = `
       <div class="alert alert-danger" role="alert">
         <i class="fas fa-exclamation-triangle me-2"></i>
-        Ingressler yüklenirken hata oluştu: ${error.message}
+        Ingresses ${_t('explorer.error_loading', 'yüklenirken hata oluştu:')} ${error.message}
       </div>
     `;
   }
@@ -369,7 +388,7 @@ async function showIngressDetail(namespace, name) {
   }
   renderBreadcrumb(root);
   
-  showLoading(root, 'Ingress detayı yükleniyor...');
+  showLoading(root, _t('explorer.loading_ingress_detail', 'Ingress detayı yükleniyor...'));
   
   try {
     const data = await fetchApi(`/k8s-explorer/ingress?namespace=${namespace}&name=${name}`);
@@ -388,12 +407,12 @@ async function showIngressDetail(namespace, name) {
           </div>
         </div>
         <button class="btn btn-outline-secondary" onclick="showIngresses()">
-          <i class="fas fa-arrow-left me-2"></i>Geri
+          <i class="fas fa-arrow-left me-2"></i>${_t('explorer.btn_back', 'Geri')}
         </button>
       </div>
     `;
     root.appendChild(header);
-    
+
     if (data.service) {
       const serviceCard = document.createElement('div');
       serviceCard.className = 'k8s-resource-card p-3 mb-3';
@@ -402,13 +421,13 @@ async function showIngressDetail(namespace, name) {
         {
           icon: '<i class="fas fa-eye"></i>',
           class: 'btn-outline-primary',
-          title: 'Service detayını görüntüle',
+          title: _t('explorer.btn_detail', 'Detayları görüntüle'),
           onclick: () => showServiceDetail(namespace, data.service.name)
         },
         {
           icon: '<i class="fas fa-edit"></i>',
           class: 'btn-outline-warning',
-          title: 'Service YAML düzenle',
+          title: _t('explorer.btn_yaml_edit', 'YAML düzenle'),
           onclick: (e) => {
             e.stopPropagation();
             showYamlModal('service', namespace, data.service.name, true);
@@ -417,7 +436,7 @@ async function showIngressDetail(namespace, name) {
         {
           icon: '<i class="fas fa-trash"></i>',
           class: 'btn-outline-danger',
-          title: 'Service sil',
+          title: _t('explorer.btn_delete', 'Sil'),
           onclick: async (e) => {
             e.stopPropagation();
             const ok = await deleteK8sObj('service', namespace, data.service.name);
@@ -425,14 +444,14 @@ async function showIngressDetail(namespace, name) {
           }
         }
       ];
-      
+
       serviceCard.innerHTML = `
         <div class="d-flex justify-content-between align-items-center">
           <div class="d-flex align-items-center">
             <i class="fas fa-network-wired fa-lg text-success me-3"></i>
             <div>
               <h6 class="mb-1 fw-bold">Service: ${data.service.name}</h6>
-              <small class="text-muted">Bağlı servis</small>
+              <small class="text-muted">${_t('explorer.linked_service', 'Bağlı servis')}</small>
             </div>
           </div>
           <div class="d-flex gap-2">
@@ -457,7 +476,7 @@ async function showIngressDetail(namespace, name) {
       noServiceCard.className = 'alert alert-warning';
       noServiceCard.innerHTML = `
         <i class="fas fa-exclamation-triangle me-2"></i>
-        Bu ingress için service bulunamadı.
+        ${_t('explorer.no_service_found', 'Bu ingress için service bulunamadı.')}
       `;
       root.appendChild(noServiceCard);
     }
@@ -468,7 +487,7 @@ async function showIngressDetail(namespace, name) {
     errorCard.className = 'alert alert-danger';
     errorCard.innerHTML = `
       <i class="fas fa-exclamation-triangle me-2"></i>
-      Ingress detayı yüklenirken hata oluştu: ${error.message}
+      Ingress ${_t('explorer.error_loading', 'yüklenirken hata oluştu:')} ${error.message}
     `;
     root.appendChild(errorCard);
   }
@@ -512,10 +531,10 @@ async function showServiceDetail(namespace, serviceName) {
             </div>
             <div class="d-flex gap-2">
               <button class="btn btn-outline-primary btn-sm" onclick="showYamlModal('service', '${namespace}', '${serviceName}')">
-                <i class="fas fa-file-code me-1"></i>YAML Görüntüle
+                <i class="fas fa-file-code me-1"></i>${_t('explorer.btn_yaml_view', 'YAML Görüntüle')}
               </button>
               <button class="btn btn-outline-warning btn-sm" onclick="showYamlModal('service', '${namespace}', '${serviceName}', true)">
-                <i class="fas fa-edit me-1"></i>YAML Düzenle
+                <i class="fas fa-edit me-1"></i>${_t('explorer.btn_yaml_edit', 'YAML Düzenle')}
               </button>
             </div>
           </div>
@@ -526,15 +545,15 @@ async function showServiceDetail(namespace, serviceName) {
       <div class="col-12">
         <div class="card border-0 shadow-sm">
           <div class="card-header bg-light">
-            <h5 class="mb-0"><i class="fas fa-cubes me-2"></i>İlişkili Pod'lar</h5>
+            <h5 class="mb-0"><i class="fas fa-cubes me-2"></i>${_t('explorer.related_pods', "İlişkili Pod'lar")}</h5>
           </div>
           <div class="card-body">
             <div id="service-pods-container">
               <div class="text-center py-4">
                 <div class="spinner-border text-primary" role="status">
-                  <span class="visually-hidden">Yükleniyor...</span>
+                  <span class="visually-hidden">${_t('explorer.loading_default', 'Yükleniyor...')}</span>
                 </div>
-                <p class="mt-2 text-muted">Pod'lar yükleniyor...</p>
+                <p class="mt-2 text-muted">${_t('explorer.loading_pods', "Pod'lar yükleniyor...")}</p>
               </div>
             </div>
           </div>
@@ -570,7 +589,7 @@ async function showServiceDetail(namespace, serviceName) {
       container.innerHTML = `
         <div class="text-center py-4">
           <i class="fas fa-exclamation-circle fa-3x text-warning mb-3"></i>
-          <p class="text-muted">Bu service için pod bulunamadı.</p>
+          <p class="text-muted">${_t('explorer.no_pods_found', 'Bu service için pod bulunamadı.')}</p>
         </div>
       `;
       return;
@@ -584,19 +603,19 @@ async function showServiceDetail(namespace, serviceName) {
         {
           icon: '<i class="fas fa-file-alt"></i>',
           class: 'btn-outline-info',
-          title: 'Logları görüntüle',
+          title: _t('explorer.pod_logs_title', 'Pod Logları'),
           onclick: `showPodLogModal('${pod.namespace || namespace}', '${pod.name}')`
         },
         {
           icon: '<i class="fas fa-file-code"></i>',
           class: 'btn-outline-primary',
-          title: 'YAML görüntüle',
+          title: _t('explorer.btn_yaml_view', 'YAML Görüntüle'),
           onclick: `showYamlModal('pod', '${pod.namespace || namespace}', '${pod.name}')`
         },
         {
           icon: '<i class="fas fa-edit"></i>',
           class: 'btn-outline-warning',
-          title: 'YAML düzenle',
+          title: _t('explorer.btn_yaml_edit', 'YAML düzenle'),
           onclick: `showYamlModal('pod', '${pod.namespace || namespace}', '${pod.name}', true)`
         }
       ];
@@ -610,7 +629,7 @@ async function showServiceDetail(namespace, serviceName) {
     document.getElementById('service-pods-container').innerHTML = `
       <div class="alert alert-danger">
         <i class="fas fa-exclamation-triangle me-2"></i>
-        Pod'lar yüklenirken hata oluştu: ${error.message}
+        Pods ${_t('explorer.error_loading', 'yüklenirken hata oluştu:')} ${error.message}
       </div>
     `;
   }
@@ -626,7 +645,7 @@ async function showDeploymentDetail(namespace, name) {
   }
   renderBreadcrumb(root);
   
-  showLoading(root, 'Deployment detayı yükleniyor...');
+  showLoading(root, _t('explorer.loading_deployment_detail', 'Deployment detayı yükleniyor...'));
   
   try {
     const data = await fetchApi(`/k8s-explorer/deployment?namespace=${namespace}&name=${name}`);
@@ -645,12 +664,12 @@ async function showDeploymentDetail(namespace, name) {
           </div>
         </div>
         <button class="btn btn-outline-secondary" onclick="showIngresses()">
-          <i class="fas fa-arrow-left me-2"></i>Geri
+          <i class="fas fa-arrow-left me-2"></i>${_t('explorer.btn_back', 'Geri')}
         </button>
       </div>
     `;
     root.appendChild(header);
-    
+
     if (data.pods && data.pods.length > 0) {
       const podsHeader = document.createElement('div');
       podsHeader.className = 'mb-3';
@@ -671,7 +690,7 @@ async function showDeploymentDetail(namespace, name) {
           {
             icon: '<i class="fas fa-file-alt"></i>',
             class: 'btn-outline-success',
-            title: 'Pod loglarını görüntüle',
+            title: _t('explorer.pod_logs_title', 'Pod Logları'),
             onclick: (e) => {
               e.stopPropagation();
               showPodLogModal(namespace, pod);
@@ -680,7 +699,7 @@ async function showDeploymentDetail(namespace, name) {
           {
             icon: '<i class="fas fa-edit"></i>',
             class: 'btn-outline-warning',
-            title: 'Pod YAML düzenle',
+            title: _t('explorer.btn_yaml_edit', 'YAML düzenle'),
             onclick: (e) => {
               e.stopPropagation();
               showYamlModal('pod', namespace, pod, true);
@@ -689,7 +708,7 @@ async function showDeploymentDetail(namespace, name) {
           {
             icon: '<i class="fas fa-trash"></i>',
             class: 'btn-outline-danger',
-            title: 'Pod sil',
+            title: _t('explorer.btn_delete', 'Sil'),
             onclick: async (e) => {
               e.stopPropagation();
               const ok = await deleteK8sObj('pod', namespace, pod);
@@ -711,7 +730,7 @@ async function showDeploymentDetail(namespace, name) {
       noPodsCard.className = 'alert alert-warning';
       noPodsCard.innerHTML = `
         <i class="fas fa-exclamation-triangle me-2"></i>
-        Bu deployment için pod bulunamadı.
+        ${_t('explorer.no_deployment_pods', 'Bu deployment için pod bulunamadı.')}
       `;
       root.appendChild(noPodsCard);
     }
@@ -722,7 +741,7 @@ async function showDeploymentDetail(namespace, name) {
     errorCard.className = 'alert alert-danger';
     errorCard.innerHTML = `
       <i class="fas fa-exclamation-triangle me-2"></i>
-      Deployment detayı yüklenirken hata oluştu: ${error.message}
+      Deployment ${_t('explorer.error_loading', 'yüklenirken hata oluştu:')} ${error.message}
     `;
     root.appendChild(errorCard);
   }
@@ -736,7 +755,7 @@ function showPodLogModal(namespace, podName) {
   if (staticDialog) {
     // Update title in static modal
     const titleEl = document.getElementById('k8s-log-modal-title');
-    if (titleEl) titleEl.textContent = `Pod Logları: ${podName}`;
+    if (titleEl) titleEl.textContent = `${_t('explorer.pod_logs_title', 'Pod Logları')}: ${podName}`;
   } else {
     // If static modal isn't present, create a wrapper and dialog
     let modal = document.getElementById('k8s-log-modal');
@@ -748,8 +767,8 @@ function showPodLogModal(namespace, podName) {
           <div class="modal-dialog modal-lg">
             <div class="modal-content">
               <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title" id="k8s-log-modal-title">Pod Logları: ${podName}</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+                <h5 class="modal-title" id="k8s-log-modal-title">${_t('explorer.pod_logs_title', 'Pod Logları')}: ${podName}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="${_t('explorer.btn_close', 'Kapat')}"></button>
               </div>
               <div class="modal-body p-0">
                 <pre id="k8s-log-pre" style="background:#1e1e1e;color:#d4d4d4;font-size:12px;max-height:500px;overflow:auto;margin:0;padding:1rem;font-family:'Courier New',monospace;"></pre>
@@ -757,10 +776,10 @@ function showPodLogModal(namespace, podName) {
               </div>
               <div class="modal-footer">
                 <button type="button" class="btn btn-outline-primary me-2" id="k8s-log-tail-btn">
-                  <i class="fas fa-play me-1"></i>Canlı Takip
+                  <i class="fas fa-play me-1"></i>${_t('explorer.btn_live_tail', 'Canlı Takip')}
                 </button>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                  <i class="fas fa-times me-1"></i>Kapat
+                  <i class="fas fa-times me-1"></i>${_t('explorer.btn_close', 'Kapat')}
                 </button>
               </div>
             </div>
@@ -773,13 +792,13 @@ function showPodLogModal(namespace, podName) {
   
   // ... existing modal logic ...
   document.getElementById('k8s-log-modal-error').textContent = '';
-  document.getElementById('k8s-log-pre').textContent = 'Loglar yükleniyor...';
-  
+  document.getElementById('k8s-log-pre').textContent = _t('explorer.loading_logs', 'Loglar yükleniyor...');
+
   // Logu getir
   fetch(`/k8s-explorer/logs?type=pod&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(podName)}`)
-    .then(r => r.ok ? r.text() : Promise.reject('Log alınamadı'))
+    .then(r => r.ok ? r.text() : Promise.reject(_t('explorer.error_log_fetch', 'Log alınamadı')))
     .then(log => {
-      document.getElementById('k8s-log-pre').textContent = log || 'Log bulunamadı';
+      document.getElementById('k8s-log-pre').textContent = log || _t('explorer.no_logs', 'Log bulunamadı');
     })
     .catch(err => {
       document.getElementById('k8s-log-pre').textContent = '';
@@ -801,31 +820,29 @@ function showPodLogModal(namespace, podName) {
       window.k8sLogTailInterval = null;
     }
     
-    tailBtn.innerHTML = '<i class="fas fa-play me-1"></i>Canlı Takip';
+    tailBtn.innerHTML = '<i class="fas fa-play me-1"></i>' + _t('explorer.btn_live_tail', 'Canlı Takip');
     tailBtn.className = 'btn btn-outline-primary me-2';
     tailBtn.dataset.tailing = 'off';
-    
+
     tailBtn.onclick = function() {
       if (tailBtn.dataset.tailing === 'on') {
-        // Takibi durdur
         clearInterval(window.k8sLogTailInterval);
         window.k8sLogTailInterval = null;
-        tailBtn.innerHTML = '<i class="fas fa-play me-1"></i>Canlı Takip';
+        tailBtn.innerHTML = '<i class="fas fa-play me-1"></i>' + _t('explorer.btn_live_tail', 'Canlı Takip');
         tailBtn.className = 'btn btn-outline-primary me-2';
         tailBtn.dataset.tailing = 'off';
       } else {
-        // Takibi başlat
-        tailBtn.innerHTML = '<i class="fas fa-stop me-1"></i>Takibi Durdur';
+        tailBtn.innerHTML = '<i class="fas fa-stop me-1"></i>' + _t('explorer.btn_stop_tail', 'Takibi Durdur');
         tailBtn.className = 'btn btn-danger me-2';
         tailBtn.dataset.tailing = 'on';
-        
+
         const fetchLog = () => {
           fetch(`/k8s-explorer/logs?type=pod&namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(podName)}`)
-            .then(r => r.ok ? r.text() : Promise.reject('Log alınamadı'))
+            .then(r => r.ok ? r.text() : Promise.reject(_t('explorer.error_log_fetch', 'Log alınamadı')))
             .then(log => {
               const pre = document.getElementById('k8s-log-pre');
               if (pre) {
-                pre.textContent = log || 'Log bulunamadı';
+                pre.textContent = log || _t('explorer.no_logs', 'Log bulunamadı');
                 pre.scrollTop = pre.scrollHeight; // Auto-scroll to bottom
               }
             })
@@ -844,11 +861,12 @@ function showPodLogModal(namespace, podName) {
   }
 }
 
-function showLoading(root, message = 'Yükleniyor...') {
+function showLoading(root, message) {
+  if (message === undefined) message = _t('explorer.loading_default', 'Yükleniyor...');
   root.innerHTML = `
     <div class="k8s-loading">
       <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
+        <span class="visually-hidden">${_t('explorer.loading_default', 'Yükleniyor...')}</span>
       </div>
       <span class="ms-2">${message}</span>
     </div>
@@ -984,7 +1002,7 @@ async function showNamespaceSelector() {
   k8sBreadcrumb = [];
   renderBreadcrumb(root);
   
-  showLoading(root, 'Namespace listesi yükleniyor...');
+  showLoading(root, _t('explorer.loading_namespaces', 'Namespace listesi yükleniyor...'));
   
   try {
     const nsResp = await fetch('/k8s-explorer/namespaces');
@@ -1005,8 +1023,8 @@ async function showNamespaceSelector() {
     header.className = 'text-center mb-4';
     header.innerHTML = `
       <i class="fas fa-layer-group fa-3x text-primary mb-3"></i>
-      <h4 class="fw-bold">Namespace Seçin</h4>
-      <p class="text-muted">Keşfetmek istediğiniz namespace'i seçin</p>
+      <h4 class="fw-bold">${_t('explorer.select_namespace', 'Namespace Seçin')}</h4>
+      <p class="text-muted">${_t('explorer.select_namespace_desc', "Keşfetmek istediğiniz namespace'i seçin")}</p>
     `;
     root.appendChild(header);
     
@@ -1035,7 +1053,7 @@ async function showNamespaceSelector() {
     root.innerHTML = `
       <div class="alert alert-danger" role="alert">
         <i class="fas fa-exclamation-triangle me-2"></i>
-        Namespace listesi yüklenirken hata oluştu: ${error.message}
+        Namespaces ${_t('explorer.error_loading', 'yüklenirken hata oluştu:')} ${error.message}
       </div>
     `;
   }
@@ -1046,7 +1064,7 @@ async function showNamespaceChildren(namespace) {
   k8sBreadcrumb = [{ type: 'namespace', label: `Namespace: ${namespace}`, namespace }];
   renderBreadcrumb(root);
   
-  showLoading(root, 'Kaynaklar yükleniyor...');
+  showLoading(root, _t('explorer.loading_resources', 'Kaynaklar yükleniyor...'));
   
   try {
     const childResp = await fetch(`/k8s-explorer/namespace-children?namespace=${encodeURIComponent(namespace)}`);
@@ -1080,8 +1098,8 @@ async function showNamespaceChildren(namespace) {
       root.innerHTML += `
         <div class="text-center py-5">
           <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-          <h5 class="text-muted">Kaynak bulunamadı</h5>
-          <p class="text-muted">Bu namespace'de ${data.resource_type} bulunamadı.</p>
+          <h5 class="text-muted">${_t('explorer.empty_resources', 'Kaynak bulunamadı')}</h5>
+          <p class="text-muted">${data.resource_type} ${_t('storage.empty_state', 'bulunamadı')}.</p>
         </div>
       `;
       return;
@@ -1095,7 +1113,7 @@ async function showNamespaceChildren(namespace) {
         {
           icon: '<i class="fas fa-eye"></i>',
           class: 'btn-outline-primary',
-          title: 'Detayları görüntüle',
+          title: _t('explorer.btn_detail', 'Detayları görüntüle'),
           onclick: () => {
             if (child.type === 'ingress') showIngressDetail(child.namespace, child.name);
             else if (child.type === 'service') showServiceDetail(child.namespace, child.name);
@@ -1104,7 +1122,7 @@ async function showNamespaceChildren(namespace) {
         {
           icon: '<i class="fas fa-edit"></i>',
           class: 'btn-outline-warning',
-          title: 'YAML düzenle',
+          title: _t('explorer.btn_yaml_edit', 'YAML düzenle'),
           onclick: (e) => {
             e.stopPropagation();
             showYamlModal(child.type, child.namespace, child.name, true);
@@ -1113,7 +1131,7 @@ async function showNamespaceChildren(namespace) {
         {
           icon: '<i class="fas fa-trash"></i>',
           class: 'btn-outline-danger',
-          title: 'Sil',
+          title: _t('explorer.btn_delete', 'Sil'),
           onclick: async (e) => {
             e.stopPropagation();
             const ok = await deleteK8sObj(child.type, child.namespace, child.name);
@@ -1131,7 +1149,7 @@ async function showNamespaceChildren(namespace) {
     root.innerHTML = `
       <div class="alert alert-danger" role="alert">
         <i class="fas fa-exclamation-triangle me-2"></i>
-        Kaynaklar yüklenirken hata oluştu: ${error.message}
+        ${_t('explorer.loading_resources', 'Kaynaklar yükleniyor...')} — ${error.message}
       </div>
     `;
   }
@@ -1145,16 +1163,16 @@ showNamespaceSelector();
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">YAML Düzenle</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+        <h5 class="modal-title">{{ t('explorer.modal_yaml_title') }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('explorer.btn_close') }}"></button>
       </div>
       <div class="modal-body">
         <textarea id="k8s-yaml-textarea" class="form-control" rows="18" style="font-family:monospace;"></textarea>
         <div id="k8s-yaml-modal-error" class="text-danger mt-2"></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-        <button type="button" class="btn btn-primary" id="k8s-yaml-save-btn">Kaydet</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('explorer.btn_close') }}</button>
+        <button type="button" class="btn btn-primary" id="k8s-yaml-save-btn">{{ t('explorer.btn_save') }}</button>
       </div>
     </div>
   </div>
@@ -1164,8 +1182,8 @@ showNamespaceSelector();
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header bg-dark text-white">
-        <h5 class="modal-title" id="k8s-log-modal-title">Pod Logları</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+        <h5 class="modal-title" id="k8s-log-modal-title">{{ t('explorer.pod_logs_title') }}</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="{{ t('explorer.btn_close') }}"></button>
       </div>
       <div class="modal-body p-0">
         <pre id="k8s-log-pre" style="background:#1e1e1e;color:#d4d4d4;font-size:12px;max-height:500px;overflow:auto;margin:0;padding:1rem;font-family:'Courier New',monospace;"></pre>
@@ -1173,10 +1191,10 @@ showNamespaceSelector();
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-primary me-2" id="k8s-log-tail-btn">
-          <i class="fas fa-play me-1"></i>Canlı Takip
+          <i class="fas fa-play me-1"></i>{{ t('explorer.btn_live_tail') }}
         </button>
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-          <i class="fas fa-times me-1"></i>Kapat
+          <i class="fas fa-times me-1"></i>{{ t('explorer.btn_close') }}
         </button>
       </div>
     </div>

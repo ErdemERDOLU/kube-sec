@@ -1,23 +1,23 @@
 {% extends 'base.html' %}
-{% block title %}Configuration{% endblock %}
+{% block title %}{{ t('cfgmgmt.title') }}{% endblock %}
 {% block content %}
 <div class="container py-4">
-  <h3>Kubeconfig Yönetimi</h3>
+  <h3>{{ t('cfgmgmt.title') }}</h3>
   <div class="row g-4">
     <div class="col-lg-6">
       <div class="card shadow-sm">
         <div class="card-header d-flex justify-content-between align-items-center">
-          <span>Yüklü Kubeconfig Dosyaları</span>
-          <button id="refreshBtn" class="btn btn-sm btn-outline-secondary">Yenile</button>
+          <span>{{ t('cfgmgmt.loaded_files') }}</span>
+          <button id="refreshBtn" class="btn btn-sm btn-outline-secondary">{{ t('cfgmgmt.btn_refresh') }}</button>
         </div>
         <div class="card-body p-0">
           <table class="table table-sm mb-0 align-middle" id="cfgTable">
             <thead class="table-light">
               <tr>
-                <th>Ad</th>
-                <th>Kaynak</th>
-                <th>Durum</th>
-                <th style="width:140px">İşlemler</th>
+                <th>{{ t('cfgmgmt.col_name') }}</th>
+                <th>{{ t('cfgmgmt.col_source') }}</th>
+                <th>{{ t('cfgmgmt.col_status') }}</th>
+                <th style="width:140px">{{ t('cfgmgmt.col_actions') }}</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -27,20 +27,20 @@
     </div>
     <div class="col-lg-6">
       <div class="card shadow-sm">
-        <div class="card-header">Yeni Kubeconfig Ekle</div>
+        <div class="card-header">{{ t('cfgmgmt.add_new') }}</div>
         <div class="card-body">
           <form id="uploadForm" class="mb-3">
             <div class="mb-2">
-              <label class="form-label">İsim</label>
+              <label class="form-label">{{ t('cfgmgmt.form_name') }}</label>
               <input class="form-control form-control-sm" name="name" required />
             </div>
             <div class="mb-2">
-              <label class="form-label">İçerik (YAML)</label>
+              <label class="form-label">{{ t('cfgmgmt.form_content') }}</label>
               <textarea class="form-control" rows="10" name="content" required placeholder="apiVersion: v1\nclusters:\n- cluster: ..."></textarea>
             </div>
-            <button class="btn btn-primary btn-sm" type="submit">Yükle</button>
+            <button class="btn btn-primary btn-sm" type="submit">{{ t('cfgmgmt.btn_upload') }}</button>
           </form>
-          <div class="text-muted small">Yüklenen dosyalar sunucunun uploads/kubeconfigs klasörüne kaydedilir. İsim benzersiz olmalıdır.</div>
+          <div class="text-muted small">{{ t('cfgmgmt.upload_info') }}</div>
         </div>
       </div>
     </div>
@@ -48,6 +48,9 @@
 </div>
 
 <script>
+function _ct(key, fallback) {
+  return (window.i18n && window.i18n[key] && window.i18n[key][window.locale || 'tr']) || fallback || key;
+}
 
 async function fetchConfigs(){
   const res = await fetch('/kubeconfigs',{credentials:'include'});
@@ -63,11 +66,11 @@ function renderTable(items, active){
     tr.innerHTML = `
       <td>${it.name}</td>
       <td>${it.source}</td>
-      <td>${active===it.name?'<span class="badge bg-success">Aktif</span>':''}</td>
+      <td>${active===it.name?'<span class="badge bg-success">' + _ct('cfgmgmt.col_status', 'Aktif') + '</span>':''}</td>
       <td>
         <div class="btn-group btn-group-sm">
-          <button class="btn btn-outline-primary" data-act="activate">Aktifleştir</button>
-          <button class="btn btn-outline-danger" data-act="delete">Sil</button>
+          <button class="btn btn-outline-primary" data-act="activate">${_ct('cfgmgmt.btn_activate', 'Aktifleştir')}</button>
+          <button class="btn btn-outline-danger" data-act="delete">${_ct('explorer.btn_delete', 'Sil')}</button>
         </div>
       </td>`;
     tr.querySelector('[data-act=activate]').onclick=()=>activateCfg(it.name);
@@ -79,13 +82,14 @@ function renderTable(items, active){
 async function activateCfg(name){
   const r = await fetch('/kubeconfigs/activate',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name})});
   const d = await r.json();
-  if(d.ok){showToast('Aktifleştirildi', 'success'); fetchConfigs();} else {showToast(d.error||'Hata', 'error');}
+  if(d.ok){showToast(_ct('cfgmgmt.toast_activated', 'Aktifleştirildi'), 'success'); fetchConfigs();} else {showToast(d.error||_ct('base.toast_error_default', 'Bir hata oluştu.'), 'error');}
 }
 async function deleteCfg(name){
-  if(!confirm('Silinsin mi?')) return;
+  const confirmMsg = _ct('storage.confirm_delete', 'silinsin mi?');
+  if(!confirm(name + ' ' + confirmMsg)) return;
   const r = await fetch('/kubeconfigs',{method:'DELETE',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name})});
   const d = await r.json();
-  if(d.ok){showToast('Silindi', 'success'); fetchConfigs();} else {showToast(d.error||'Hata', 'error');}
+  if(d.ok){showToast(_ct('cfgmgmt.toast_deleted', 'Silindi'), 'success'); fetchConfigs();} else {showToast(d.error||_ct('base.toast_error_default', 'Bir hata oluştu.'), 'error');}
 }
 
 document.getElementById('uploadForm').addEventListener('submit', async e=>{
@@ -94,7 +98,7 @@ document.getElementById('uploadForm').addEventListener('submit', async e=>{
   const payload = Object.fromEntries(fd.entries());
   const r = await fetch('/kubeconfigs',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(payload)});
   const d = await r.json();
-  if(d.ok){showToast('Yüklendi', 'success'); e.target.reset(); fetchConfigs(); } else {showToast(d.error||'Hata', 'error');}
+  if(d.ok){showToast(_ct('cfgmgmt.toast_uploaded', 'Yüklendi'), 'success'); e.target.reset(); fetchConfigs(); } else {showToast(d.error||_ct('base.toast_error_default', 'Bir hata oluştu.'), 'error');}
 });
 
 document.getElementById('refreshBtn').onclick=fetchConfigs;

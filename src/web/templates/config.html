@@ -457,16 +457,16 @@
 <div class="d-flex justify-content-between align-items-center mb-5 page-header">
   <div>
     <h1 class="h1 mb-2 fw-bold">
-      <i class="bi bi-gear me-3" style="color: #059669;"></i>Kubernetes Configuration
+      <i class="bi bi-gear me-3" style="color: #059669;"></i>{{ t('config.title') }}
     </h1>
-    <p class="mb-0">Modern cluster configuration management and monitoring dashboard</p>
+    <p class="mb-0">{{ t('config.subtitle') }}</p>
   </div>
   <div class="d-flex gap-3">
     <button class="btn btn-outline-primary" onclick="refreshAllData()">
-      <i class="bi bi-arrow-clockwise me-2"></i>Tümünü Yenile
+      <i class="bi bi-arrow-clockwise me-2"></i>{{ t('config.btn_refresh_all') }}
     </button>
     <button class="btn btn-primary" style="background: var(--primary-gradient); border: none;">
-      <i class="bi bi-plus-circle me-2"></i>Yeni Ekle
+      <i class="bi bi-plus-circle me-2"></i>{{ t('config.btn_add_new') }}
     </button>
   </div>
 </div>
@@ -538,27 +538,27 @@
         <div class="config-card">
           <div class="card-header text-white" style="background: var(--primary-gradient);">
             <h5 class="mb-0 fw-bold">
-              <i class="bi bi-file-text me-2"></i>ConfigMaps Listesi
+              <i class="bi bi-file-text me-2"></i>{{ t('config.configmaps_title') }}
             </h5>
           </div>
           <div class="card-body p-0">
                   <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
                     <div>
-                      <small class="text-muted">Namespace filtresi</small>
+                      <small class="text-muted">{{ t('config.ns_filter_label') }}</small>
                       <select id="configNamespaceSelect" class="form-select form-select-sm form-select-inline d-inline-block ms-2" aria-label="Namespace filtre">
                         <option value="default">default</option>
-                        <option value="all">Tümü</option>
+                        <option value="all">{{ t('cmsecrets.filter_all_ns') }}</option>
                       </select>
                     </div>
                     <div>
-                      <button id="clearConfigNsFilter" class="btn btn-outline-secondary btn-sm d-none">Filtreyi Temizle</button>
+                      <button id="clearConfigNsFilter" class="btn btn-outline-secondary btn-sm d-none">{{ t('config.btn_clear_filter') }}</button>
                     </div>
                   </div>
                   <div id="configmaps-table-container">
                      Enhanced loading state with better visual feedback
                     <div class="loading-state">
                       <div class="loading-spinner"></div>
-                      <span class="loading-text">ConfigMap listesi yükleniyor...</span>
+                      <span class="loading-text">{{ t('config.loading_configmaps') }}</span>
                     </div>
                   </div>
                 </div>
@@ -573,29 +573,29 @@
         <div class="config-card">
           <div class="card-header text-white" style="background: var(--danger-gradient);">
             <h5 class="mb-0 fw-bold">
-              <i class="bi bi-shield-lock me-2"></i>Secrets Listesi
+              <i class="bi bi-shield-lock me-2"></i>{{ t('config.secrets_title') }}
             </h5>
           </div>
           <div class="card-body p-0">
             <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
               <div>
-                <small class="text-muted">Namespace filtresi</small>
+                <small class="text-muted">{{ t('config.ns_filter_label') }}</small>
                 <span class="secrets-filter ms-2">
                   <select id="secretsNamespaceSelect" class="form-select form-select-sm form-select-inline" aria-label="Namespace filtre">
                   <option value="default">default</option>
-                  <option value="all">Tümü</option>
+                  <option value="all">{{ t('cmsecrets.filter_all_ns') }}</option>
                   </select>
                 </span>
               </div>
               <div>
-                <button id="clearSecretsNsFilter" class="btn btn-outline-secondary btn-sm d-none">Filtreyi Temizle</button>
+                <button id="clearSecretsNsFilter" class="btn btn-outline-secondary btn-sm d-none">{{ t('config.btn_clear_filter') }}</button>
               </div>
             </div>
             <div id="secrets-table-container">
                Enhanced loading state for secrets 
               <div class="loading-state">
                 <div class="loading-spinner"></div>
-                <span class="loading-text">Secret listesi yükleniyor...</span>
+                <span class="loading-text">{{ t('config.loading_secrets') }}</span>
               </div>
             </div>
           </div>
@@ -610,14 +610,14 @@
         <div class="config-card">
           <div class="card-header text-white" style="background: var(--warning-gradient);">
             <h5 class="mb-0 fw-bold">
-              <i class="bi bi-speedometer2 me-2"></i>Resource Quotas Listesi
+              <i class="bi bi-speedometer2 me-2"></i>{{ t('config.resource_quotas_title') }}
             </h5>
           </div>
           <div class="card-body p-0">
             <div id="resource-quotas-table-container">
               <div class="d-flex align-items-center justify-content-center py-5">
                 <div class="loading-spinner me-2"></div>
-                <span class="text-muted">Resource Quota listesi yükleniyor...</span>
+                <span class="text-muted">{{ t('config.loading_resource_quotas') }}</span>
               </div>
             </div>
           </div>
@@ -632,14 +632,14 @@
         <div class="config-card">
           <div class="card-header text-white" style="background: var(--info-gradient);">
             <h5 class="mb-0 fw-bold">
-              <i class="bi bi-bar-chart me-2"></i>Limit Ranges Listesi
+              <i class="bi bi-bar-chart me-2"></i>{{ t('config.limit_ranges_title') }}
             </h5>
           </div>
           <div class="card-body p-0">
             <div id="limit-ranges-table-container">
               <div class="d-flex align-items-center justify-content-center py-5">
                 <div class="loading-spinner me-2"></div>
-                <span class="text-muted">Limit Range listesi yükleniyor...</span>
+                <span class="text-muted">{{ t('config.loading_limit_ranges') }}</span>
               </div>
             </div>
           </div>
@@ -693,7 +693,7 @@
         <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
           <label for="pcNamespaceFilter" class="form-label mb-0">{{ t('label.namespace') }}</label>
           <select id="pcNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
-          <small class="text-muted">Not: PriorityClass cluster-scope’tur; filtre sadece varsayılan seçim için görüntülenir.</small>
+          <small class="text-muted">{{ t('config.note_priority_class_scope') }}</small>
         </div>
   <div id="pc-table-container"><div class="text-muted">{{ t('loading') }}</div></div>
       </div>
@@ -711,7 +711,7 @@
         <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
           <label for="rcNamespaceFilter" class="form-label mb-0">{{ t('label.namespace') }}</label>
           <select id="rcNamespaceFilter" class="form-select form-select-sm" style="width:auto;"></select>
-          <small class="text-muted">Not: RuntimeClass cluster-scope’tur; filtre sadece varsayılan seçim için görüntülenir.</small>
+          <small class="text-muted">{{ t('config.note_runtime_class_scope') }}</small>
         </div>
   <div id="rc-table-container"><div class="text-muted">{{ t('loading') }}</div></div>
       </div>
@@ -859,12 +859,12 @@ window.showConfigMap = function(name, namespace) {
     .then(response => response.json())
     .then(data => {
       setRequestInactive(requestKey);
-      
+
       if (data.error) {
-        showToast('ConfigMap yüklenirken hata: ' + data.error, 'error');
+        showToast('{{ t("config.toast_configmap_load_error") }}: ' + data.error, 'error');
         return;
       }
-      
+
       const configmap = data.configmap;
       const modalHtml = `
         <div class="modal fade" id="configMapViewModal" tabindex="-1">
@@ -901,8 +901,8 @@ window.showConfigMap = function(name, namespace) {
                 </div>
               </div>
               <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="event.stopPropagation(); window.editConfigMap('${configmap.name}', '${configmap.namespace}');">Edit</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('config.btn_close') }}</button>
+                <button type="button" class="btn btn-primary" onclick="event.stopPropagation(); window.editConfigMap('${configmap.name}', '${configmap.namespace}');">{{ t('config.btn_edit') }}</button>
               </div>
             </div>
           </div>
@@ -924,7 +924,7 @@ window.showConfigMap = function(name, namespace) {
     .catch(error => {
       setRequestInactive(requestKey);
       console.error('Error fetching ConfigMap:', error);
-      showToast('ConfigMap yüklenirken hata: ' + error.message, 'error');
+      showToast('{{ t("config.toast_configmap_load_error") }} ' + error.message, 'error');
     });
 };
 
@@ -967,19 +967,19 @@ window.editConfigMap = function(name, namespace) {
     .then(response => response.json())
     .then(data => {
       setRequestInactive(requestKey);
-      
+
       if (data.error) {
-        showToast('ConfigMap yüklenirken hata: ' + data.error, 'error');
+        showToast('{{ t("config.toast_configmap_load_error") }}: ' + data.error, 'error');
         return;
       }
-      
+
       const configmap = data.configmap;
       const modalHtml = `
         <div class="modal fade" id="configMapEditModal" tabindex="-1">
           <div class="modal-dialog modal-xl">
             <div class="modal-content">
               <div class="modal-header">
-                <h5 class="modal-title">Edit ConfigMap: ${configmap.name}</h5>
+                <h5 class="modal-title">{{ t('config.configmaps_title') }}: ${configmap.name}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
               </div>
               <div class="modal-body">
@@ -988,17 +988,17 @@ window.editConfigMap = function(name, namespace) {
                 </div>
                 <div class="mb-3">
                   <strong>Data:</strong>
-                  <small class="text-muted ms-2">Edit the key-value pairs below</small>
+                  <small class="text-muted ms-2">{{ t("config.edit_kv_pairs_below") }}</small>
                 </div>
                 <div id="configMapDataEditor">
                   ${Object.entries(configmap.data || {}).map(([key, value], index) => `
                     <div class="row mb-3 config-data-row">
                       <div class="col-md-3">
-                        <label class="form-label">Key</label>
+                        <label class="form-label">{{ t('config.kv_key_label') }}</label>
                         <input type="text" class="form-control config-key" value="${key}" data-original-key="${key}">
                       </div>
                       <div class="col-md-8">
-                        <label class="form-label">Value</label>
+                        <label class="form-label">{{ t('config.kv_value_label') }}</label>
                         <textarea class="form-control config-value" rows="3" style="font-family: monospace;">${value}</textarea>
                       </div>
                       <div class="col-md-1 d-flex align-items-end">
@@ -1010,12 +1010,12 @@ window.editConfigMap = function(name, namespace) {
                   `).join('')}
                 </div>
                 <button type="button" class="btn btn-outline-success btn-sm" id="addConfigRow">
-                  <i class="fas fa-plus"></i> Add New Key-Value Pair
+                  <i class="fas fa-plus"></i> {{ t('config.kv_add_pair') }}
                 </button>
               </div>
               <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="saveConfigMapBtn">Save Changes</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('config.btn_cancel') }}</button>
+                <button type="button" class="btn btn-primary" id="saveConfigMapBtn">{{ t('config.btn_save') }}</button>
               </div>
             </div>
           </div>
@@ -1046,11 +1046,11 @@ window.editConfigMap = function(name, namespace) {
         const newRowHtml = `
           <div class="row mb-3 config-data-row">
             <div class="col-md-3">
-              <label class="form-label">Key</label>
+              <label class="form-label">{{ t('config.kv_key_label') }}</label>
               <input type="text" class="form-control config-key" value="" data-original-key="">
             </div>
             <div class="col-md-8">
-              <label class="form-label">Value</label>
+              <label class="form-label">{{ t('config.kv_value_label') }}</label>
               <textarea class="form-control config-value" rows="3" style="font-family: monospace;"></textarea>
             </div>
             <div class="col-md-1 d-flex align-items-end">
@@ -1103,7 +1103,7 @@ window.editConfigMap = function(name, namespace) {
           }
           
           if (newData.hasOwnProperty(key)) {
-            showToast('Tekrarlanan anahtar bulundu: ' + key, 'error');
+            showToast('{{ t("config.toast_duplicate_key") }}: ' + key, 'error');
             hasError = true;
             return;
           }
@@ -1133,9 +1133,9 @@ window.editConfigMap = function(name, namespace) {
           setRequestInactive(saveRequestKey);
           
           if (result.error) {
-            showToast('ConfigMap güncellenirken hata: ' + result.error, 'error');
+            showToast('{{ t("config.toast_configmap_update_error") }}: ' + result.error, 'error');
           } else {
-            showToast('ConfigMap başarıyla güncellendi', 'success');
+            showToast('{{ t("config.toast_configmap_updated") }}', 'success');
             modal.hide();
             // Refresh the page to show updated data
             setTimeout(() => {
@@ -1146,14 +1146,14 @@ window.editConfigMap = function(name, namespace) {
         .catch(error => {
           setRequestInactive(saveRequestKey);
           console.error('Error updating configmap:', error);
-          showToast('ConfigMap güncellenirken hata oluştu', 'error');
+          showToast('{{ t("config.toast_configmap_update_error") }}', 'error');
         });
       });
     })
     .catch(error => {
       setRequestInactive(requestKey);
       console.error('Error fetching configmap:', error);
-      showToast('ConfigMap yüklenirken hata oluştu', 'error');
+      showToast('{{ t("config.toast_configmap_load_error") }}', 'error');
     });
 };
 
@@ -1250,7 +1250,7 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         };
         ensureOpt('default', 'default');
-        ensureOpt('all', 'Tümü');
+        ensureOpt('all', '{{ t("cmsecrets.filter_all_ns") }}');
         j.namespaces.forEach(ns => ensureOpt(ns, ns));
         hpaSel.value = j.namespaces.includes('default') ? 'default' : 'all';
         hpaSel.addEventListener('change', () => {
@@ -1267,7 +1267,7 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         };
         ensureOpt2('default', 'default');
-        ensureOpt2('all', 'Tümü');
+        ensureOpt2('all', '{{ t("cmsecrets.filter_all_ns") }}');
         j.namespaces.forEach(ns => ensureOpt2(ns, ns));
         pdbSel.value = j.namespaces.includes('default') ? 'default' : 'all';
         pdbSel.addEventListener('change', () => {
@@ -1284,7 +1284,7 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         };
         ensureOpt3('default', 'default');
-        ensureOpt3('all', 'Tümü');
+        ensureOpt3('all', '{{ t("cmsecrets.filter_all_ns") }}');
         j.namespaces.forEach(ns => ensureOpt3(ns, ns));
         pcSel.value = j.namespaces.includes('default') ? 'default' : 'all';
         pcSel.addEventListener('change', () => {
@@ -1301,7 +1301,7 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         };
         ensureOpt4('default', 'default');
-        ensureOpt4('all', 'Tümü');
+        ensureOpt4('all', '{{ t("cmsecrets.filter_all_ns") }}');
         j.namespaces.forEach(ns => ensureOpt4(ns, ns));
         rcSel.value = j.namespaces.includes('default') ? 'default' : 'all';
         rcSel.addEventListener('change', () => {
@@ -1318,7 +1318,7 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         };
         ensureOpt5('default', 'default');
-        ensureOpt5('all', 'Tümü');
+        ensureOpt5('all', '{{ t("cmsecrets.filter_all_ns") }}');
         j.namespaces.forEach(ns => ensureOpt5(ns, ns));
         leasesSel.value = j.namespaces.includes('default') ? 'default' : 'all';
         leasesSel.addEventListener('change', () => {
@@ -1335,7 +1335,7 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         };
         ensureOpt6('default', 'default');
-        ensureOpt6('all', 'Tümü');
+        ensureOpt6('all', '{{ t("cmsecrets.filter_all_ns") }}');
         j.namespaces.forEach(ns => ensureOpt6(ns, ns));
         mutSel.value = j.namespaces.includes('default') ? 'default' : 'all';
         mutSel.addEventListener('change', () => {
@@ -1351,7 +1351,7 @@ document.addEventListener('DOMContentLoaded', function() {
           }
         };
         ensureOpt7('default', 'default');
-        ensureOpt7('all', 'Tümü');
+        ensureOpt7('all', '{{ t("cmsecrets.filter_all_ns") }}');
         j.namespaces.forEach(ns => ensureOpt7(ns, ns));
         valSel.value = j.namespaces.includes('default') ? 'default' : 'all';
         valSel.addEventListener('change', () => {
@@ -1503,7 +1503,7 @@ function updateOverviewCharts() {
           series: [{
             type: 'pie',
             radius: '70%',
-            data: [ { value: 1, name: 'Simülasyon Modu' } ],
+            data: [ { value: 1, name: '{{ t("config.simulation_mode") }}' } ],
             emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' }}
           }]
         });
@@ -1563,23 +1563,23 @@ async function fetchAndRenderConfigMapsTable() {
         <table class="table table-hover mb-0">
           <thead>
             <tr>
-              <th>Namespace</th>
-              <th>Name</th>
-              <th>Data Keys</th>
-              <th>Age</th>
-              <th>Actions</th>
+              <th>{{ t("config.col_namespace") }}</th>
+              <th>{{ t("config.col_name") }}</th>
+              <th>{{ t("config.col_data_keys") }}</th>
+              <th>{{ t("config.col_age") }}</th>
+              <th>{{ t("config.col_actions") }}</th>
             </tr>
           </thead>
           <tbody>
     `;
     
     configmaps.forEach(cm => {
-      const age = cm.creation_timestamp ? calculateAge(cm.creation_timestamp) : 'Unknown';
+      const age = cm.creation_timestamp ? calculateAge(cm.creation_timestamp) : '{{ t("config.unknown") }}';
       tableHtml += `
         <tr>
           <td><span class="badge bg-primary">${cm.namespace}</span></td>
           <td><strong>${cm.name}</strong></td>
-          <td><span class="badge bg-info">${cm.data_count} keys</span></td>
+          <td><span class="badge bg-info">${cm.data_count} {{ t("config.unit_keys") }}</span></td>
           <td>${age}</td>
           <td>
                 <button type="button" class="btn btn-sm btn-outline-primary me-1 btn-view-configmap" data-name="${cm.name}" data-namespace="${cm.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('view', '${cm.name}', '${cm.namespace}')">
@@ -1612,7 +1612,7 @@ async function fetchAndRenderConfigMapsTable() {
     });
     
   } catch (error) {
-    container.innerHTML = '<div class="alert alert-danger">ConfigMap listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+    container.innerHTML = '<div class="alert alert-danger">{{ t("config.error_configmaps") }}: ' + error.message + '</div>';
   }
 }
 
@@ -1631,19 +1631,19 @@ async function fetchAndRenderSecretsTable() {
         <table class="table table-hover mb-0">
           <thead>
             <tr>
-              <th>Namespace</th>
-              <th>Name</th>
-              <th>Type</th>
-              <th>Data Keys</th>
-              <th>Age</th>
-              <th>Actions</th>
+              <th>{{ t("config.col_namespace") }}</th>
+              <th>{{ t("config.col_name") }}</th>
+              <th>{{ t("config.col_type") }}</th>
+              <th>{{ t("config.col_data_keys") }}</th>
+              <th>{{ t("config.col_age") }}</th>
+              <th>{{ t("config.col_actions") }}</th>
             </tr>
           </thead>
           <tbody>
     `;
     
     secrets.forEach(secret => {
-      const age = secret.creation_timestamp ? calculateAge(secret.creation_timestamp) : 'Unknown';
+      const age = secret.creation_timestamp ? calculateAge(secret.creation_timestamp) : '{{ t("config.unknown") }}';
       const typeColor = secret.type === 'kubernetes.io/service-account-token' ? 'bg-success' : 
                        secret.type === 'kubernetes.io/tls' ? 'bg-warning' : 'bg-secondary';
       tableHtml += `
@@ -1651,7 +1651,7 @@ async function fetchAndRenderSecretsTable() {
           <td><span class="badge bg-primary">${secret.namespace}</span></td>
           <td><strong>${secret.name}</strong></td>
           <td><span class="badge ${typeColor}">${secret.type}</span></td>
-          <td><span class="badge bg-info">${secret.data_count} keys</span></td>
+          <td><span class="badge bg-info">${secret.data_count} {{ t("config.unit_keys") }}</span></td>
           <td>${age}</td>
               <td>
                 <button type="button" class="btn btn-sm btn-outline-primary me-1 btn-view-secret" data-name="${secret.name}" data-namespace="${secret.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('view-secret', '${secret.name}', '${secret.namespace}')">
@@ -1676,7 +1676,7 @@ async function fetchAndRenderSecretsTable() {
   container.querySelectorAll('.btn-delete-secret').forEach(btn => btn.addEventListener('click', () => { const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.deleteSecret && window.deleteSecret(name, namespace); } catch(e){console.error(e);} }));
     
   } catch (error) {
-    container.innerHTML = '<div class="alert alert-danger">Secret listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+    container.innerHTML = '<div class="alert alert-danger">{{ t("config.error_secrets") }}: ' + error.message + '</div>';
   }
 }
 
@@ -1694,27 +1694,27 @@ async function fetchAndRenderResourceQuotasTable() {
         <table class="table table-hover mb-0">
           <thead>
             <tr>
-              <th>Namespace</th>
-              <th>Name</th>
-              <th>Hard Limits</th>
-              <th>Used</th>
-              <th>Age</th>
-              <th>Actions</th>
+              <th>{{ t("config.col_namespace") }}</th>
+              <th>{{ t("config.col_name") }}</th>
+              <th>{{ t("config.col_hard_limits") }}</th>
+              <th>{{ t("config.col_used") }}</th>
+              <th>{{ t("config.col_age") }}</th>
+              <th>{{ t("config.col_actions") }}</th>
             </tr>
           </thead>
           <tbody>
     `;
     
     quotas.forEach(quota => {
-      const age = quota.creation_timestamp ? calculateAge(quota.creation_timestamp) : 'Unknown';
+      const age = quota.creation_timestamp ? calculateAge(quota.creation_timestamp) : '{{ t("config.unknown") }}';
       const hardLimits = Object.keys(quota.hard).length;
       const usedResources = Object.keys(quota.used).length;
       tableHtml += `
         <tr>
           <td><span class="badge bg-primary">${quota.namespace}</span></td>
           <td><strong>${quota.name}</strong></td>
-          <td><span class="badge bg-warning">${hardLimits} limits</span></td>
-          <td><span class="badge bg-info">${usedResources} used</span></td>
+          <td><span class="badge bg-warning">${hardLimits} {{ t("config.unit_limits") }}</span></td>
+          <td><span class="badge bg-info">${usedResources} {{ t("config.unit_used") }}</span></td>
           <td>${age}</td>
           <td>
             <button class="btn btn-sm btn-outline-primary me-1">
@@ -1732,7 +1732,7 @@ async function fetchAndRenderResourceQuotasTable() {
     container.innerHTML = tableHtml;
     
   } catch (error) {
-    container.innerHTML = '<div class="alert alert-danger">Resource Quota listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+    container.innerHTML = '<div class="alert alert-danger">{{ t("config.error_resource_quotas") }}: ' + error.message + '</div>';
   }
 }
 
@@ -1750,23 +1750,23 @@ async function fetchAndRenderLimitRangesTable() {
         <table class="table table-hover mb-0">
           <thead>
             <tr>
-              <th>Namespace</th>
-              <th>Name</th>
-              <th>Limits Count</th>
-              <th>Age</th>
-              <th>Actions</th>
+              <th>{{ t("config.col_namespace") }}</th>
+              <th>{{ t("config.col_name") }}</th>
+              <th>{{ t("config.col_limits_count") }}</th>
+              <th>{{ t("config.col_age") }}</th>
+              <th>{{ t("config.col_actions") }}</th>
             </tr>
           </thead>
           <tbody>
     `;
     
     limitRanges.forEach(lr => {
-      const age = lr.creation_timestamp ? calculateAge(lr.creation_timestamp) : 'Unknown';
+      const age = lr.creation_timestamp ? calculateAge(lr.creation_timestamp) : '{{ t("config.unknown") }}';
       tableHtml += `
         <tr>
           <td><span class="badge bg-primary">${lr.namespace}</span></td>
           <td><strong>${lr.name}</strong></td>
-          <td><span class="badge bg-info">${lr.limits_count} limits</span></td>
+          <td><span class="badge bg-info">${lr.limits_count} {{ t("config.unit_limits") }}</span></td>
           <td>${age}</td>
           <td>
             <button class="btn btn-sm btn-outline-primary me-1">
@@ -1784,7 +1784,7 @@ async function fetchAndRenderLimitRangesTable() {
     container.innerHTML = tableHtml;
     
   } catch (error) {
-    container.innerHTML = '<div class="alert alert-danger">Limit Range listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+    container.innerHTML = '<div class="alert alert-danger">{{ t("config.error_limit_ranges") }}: ' + error.message + '</div>';
   }
 }
 
@@ -1807,20 +1807,20 @@ async function fetchAndRenderHPATable() {
         <table class="table table-hover mb-0">
           <thead>
             <tr>
-              <th>Namespace</th>
-              <th>Name</th>
-              <th>Target</th>
-              <th>Replicas (cur/desired)</th>
-              <th>Min/Max</th>
-        <th>Age</th>
-        <th>Actions</th>
+              <th>{{ t("config.col_namespace") }}</th>
+              <th>{{ t("config.col_name") }}</th>
+              <th>{{ t("config.col_target") }}</th>
+              <th>{{ t("config.col_replicas") }}</th>
+              <th>{{ t("config.col_minmax") }}</th>
+        <th>{{ t("config.col_age") }}</th>
+        <th>{{ t("config.col_actions") }}</th>
             </tr>
           </thead>
           <tbody>
     `;
 
     hpas.forEach(h => {
-      const age = h.creation_timestamp ? calculateAge(h.creation_timestamp) : 'Unknown';
+      const age = h.creation_timestamp ? calculateAge(h.creation_timestamp) : '{{ t("config.unknown") }}';
       const target = [h.target_kind, h.target_name].filter(Boolean).join('/');
       const cur = h.current_replicas ?? '-';
       const des = h.desired_replicas ?? '-';
@@ -1854,23 +1854,23 @@ async function fetchAndRenderHPATable() {
       const name = btn.getAttribute('data-name');
       const namespace = btn.getAttribute('data-namespace');
       openConfirmModal({
-        title: 'HPA Sil',
-        message: `"${name}" HPA'sini "${namespace}" namespace'inde silmek istediğinizden emin misiniz?`,
-        confirmText: 'Evet, Sil',
+        title: '{{ t("config.confirm_title_hpa_delete") }}',
+        message: `"${name}" (${namespace}) ` + '{{ t("config.confirm_delete_hpa_msg") }}',
+        confirmText: '{{ t("config.confirm_yes_delete") }}',
         confirmBtnClass: 'btn-danger',
         onConfirm: async () => {
           try {
             const resp = await fetch('/k8s-explorer/delete-hpa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, namespace }) });
             const j = await resp.json();
-            if (j.error) { showToast('Silme hatası: ' + j.error, 'error'); return; }
-            showToast('HPA başarıyla silindi', 'success');
+            if (j.error) { showToast('{{ t("config.toast_delete_error") }} ' + j.error, 'error'); return; }
+            showToast('{{ t("config.toast_hpa_deleted") }}', 'success');
             fetchAndRenderHPATable();
-          } catch (e) { showToast('Silme hatası: ' + e.message, 'error'); }
+          } catch (e) { showToast('{{ t("config.toast_delete_error") }} ' + e.message, 'error'); }
         }
       });
     }));
   } catch (err) {
-    container.innerHTML = '<div class="alert alert-danger">HPA listesi yüklenirken hata oluştu: ' + err.message + '</div>';
+    container.innerHTML = '<div class="alert alert-danger">{{ t("config.error_hpa") }} ' + err.message + '</div>';
   }
 }
 
@@ -1893,22 +1893,22 @@ async function fetchAndRenderPDBTable() {
         <table class="table table-hover mb-0">
           <thead>
             <tr>
-              <th>Namespace</th>
-              <th>Name</th>
+              <th>{{ t("config.col_namespace") }}</th>
+              <th>{{ t("config.col_name") }}</th>
               <th>MinAvailable</th>
               <th>MaxUnavailable</th>
-              <th>Disruptions</th>
-              <th>Healthy (cur/desired)</th>
-              <th>Expected Pods</th>
-              <th>Age</th>
-              <th>Actions</th>
+              <th>{{ t("config.col_disruptions") }}</th>
+              <th>{{ t("config.col_healthy") }}</th>
+              <th>{{ t("config.col_expected_pods") }}</th>
+              <th>{{ t("config.col_age") }}</th>
+              <th>{{ t("config.col_actions") }}</th>
             </tr>
           </thead>
           <tbody>
     `;
 
     pdbs.forEach(p => {
-      const age = p.creation_timestamp ? calculateAge(p.creation_timestamp) : 'Unknown';
+      const age = p.creation_timestamp ? calculateAge(p.creation_timestamp) : '{{ t("config.unknown") }}';
       const disr = p.disruptions_allowed ?? '-';
       const healthy = `${p.current_healthy ?? '-'} / ${p.desired_healthy ?? '-'}`;
       html += `
@@ -1941,23 +1941,23 @@ async function fetchAndRenderPDBTable() {
       const name = btn.getAttribute('data-name');
       const namespace = btn.getAttribute('data-namespace');
       openConfirmModal({
-    title: 'PDB Sil',
-    message: `"${name}" PDB'sini "${namespace}" namespace'inde silmek istediğinizden emin misiniz?`,
-        confirmText: 'Evet, Sil',
+    title: '{{ t("config.confirm_title_pdb_delete") }}',
+    message: `"${name}" (${namespace}) ` + '{{ t("config.confirm_delete_pdb_msg") }}',
+        confirmText: '{{ t("config.confirm_yes_delete") }}',
         confirmBtnClass: 'btn-danger',
         onConfirm: async () => {
           try {
       const resp = await fetch('/k8s-explorer/delete-pdb', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, namespace }) });
             const j = await resp.json();
-            if (j.error) { showToast('Silme hatası: ' + j.error, 'error'); return; }
-      showToast('PDB başarıyla silindi', 'success');
+            if (j.error) { showToast('{{ t("config.toast_delete_error") }} ' + j.error, 'error'); return; }
+      showToast('{{ t("config.toast_pdb_deleted") }}', 'success');
       fetchAndRenderPDBTable();
-          } catch (e) { showToast('Silme hatası: ' + e.message, 'error'); }
+          } catch (e) { showToast('{{ t("config.toast_delete_error") }} ' + e.message, 'error'); }
         }
       });
     }));
   } catch (err) {
-    container.innerHTML = '<div class="alert alert-danger">PDB listesi yüklenirken hata oluştu: ' + err.message + '</div>';
+    container.innerHTML = '<div class="alert alert-danger">{{ t("config.error_pdb") }} ' + err.message + '</div>';
   }
 }
 
@@ -1968,7 +1968,7 @@ function openPdbEditModal(name, namespace) {
   fetch(`/k8s-explorer/pdb?name=${encodeURIComponent(name)}&namespace=${encodeURIComponent(namespace)}`)
     .then(r => r.json())
     .then(data => {
-  if (data.error) { showToast('PDB okunamadı: ' + data.error, 'error'); return; }
+  if (data.error) { showToast('{{ t("config.toast_pdb_read_error") }}: ' + data.error, 'error'); return; }
       const p = data.pdb || { name, namespace };
       const min = p.min_available ?? '';
       const max = p.max_unavailable ?? '';
@@ -1977,7 +1977,7 @@ function openPdbEditModal(name, namespace) {
           <div class="modal-dialog">
             <div class="modal-content">
               <div class="modal-header">
-                <h5 class="modal-title">PDB Düzenle: ${p.name}</h5>
+                <h5 class="modal-title">{{ t("config.modal_pdb_edit_title") }} ${p.name}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
               </div>
               <div class="modal-body">
@@ -1985,18 +1985,18 @@ function openPdbEditModal(name, namespace) {
                 <div class="row g-3">
                   <div class="col">
                     <label class="form-label">minAvailable</label>
-                    <input type="text" class="form-control" id="pdbMinInput" placeholder="örn: 1 veya 50%" value="${min}">
+                    <input type="text" class="form-control" id="pdbMinInput" placeholder="{{ t("config.placeholder_min_available") }}" value="${min}">
                   </div>
                   <div class="col">
                     <label class="form-label">maxUnavailable</label>
-                    <input type="text" class="form-control" id="pdbMaxInput" placeholder="örn: 1 veya 25%" value="${max}">
+                    <input type="text" class="form-control" id="pdbMaxInput" placeholder="{{ t("config.placeholder_max_unavailable") }}" value="${max}">
                   </div>
                 </div>
-                <small class="text-muted">Sayı veya yüzde (ör. 50%) kabul edilir.</small>
+                <small class="text-muted">{{ t("config.note_pdb_range") }}</small>
               </div>
               <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-                <button type="button" class="btn btn-primary" id="pdbSaveBtn">Kaydet</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('config.btn_close') }}</button>
+                <button type="button" class="btn btn-primary" id="pdbSaveBtn">{{ t('config.btn_save') }}</button>
               </div>
             </div>
           </div>
@@ -2011,19 +2011,19 @@ function openPdbEditModal(name, namespace) {
         const maxRaw = el.querySelector('#pdbMaxInput').value;
         const minVal = (minRaw === '' ? null : minRaw);
         const maxVal = (maxRaw === '' ? null : maxRaw);
-        if (minVal !== null && maxVal !== null) { showToast('minAvailable ve maxUnavailable aynı anda girilemez. Lütfen yalnızca birini doldurun.', 'error'); return; }
+        if (minVal !== null && maxVal !== null) { showToast('{{ t("config.error_pdb_conflicting") }}', 'error'); return; }
         try {
           const resp = await fetch('/k8s-explorer/update-pdb', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: p.name, namespace: p.namespace, min_available: minVal, max_unavailable: maxVal }) });
           const j = await resp.json();
-          if (j.error) { showToast('Güncelleme hatası: ' + j.error, 'error'); return; }
+          if (j.error) { showToast('{{ t("config.toast_update_error") }} ' + j.error, 'error'); return; }
           modal.hide();
-          showToast('PDB güncellendi', 'success');
+          showToast('{{ t("config.toast_pdb_updated") }}', 'success');
           fetchAndRenderPDBTable();
-        } catch (e) { showToast('Güncelleme hatası: ' + e.message, 'error'); }
+        } catch (e) { showToast('{{ t("config.toast_update_error") }} ' + e.message, 'error'); }
       });
       modal.show();
     })
-    .catch(e => alert('PDB getirilemedi: ' + e.message));
+    .catch(e => showToast('{{ t("config.toast_pdb_fetch_error") }} ' + e.message, 'error'));
 }
 
 function openHpaEditModal(name, namespace) {
@@ -2035,7 +2035,7 @@ function openHpaEditModal(name, namespace) {
   fetch(`/k8s-explorer/hpa?name=${encodeURIComponent(name)}&namespace=${encodeURIComponent(namespace)}`)
     .then(r => r.json())
     .then(data => {
-  if (data.error) { showToast('HPA okunamadı: ' + data.error, 'error'); return; }
+  if (data.error) { showToast('{{ t("config.toast_hpa_read_error") }}: ' + data.error, 'error'); return; }
       const h = data.hpa || { name, namespace };
       const min = h.min_replicas ?? '';
       const max = h.max_replicas ?? '';
@@ -2046,7 +2046,7 @@ function openHpaEditModal(name, namespace) {
           <div class="modal-dialog">
             <div class="modal-content">
               <div class="modal-header">
-                <h5 class="modal-title">HPA Düzenle: ${h.name}</h5>
+                <h5 class="modal-title">{{ t("config.modal_hpa_edit_title") }} ${h.name}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
               </div>
               <div class="modal-body">
@@ -2062,11 +2062,11 @@ function openHpaEditModal(name, namespace) {
                     <input type="number" min="1" class="form-control" id="hpaMaxInput" value="${max}">
                   </div>
                 </div>
-                <small class="text-muted">Yalnızca min/max kopya sayıları güncellenir.</small>
+                <small class="text-muted">{{ t("config.note_hpa_update") }}</small>
               </div>
               <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-                <button type="button" class="btn btn-primary" id="hpaSaveBtn">Kaydet</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('config.btn_close') }}</button>
+                <button type="button" class="btn btn-primary" id="hpaSaveBtn">{{ t('config.btn_save') }}</button>
               </div>
             </div>
           </div>
@@ -2082,15 +2082,15 @@ function openHpaEditModal(name, namespace) {
         try {
           const resp = await fetch('/k8s-explorer/update-hpa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: h.name, namespace: h.namespace, min_replicas: minVal === '' ? null : Number(minVal), max_replicas: maxVal === '' ? null : Number(maxVal) }) });
           const j = await resp.json();
-          if (j.error) { showToast('Güncelleme hatası: ' + j.error, 'error'); return; }
+          if (j.error) { showToast('{{ t("config.toast_update_error") }} ' + j.error, 'error'); return; }
           modal.hide();
-          showToast('HPA güncellendi', 'success');
+          showToast('{{ t("config.toast_hpa_updated") }}', 'success');
           fetchAndRenderHPATable();
-        } catch (e) { showToast('Güncelleme hatası: ' + e.message, 'error'); }
+        } catch (e) { showToast('{{ t("config.toast_update_error") }} ' + e.message, 'error'); }
       });
       modal.show();
     })
-  .catch(e => showToast('HPA getirilemedi: ' + e.message, 'error'));
+  .catch(e => showToast('{{ t("config.toast_hpa_fetch_error") }} ' + e.message, 'error'));
 }
 
 // Priority Classes table rendering
@@ -2113,21 +2113,21 @@ async function fetchAndRenderPriorityClassesTable() {
         <table class="table table-hover mb-0">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Value</th>
-              <th>Global Default</th>
+              <th>{{ t("config.col_name") }}</th>
+              <th>{{ t("config.col_value") }}</th>
+              <th>{{ t("config.col_global_default") }}</th>
               <th>Preemption</th>
-              <th>Description</th>
-              <th>Age</th>
-              <th style="white-space: nowrap;">Actions</th>
+              <th>{{ t("config.col_description") }}</th>
+              <th>{{ t("config.col_age") }}</th>
+              <th style="white-space: nowrap;">{{ t("config.col_actions") }}</th>
             </tr>
           </thead>
           <tbody>
     `;
 
     pcs.forEach(pc => {
-      const age = pc.creation_timestamp ? calculateAge(pc.creation_timestamp) : 'Unknown';
-      const gdef = pc.global_default ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>';
+      const age = pc.creation_timestamp ? calculateAge(pc.creation_timestamp) : '{{ t("config.unknown") }}';
+      const gdef = pc.global_default ? '<span class="badge bg-success">{{ t("config.bool_yes") }}</span>' : '<span class="badge bg-secondary">{{ t("config.bool_no") }}</span>';
       html += `
         <tr>
           <td><strong>${pc.name || '-'}</strong></td>
@@ -2155,23 +2155,23 @@ async function fetchAndRenderPriorityClassesTable() {
     container.querySelectorAll('.btn-delete-pc').forEach(btn => btn.addEventListener('click', () => {
       const name = btn.getAttribute('data-name');
       openConfirmModal({
-        title: 'PriorityClass Sil',
-        message: `"${name}" PriorityClass'ını silmek istediğinizden emin misiniz?`,
-        confirmText: 'Evet, Sil',
+        title: '{{ t("config.confirm_title_pc_delete") }}',
+        message: `"${name}" ` + '{{ t("config.confirm_delete_pc_msg") }}',
+        confirmText: '{{ t("config.confirm_yes_delete") }}',
         confirmBtnClass: 'btn-danger',
         onConfirm: async () => {
           try {
             const resp = await fetch('/k8s-explorer/delete-priority-class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
             const j = await resp.json();
-            if (j.error) { showToast('Silme hatası: ' + j.error, 'error'); return; }
-            showToast('PriorityClass başarıyla silindi', 'success');
+            if (j.error) { showToast('{{ t("config.toast_delete_error") }} ' + j.error, 'error'); return; }
+            showToast('{{ t("config.toast_priority_class_deleted") }}', 'success');
             fetchAndRenderPriorityClassesTable();
-          } catch (e) { showToast('Silme hatası: ' + e.message, 'error'); }
+          } catch (e) { showToast('{{ t("config.toast_delete_error") }} ' + e.message, 'error'); }
         }
       });
     }));
   } catch (err) {
-    container.innerHTML = '<div class="alert alert-danger">PriorityClass listesi yüklenirken hata oluştu: ' + err.message + '</div>';
+    container.innerHTML = '<div class="alert alert-danger">{{ t("config.error_priority_classes") }} ' + err.message + '</div>';
   }
 }
 
@@ -2195,20 +2195,20 @@ async function fetchAndRenderRuntimeClassesTable() {
         <table class="table table-hover mb-0">
           <thead>
             <tr>
-              <th>Name</th>
+              <th>{{ t("config.col_name") }}</th>
               <th>Handler</th>
               <th>Node Selector</th>
               <th>Tolerations</th>
               <th>Overhead</th>
-              <th>Age</th>
-        <th>Actions</th>
+              <th>{{ t("config.col_age") }}</th>
+        <th>{{ t("config.col_actions") }}</th>
             </tr>
           </thead>
           <tbody>
     `;
 
     rcs.forEach(rc => {
-      const age = rc.creation_timestamp ? calculateAge(rc.creation_timestamp) : 'Unknown';
+      const age = rc.creation_timestamp ? calculateAge(rc.creation_timestamp) : '{{ t("config.unknown") }}';
       const nodeSel = rc.scheduling && rc.scheduling.node_selector ? Object.entries(rc.scheduling.node_selector).map(([k,v])=>`${k}=${v}`).join(', ') : '-';
       const tolerations = rc.scheduling && Array.isArray(rc.scheduling.tolerations) ? rc.scheduling.tolerations.length : 0;
       const overhead = rc.overhead ? JSON.stringify(rc.overhead) : '-';
@@ -2241,7 +2241,7 @@ async function fetchAndRenderRuntimeClassesTable() {
       deleteRuntimeClass(name);
     }));
   } catch (err) {
-    container.innerHTML = '<div class="alert alert-danger">RuntimeClass listesi yüklenirken hata oluştu: ' + err.message + '</div>';
+    container.innerHTML = '<div class="alert alert-danger">{{ t("config.error_runtime_classes") }} ' + err.message + '</div>';
   }
 }
 
@@ -2279,7 +2279,7 @@ async function fetchAndRenderLeasesTable() {
     `;
 
     leases.forEach(le => {
-      const age = le.creation_timestamp ? calculateAge(le.creation_timestamp) : 'Unknown';
+      const age = le.creation_timestamp ? calculateAge(le.creation_timestamp) : '{{ t("config.unknown") }}';
       html += `
         <tr>
           <td><span class="badge bg-secondary">${le.namespace || '-'}</span></td>
@@ -2297,7 +2297,7 @@ async function fetchAndRenderLeasesTable() {
     html += '</tbody></table></div>';
     container.innerHTML = html;
   } catch (err) {
-    container.innerHTML = '<div class="alert alert-danger">Lease listesi yüklenirken hata oluştu: ' + err.message + '</div>';
+    container.innerHTML = '<div class="alert alert-danger">{{ t("config.error_leases") }} ' + err.message + '</div>';
   }
 }
 
@@ -2340,7 +2340,7 @@ async function fetchAndRenderMutatingWebhooksTable(page = __mutatingPage) {
           <tbody>
     `;
     pageItems.forEach(it => {
-      const age = it.creation_timestamp ? calculateAge(it.creation_timestamp) : 'Unknown';
+      const age = it.creation_timestamp ? calculateAge(it.creation_timestamp) : '{{ t("config.unknown") }}';
       const services = Array.isArray(it.services) && it.services.length ? it.services.map(s => `${s.namespace}/${s.name}${s.path ? s.path : ''}`).join('<br>') : '-';
       html += `
         <tr>
@@ -2359,10 +2359,10 @@ async function fetchAndRenderMutatingWebhooksTable(page = __mutatingPage) {
     const pager = document.getElementById('mutating-pagination');
     if (pager) {
       pager.innerHTML = `
-        <div class="small text-muted">Toplam: ${total} • Sayfa ${__mutatingPage}/${totalPages}</div>
+        <div class="small text-muted">{{ t("config.total_label") }} ${total} • {{ t("config.page_label") }} ${__mutatingPage}/${totalPages}</div>
         <div class="btn-group btn-group-sm">
-          <button class="btn btn-outline-secondary" ${__mutatingPage===1?'disabled':''} id="mutPrev">Önceki</button>
-          <button class="btn btn-outline-secondary" ${__mutatingPage===totalPages?'disabled':''} id="mutNext">Sonraki</button>
+          <button class="btn btn-outline-secondary" ${__mutatingPage===1?'disabled':''} id="mutPrev">{{ t("config.btn_prev") }}</button>
+          <button class="btn btn-outline-secondary" ${__mutatingPage===totalPages?'disabled':''} id="mutNext">{{ t("config.btn_next") }}</button>
         </div>`;
       const prev = document.getElementById('mutPrev');
       const next = document.getElementById('mutNext');
@@ -2370,7 +2370,7 @@ async function fetchAndRenderMutatingWebhooksTable(page = __mutatingPage) {
       if (next) next.addEventListener('click', () => fetchAndRenderMutatingWebhooksTable(__mutatingPage + 1));
     }
   } catch (err) {
-    container.innerHTML = '<div class="alert alert-danger">Mutating webhook listesi yüklenirken hata oluştu: ' + err.message + '</div>';
+    container.innerHTML = '<div class="alert alert-danger">{{ t("config.error_mutating_webhooks") }} ' + err.message + '</div>';
   }
 }
 
@@ -2380,7 +2380,7 @@ const __validatingPageSize = 5;
 async function fetchAndRenderValidatingWebhooksTable(page = __validatingPage) {
   const container = document.getElementById('validating-table-container');
   if (!container) return;
-  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-4"><div class="loading-spinner me-2"></div><span class="text-muted">Validating webhook listesi yükleniyor...</span></div>';
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-4"><div class="loading-spinner me-2"></div><span class="text-muted">{{ t("config.loading_validating_webhooks") }}</span></div>';
 
   try {
     const sel = document.getElementById('validatingNamespaceFilter');
@@ -2413,7 +2413,7 @@ async function fetchAndRenderValidatingWebhooksTable(page = __validatingPage) {
           <tbody>
     `;
     pageItems.forEach(it => {
-      const age = it.creation_timestamp ? calculateAge(it.creation_timestamp) : 'Unknown';
+      const age = it.creation_timestamp ? calculateAge(it.creation_timestamp) : '{{ t("config.unknown") }}';
       const services = Array.isArray(it.services) && it.services.length ? it.services.map(s => `${s.namespace}/${s.name}${s.path ? s.path : ''}`).join('<br>') : '-';
       html += `
         <tr>
@@ -2432,10 +2432,10 @@ async function fetchAndRenderValidatingWebhooksTable(page = __validatingPage) {
     const pager = document.getElementById('validating-pagination');
     if (pager) {
       pager.innerHTML = `
-        <div class="small text-muted">Toplam: ${total} • Sayfa ${__validatingPage}/${totalPages}</div>
+        <div class="small text-muted">{{ t("config.total_label") }} ${total} • {{ t("config.page_label") }} ${__validatingPage}/${totalPages}</div>
         <div class="btn-group btn-group-sm">
-          <button class="btn btn-outline-secondary" ${__validatingPage===1?'disabled':''} id="valPrev">Önceki</button>
-          <button class="btn btn-outline-secondary" ${__validatingPage===totalPages?'disabled':''} id="valNext">Sonraki</button>
+          <button class="btn btn-outline-secondary" ${__validatingPage===1?'disabled':''} id="valPrev">{{ t("config.btn_prev") }}</button>
+          <button class="btn btn-outline-secondary" ${__validatingPage===totalPages?'disabled':''} id="valNext">{{ t("config.btn_next") }}</button>
         </div>`;
       const prev = document.getElementById('valPrev');
       const next = document.getElementById('valNext');
@@ -2443,7 +2443,7 @@ async function fetchAndRenderValidatingWebhooksTable(page = __validatingPage) {
       if (next) next.addEventListener('click', () => fetchAndRenderValidatingWebhooksTable(__validatingPage + 1));
     }
   } catch (err) {
-    container.innerHTML = '<div class="alert alert-danger">Validating webhook listesi yüklenirken hata oluştu: ' + err.message + '</div>';
+    container.innerHTML = '<div class="alert alert-danger">{{ t("config.error_validating_webhooks") }} ' + err.message + '</div>';
   }
 }
 
@@ -2455,7 +2455,7 @@ function openRcEditModal(name) {
   fetch(`/k8s-explorer/runtime-class?name=${encodeURIComponent(name)}`)
     .then(r => r.json())
     .then(data => {
-      if (data.error) { showToast('RuntimeClass okunamadı: ' + data.error, 'error'); return; }
+      if (data.error) { showToast('{{ t("config.toast_runtime_class_read_error") }} ' + data.error, 'error'); return; }
       const rc = data.runtime_class || { name };
       const nodeSelStr = rc.scheduling && rc.scheduling.node_selector ? Object.entries(rc.scheduling.node_selector).map(([k,v])=>`${k}=${v}`).join(',') : '';
       const tolStr = rc.scheduling && rc.scheduling.tolerations ? JSON.stringify(rc.scheduling.tolerations, null, 2) : '';
@@ -2466,7 +2466,7 @@ function openRcEditModal(name) {
           <div class="modal-dialog modal-lg">
             <div class="modal-content">
               <div class="modal-header">
-                <h5 class="modal-title">RuntimeClass Düzenle: ${rc.name}</h5>
+                <h5 class="modal-title">{{ t("config.modal_rc_edit_title") }} ${rc.name}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
               </div>
               <div class="modal-body">
@@ -2486,11 +2486,11 @@ function openRcEditModal(name) {
                   <label class="form-label">Overhead (JSON object)</label>
                   <textarea class="form-control" id="rcOverheadInput" rows="4" placeholder='{"podFixed":{"cpu":"100m","memory":"128Mi"}}'>${overheadStr}</textarea>
                 </div>
-                <small class="text-muted">Handler alanı değiştirilemez. Node selector virgülle ayrılmış anahtar=değer çiftleridir. Tolerations ve Overhead JSON bekler.</small>
+                <small class="text-muted">{{ t("config.note_rc_edit") }}</small>
               </div>
               <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
-                <button type="button" class="btn btn-primary" id="rcSaveBtn">Kaydet</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('config.btn_close') }}</button>
+                <button type="button" class="btn btn-primary" id="rcSaveBtn">{{ t('config.btn_save') }}</button>
               </div>
             </div>
           </div>
@@ -2511,31 +2511,31 @@ function openRcEditModal(name) {
         try {
           const resp = await fetch('/k8s-explorer/update-runtime-class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
           const j = await resp.json();
-          if (j.error) { showToast('Güncelleme hatası: ' + j.error, 'error'); return; }
+          if (j.error) { showToast('{{ t("config.toast_update_error") }} ' + j.error, 'error'); return; }
           modal.hide();
-          showToast('RuntimeClass güncellendi', 'success');
+          showToast('{{ t("config.toast_runtime_class_updated") }}', 'success');
           fetchAndRenderRuntimeClassesTable();
-        } catch (e) { showToast('Güncelleme hatası: ' + e.message, 'error'); }
+        } catch (e) { showToast('{{ t("config.toast_update_error") }} ' + e.message, 'error'); }
       });
       modal.show();
     })
-    .catch(e => showToast('RuntimeClass getirilemedi: ' + e.message, 'error'));
+    .catch(e => showToast('{{ t("config.toast_runtime_class_fetch_error") }} ' + e.message, 'error'));
 }
 
 function deleteRuntimeClass(name) {
   openConfirmModal({
-    title: 'RuntimeClass Sil',
-    message: `"${name}" RuntimeClass'ını silmek istediğinizden emin misiniz?`,
-    confirmText: 'Evet, Sil',
+    title: '{{ t("config.confirm_title_runtime_class_delete") }}',
+    message: `"${name}" ` + '{{ t("config.confirm_delete_rc_msg") }}',
+    confirmText: '{{ t("config.confirm_yes_delete") }}',
     confirmBtnClass: 'btn-danger',
     onConfirm: async () => {
       try {
         const resp = await fetch('/k8s-explorer/delete-runtime-class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
         const j = await resp.json();
-        if (j.error) { showToast('Silme hatası: ' + j.error, 'error'); return; }
-        showToast('RuntimeClass başarıyla silindi', 'success');
+        if (j.error) { showToast('{{ t("config.toast_delete_error") }} ' + j.error, 'error'); return; }
+        showToast('{{ t("config.toast_runtime_class_deleted") }}', 'success');
         fetchAndRenderRuntimeClassesTable();
-      } catch (e) { showToast('Silme hatası: ' + e.message, 'error'); }
+      } catch (e) { showToast('{{ t("config.toast_delete_error") }} ' + e.message, 'error'); }
     }
   });
 }
@@ -2548,14 +2548,14 @@ function openPcEditModal(name) {
   fetch(`/k8s-explorer/priority-class?name=${encodeURIComponent(name)}`)
     .then(r => r.json())
     .then(data => {
-      if (data.error) { showToast('PriorityClass okunamadı: ' + data.error, 'error'); return; }
+      if (data.error) { showToast('{{ t("config.toast_priority_class_read_error") }} ' + data.error, 'error'); return; }
       const pc = data.priority_class || { name };
       const modalHtml = `
         <div class=\"modal fade\" id=\"pcEditModal\" tabindex=\"-1\">
           <div class=\"modal-dialog\">
             <div class=\"modal-content\">
               <div class=\"modal-header\">
-                <h5 class=\"modal-title\">PriorityClass Düzenle: ${pc.name}</h5>
+                <h5 class=\"modal-title\">{{ t("config.modal_pc_edit_title") }} ${pc.name}</h5>
                 <button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\"></button>
               </div>
               <div class=\"modal-body\">
@@ -2567,7 +2567,7 @@ function openPcEditModal(name) {
                   <div class=\"col-6\">
                     <label class=\"form-label\">Global Default</label>
                     <select class=\"form-select\" id=\"pcGlobalDefaultInput\">
-                      <option value=\"\" ${pc.global_default === null || pc.global_default === undefined ? 'selected' : ''}>Değiştirme</option>
+                      <option value=\"\" ${pc.global_default === null || pc.global_default === undefined ? 'selected' : ''}>{{ t("config.option_no_change") }}</option>
                       <option value=\"true\" ${pc.global_default === true ? 'selected' : ''}>true</option>
                       <option value=\"false\" ${pc.global_default === false ? 'selected' : ''}>false</option>
                     </select>
@@ -2581,11 +2581,11 @@ function openPcEditModal(name) {
                     <textarea class=\"form-control\" id=\"pcDescriptionInput\" rows=\"3\">${pc.description ?? ''}</textarea>
                   </div>
                 </div>
-                <small class=\"text-muted\">Value alanı Kubernetes tarafından güncellemede değiştirilemez (immutable). Diğer alanlar: boş bırakılırsa değiştirilmez. Global Default için "Değiştirme" mevcut değeri korur.</small>
+                <small class=\"text-muted\">{{ t("config.note_pc_edit") }}</small>
               </div>
               <div class=\"modal-footer\">
-                <button type=\"button\" class=\"btn btn-secondary\" data-bs-dismiss=\"modal\">Kapat</button>
-                <button type=\"button\" class=\"btn btn-primary\" id=\"pcSaveBtn\">Kaydet</button>
+                <button type=\"button\" class=\"btn btn-secondary\" data-bs-dismiss=\"modal\">{{ t('config.btn_close') }}</button>
+                <button type=\"button\" class=\"btn btn-primary\" id=\"pcSaveBtn\">{{ t('config.btn_save') }}</button>
               </div>
             </div>
           </div>
@@ -2610,15 +2610,15 @@ function openPcEditModal(name) {
         try {
           const resp = await fetch('/k8s-explorer/update-priority-class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
           const j = await resp.json();
-          if (j.error) { showToast('Güncelleme hatası: ' + j.error, 'error'); return; }
+          if (j.error) { showToast('{{ t("config.toast_update_error") }} ' + j.error, 'error'); return; }
           modal.hide();
-          showToast('PriorityClass güncellendi', 'success');
+          showToast('{{ t("config.toast_priority_class_updated") }}', 'success');
           fetchAndRenderPriorityClassesTable();
-        } catch (e) { showToast('Güncelleme hatası: ' + e.message, 'error'); }
+        } catch (e) { showToast('{{ t("config.toast_update_error") }} ' + e.message, 'error'); }
       });
       modal.show();
     })
-    .catch(e => showToast('PriorityClass getirilemedi: ' + e.message, 'error'));
+    .catch(e => showToast('{{ t("config.toast_priority_class_fetch_error") }} ' + e.message, 'error'));
 }
 
 function refreshAllData() {
@@ -2644,7 +2644,7 @@ window.showSecret = function(name, namespace) {
     .then(response => response.json())
     .then(data => {
       if (data.error) {
-        showToast('Secret yüklenirken hata: ' + data.error, 'error');
+        showToast('{{ t("config.toast_secret_load_error") }} ' + data.error, 'error');
         return;
       }
       
@@ -2661,7 +2661,7 @@ window.showSecret = function(name, namespace) {
           <div class="modal-dialog modal-lg">
             <div class="modal-content">
               <div class="modal-header">
-                <h5 class="modal-title">Secret: ${secret.name}</h5>
+                <h5 class="modal-title">{{ t("config.modal_secret_view_title") }} ${secret.name}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
               </div>
               <div class="modal-body">
@@ -2678,9 +2678,9 @@ window.showSecret = function(name, namespace) {
                   <table class="table table-bordered">
                     <thead>
                       <tr>
-                        <th>Key</th>
-                        <th>Value</th>
-                        <th>Actions</th>
+                        <th>{{ t("config.col_key") }}</th>
+                        <th>{{ t("config.col_value") }}</th>
+                        <th>{{ t("config.col_actions") }}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2695,10 +2695,10 @@ window.showSecret = function(name, namespace) {
                           </td>
                           <td>
                             <div class="d-flex gap-1">
-                              <button type="button" class="btn btn-sm btn-outline-secondary toggle-secret-value" data-secret-idx="${idx}" title="Show / Hide">
-                                <i class="bi bi-eye"></i> Show
+                              <button type="button" class="btn btn-sm btn-outline-secondary toggle-secret-value" data-secret-idx="${idx}" title="{{ t('cmsecrets.btn_show') }} / {{ t('cmsecrets.btn_hide') }}">
+                                <i class="bi bi-eye"></i> {{ t('cmsecrets.btn_show') }}
                               </button>
-                              <button type="button" class="btn btn-sm btn-outline-secondary copy-secret-value" data-secret-idx="${idx}" title="Copy to clipboard">
+                              <button type="button" class="btn btn-sm btn-outline-secondary copy-secret-value" data-secret-idx="${idx}" title="{{ t('config.btn_copy_clipboard') }}">
                                 <i class="bi bi-clipboard"></i>
                               </button>
                             </div>
@@ -2710,8 +2710,8 @@ window.showSecret = function(name, namespace) {
                 </div>
               </div>
               <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" onclick="window.editSecret('${secret.name}', '${secret.namespace}');">Edit</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('config.btn_close') }}</button>
+                <button type="button" class="btn btn-primary" onclick="window.editSecret('${secret.name}', '${secret.namespace}');">{{ t('config.btn_edit') }}</button>
               </div>
             </div>
           </div>
@@ -2733,7 +2733,7 @@ window.showSecret = function(name, namespace) {
         shownPre.textContent = '';           // Remove value from DOM (Approach A)
         shownPre.classList.add('d-none');
         hiddenSpan.classList.remove('d-none');
-        toggleBtn.innerHTML = '<i class="bi bi-eye"></i> Show';
+        toggleBtn.innerHTML = '<i class="bi bi-eye"></i> {{ t("cmsecrets.btn_show") }}';
         if (remaskTimers[idx]) { clearTimeout(remaskTimers[idx]); delete remaskTimers[idx]; }
       }
 
@@ -2754,7 +2754,7 @@ window.showSecret = function(name, namespace) {
             shownPre.textContent = secretsMap[idx];
             shownPre.classList.remove('d-none');
             hiddenSpan.classList.add('d-none');
-            toggleBtn.innerHTML = '<i class="bi bi-eye-slash"></i> Hide';
+            toggleBtn.innerHTML = '<i class="bi bi-eye-slash"></i> {{ t("cmsecrets.btn_hide") }}';
             // Auto re-mask after 30 seconds
             if (remaskTimers[idx]) clearTimeout(remaskTimers[idx]);
             remaskTimers[idx] = setTimeout(() => maskSecretRow(container, toggleBtn, idx), 30000);
@@ -2787,7 +2787,7 @@ window.showSecret = function(name, namespace) {
     })
     .catch(error => {
       console.error('Error fetching Secret:', error);
-      showToast('Secret yüklenirken hata: ' + error.message, 'error');
+      showToast('{{ t("config.toast_secret_load_error") }} ' + error.message, 'error');
     });
 };
 
@@ -2839,7 +2839,7 @@ window.editSecret = function(name, namespace) {
       setRequestInactive(requestKey);
       
       if (data.error) {
-        showToast('Secret yüklenirken hata: ' + data.error, 'error');
+        showToast('{{ t("config.toast_secret_load_error") }} ' + data.error, 'error');
         return;
       }
       
@@ -2849,7 +2849,7 @@ window.editSecret = function(name, namespace) {
           <div class="modal-dialog modal-xl">
             <div class="modal-content">
               <div class="modal-header">
-                <h5 class="modal-title">Edit Secret: ${secret.name}</h5>
+                <h5 class="modal-title">{{ t("config.modal_secret_edit_title") }} ${secret.name}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
               </div>
               <div class="modal-body">
@@ -2861,17 +2861,17 @@ window.editSecret = function(name, namespace) {
                 </div>
                 <div class="mb-3">
                   <strong>Data:</strong>
-                  <small class="text-muted ms-2">Edit the key-value pairs below</small>
+                  <small class="text-muted ms-2">{{ t("config.edit_kv_pairs_below") }}</small>
                 </div>
                 <div id="secretDataEditor">
                   ${Object.entries(secret.data || {}).map(([key, value], index) => `
                     <div class="row mb-3 secret-data-row">
                       <div class="col-md-3">
-                        <label class="form-label">Key</label>
+                        <label class="form-label">{{ t("config.col_key") }}</label>
                         <input type="text" class="form-control secret-key" value="${key}" data-original-key="${key}">
                       </div>
                       <div class="col-md-8">
-                        <label class="form-label">Value</label>
+                        <label class="form-label">{{ t("config.col_value") }}</label>
                         <textarea class="form-control secret-value" rows="3" style="font-family: monospace;">${value}</textarea>
                       </div>
                       <div class="col-md-1 d-flex align-items-end">
@@ -2883,12 +2883,12 @@ window.editSecret = function(name, namespace) {
                   `).join('')}
                 </div>
                 <button type="button" class="btn btn-outline-success btn-sm" id="addSecretRow">
-                  <i class="bi bi-plus"></i> Add New Key-Value Pair
+                  <i class="bi bi-plus"></i> {{ t("config.kv_add_pair") }}
                 </button>
               </div>
               <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="saveSecret">Save Changes</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('config.btn_cancel') }}</button>
+                <button type="button" class="btn btn-primary" id="saveSecret">{{ t('config.btn_save') }}</button>
               </div>
             </div>
           </div>
@@ -2919,11 +2919,11 @@ window.editSecret = function(name, namespace) {
         const newRowHtml = `
           <div class="row mb-3 secret-data-row">
             <div class="col-md-3">
-              <label class="form-label">Key</label>
+              <label class="form-label">{{ t("config.col_key") }}</label>
               <input type="text" class="form-control secret-key" value="" data-original-key="">
             </div>
             <div class="col-md-8">
-              <label class="form-label">Value</label>
+              <label class="form-label">{{ t("config.col_value") }}</label>
               <textarea class="form-control secret-value" rows="3" style="font-family: monospace;"></textarea>
             </div>
             <div class="col-md-1 d-flex align-items-end">
@@ -2971,13 +2971,13 @@ window.editSecret = function(name, namespace) {
           const value = valueInput.value;
           
           if (key === '') {
-            showToast('Tüm anahtarların değeri olmalıdır', 'error');
+            showToast('{{ t("config.toast_secret_key_required") }}', 'error');
             hasError = true;
             return;
           }
           
           if (seenKeys.has(key)) {
-            showToast('Tekrarlanan anahtar bulundu: ' + key, 'error');
+            showToast('{{ t("config.toast_duplicate_key") }}: ' + key, 'error');
             hasError = true;
             return;
           }
@@ -2996,7 +2996,7 @@ window.editSecret = function(name, namespace) {
         setRequestActive(saveRequestKey);
         
         saveBtn.disabled = true;
-        saveBtn.textContent = 'Kaydediliyor...';
+        saveBtn.textContent = '{{ t("config.btn_saving") }}';
         
         // Save to backend
         fetch('/k8s-explorer/update-secret', {
@@ -3014,12 +3014,12 @@ window.editSecret = function(name, namespace) {
         .then(result => {
           setRequestInactive(saveRequestKey);
           saveBtn.disabled = false;
-          saveBtn.textContent = 'Kaydet';
+          saveBtn.textContent = '{{ t("config.btn_save") }}';
           
           if (result.error) {
-            showToast('Secret kaydedilirken hata: ' + result.error, 'error');
+            showToast('{{ t("config.toast_secret_save_error") }} ' + result.error, 'error');
           } else {
-            showToast('Secret başarıyla kaydedildi!', 'success');
+            showToast('{{ t("config.toast_secret_saved") }}', 'success');
             modal.hide();
             // Refresh the table
             if (typeof fetchAndRenderSecretsTable === 'function') {
@@ -3030,21 +3030,21 @@ window.editSecret = function(name, namespace) {
         .catch(error => {
           setRequestInactive(saveRequestKey);
           saveBtn.disabled = false;
-          saveBtn.textContent = 'Kaydet';
+          saveBtn.textContent = '{{ t("config.btn_save") }}';
           console.error('Error saving Secret:', error);
-          showToast('Secret kaydedilirken hata: ' + error.message, 'error');
+          showToast('{{ t("config.toast_secret_save_error") }} ' + error.message, 'error');
         })
         .finally(() => {
           // Re-enable save button
           saveBtn.disabled = false;
-          saveBtn.textContent = 'Değişiklikleri Kaydet';
+          saveBtn.textContent = '{{ t("config.btn_save") }}';
         });
       });
     })
     .catch(error => {
       setRequestInactive(requestKey);
       console.error('Error fetching Secret:', error);
-      showToast('Secret yüklenirken hata: ' + error.message, 'error');
+      showToast('{{ t("config.toast_secret_load_error") }} ' + error.message, 'error');
     });
 };
 
@@ -3057,7 +3057,7 @@ window.deleteSecret = function(name, namespace) {
     return;
   }
   
-  if (!confirm(`"${name}" Secret'ını "${namespace}" namespace'inde silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`)) {
+  if (!confirm(`"${name}" / "${namespace}": {{ t('config.confirm_delete_secret_msg') }}`)) {
     return;
   }
   
@@ -3078,9 +3078,9 @@ window.deleteSecret = function(name, namespace) {
     setRequestInactive(requestKey);
     
     if (result.error) {
-      showToast('Secret silinirken hata: ' + result.error, 'error');
+      showToast('{{ t("config.toast_secret_delete_error") }} ' + result.error, 'error');
     } else {
-      showToast('Secret başarıyla silindi!', 'success');
+      showToast('{{ t("config.toast_secret_deleted") }}', 'success');
       // Refresh the table
       if (typeof fetchAndRenderSecretsTable === 'function') {
         fetchAndRenderSecretsTable();
@@ -3090,7 +3090,7 @@ window.deleteSecret = function(name, namespace) {
   .catch(error => {
     setRequestInactive(requestKey);
     console.error('Error deleting Secret:', error);
-    showToast('Secret silinirken hata: ' + error.message, 'error');
+    showToast('{{ t("config.toast_secret_delete_error") }} ' + error.message, 'error');
   });
 };
 
@@ -3153,10 +3153,10 @@ document.addEventListener('click', function(event) {
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <div id="configMapViewBody">Yükleniyor...</div>
+        <div id="configMapViewBody">{{ t("loading") }}</div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t("config.btn_close") }}</button>
       </div>
     </div>
   </div>
@@ -3166,15 +3166,15 @@ document.addEventListener('click', function(event) {
   <div class="modal-dialog modal-xl">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="configMapEditModalLabel">ConfigMap Düzenle</h5>
+        <h5 class="modal-title" id="configMapEditModalLabel">{{ t("config.modal_configmap_edit_title") }}</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <div id="configMapEditBody">Yükleniyor...</div>
+        <div id="configMapEditBody">{{ t("loading") }}</div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-        <button type="button" class="btn btn-primary" onclick="saveConfigMap()">Kaydet</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t("config.btn_cancel") }}</button>
+        <button type="button" class="btn btn-primary" onclick="saveConfigMap()">{{ t("config.btn_save") }}</button>
       </div>
     </div>
   </div>
@@ -3189,10 +3189,10 @@ document.addEventListener('click', function(event) {
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <div id="secretViewBody">Yükleniyor...</div>
+        <div id="secretViewBody">{{ t("loading") }}</div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t("config.btn_close") }}</button>
       </div>
     </div>
   </div>
@@ -3202,15 +3202,15 @@ document.addEventListener('click', function(event) {
   <div class="modal-dialog modal-xl">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="secretEditModalLabel">Secret Düzenle</h5>
+        <h5 class="modal-title" id="secretEditModalLabel">{{ t("config.modal_secret_edit_title_generic") }}</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <div id="secretEditBody">Yükleniyor...</div>
+        <div id="secretEditBody">{{ t("loading") }}</div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
-        <button type="button" class="btn btn-primary" onclick="saveSecret()">Kaydet</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t("config.btn_cancel") }}</button>
+        <button type="button" class="btn btn-primary" onclick="saveSecret()">{{ t("config.btn_save") }}</button>
       </div>
     </div>
   </div>

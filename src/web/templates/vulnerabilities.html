@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Zafiyetler{% endblock %}
+{% block title %}{{ t('vulns.title') }}{% endblock %}
 {% block content %}
 <div class="row">
     <div class="col-12">
@@ -9,8 +9,8 @@
                 <i class="bi bi-shield-exclamation text-danger fs-2"></i>
             </div>
             <div>
-                <h2 class="mb-1 fw-bold">Kubernetes Güvenlik Zafiyetleri</h2>
-                <p class="text-muted mb-0">Kubernetes cluster'ınızdaki güvenlik açıklarını ve yapılandırma hatalarını görüntüleyin</p>
+                <h2 class="mb-1 fw-bold">{{ t('vulns.title') }}</h2>
+                <p class="text-muted mb-0">{{ t('vulns.subtitle') }}</p>
             </div>
         </div>
     </div>
@@ -24,14 +24,14 @@
                 <div class="d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center">
                         <i class="bi bi-funnel text-primary me-2 fs-5"></i>
-                        <h6 class="mb-0 fw-bold">Namespace Filtresi</h6>
+                        <h6 class="mb-0 fw-bold">{{ t('vulns.filter_title') }}</h6>
                     </div>
                     <div class="d-flex align-items-center gap-3">
                         <form method="GET" class="d-flex align-items-center gap-2">
                             <label for="namespaceSelect" class="form-label mb-0 text-muted small">Namespace:</label>
                             <select class="form-select form-select-sm" id="namespaceSelect" name="namespace" onchange="this.form.submit()" style="min-width: 200px;">
                                 <option value="all" {% if selected_namespace == 'all' %}selected{% endif %}>
-                                    <i class="bi bi-globe"></i> Tüm Namespace'ler
+                                    <i class="bi bi-globe"></i> {{ t('vulns.all_namespaces') }}
                                 </option>
                                 {% for ns in all_namespaces %}
                                 <option value="{{ ns }}" {% if selected_namespace == ns %}selected{% endif %}>
@@ -42,7 +42,7 @@
                         </form>
                         {% if selected_namespace != 'all' %}
                         <a href="{{ url_for('security.vulnerabilities') }}" class="btn btn-outline-secondary btn-sm">
-                            <i class="bi bi-x-circle me-1"></i>Filtreyi Temizle
+                            <i class="bi bi-x-circle me-1"></i>{{ t('vulns.btn_clear_filter') }}
                         </a>
                         {% endif %}
                     </div>
@@ -55,7 +55,7 @@
                             <div class="d-flex align-items-center justify-content-center">
                                 <i class="bi bi-diagram-3 text-info me-2"></i>
                                 <div>
-                                    <small class="text-muted d-block">Aktif Namespace</small>
+                                    <small class="text-muted d-block">{{ t('vulns.stat_active_ns') }}</small>
                                     <span class="fw-bold">
                                         {% if selected_namespace == 'all' %}
                                             {{ all_namespaces|length }}
@@ -70,7 +70,7 @@
                             <div class="d-flex align-items-center justify-content-center">
                                 <i class="bi bi-hdd-stack text-primary me-2"></i>
                                 <div>
-                                    <small class="text-muted d-block">Taranan Deployment</small>
+                                    <small class="text-muted d-block">{{ t('vulns.stat_scanned_deployments') }}</small>
                                     <span class="fw-bold">{{ vulnerabilities|length }}</span>
                                 </div>
                             </div>
@@ -79,7 +79,7 @@
                             <div class="d-flex align-items-center justify-content-center">
                                 <i class="bi bi-bug text-danger me-2"></i>
                                 <div>
-                                    <small class="text-muted d-block">Toplam Zafiyet</small>
+                                    <small class="text-muted d-block">{{ t('vulns.stat_total_vulns') }}</small>
                                     <span class="fw-bold">
                                         {% set total_vulns = 0 %}
                                         {% for dep, vulns in vulnerabilities.items() %}
@@ -94,7 +94,7 @@
                             <div class="d-flex align-items-center justify-content-center">
                                 <i class="bi bi-shield-check text-success me-2"></i>
                                 <div>
-                                    <small class="text-muted d-block">Güvenlik Skoru</small>
+                                    <small class="text-muted d-block">{{ t('vulns.stat_security_score') }}</small>
                                     <span class="fw-bold">
                                         {% set safe_deployments = 0 %}
                                         {% for dep, vulns in vulnerabilities.items() %}
@@ -121,7 +121,7 @@
             <div class="alert alert-danger d-flex align-items-center" role="alert">
                 <i class="bi bi-exclamation-triangle-fill me-3 fs-4"></i>
                 <div>
-                    <h5 class="alert-heading mb-1">Hata Oluştu</h5>
+                    <h5 class="alert-heading mb-1">{{ t('vulns.error_title') }}</h5>
                     <p class="mb-0">{{ error }}</p>
                 </div>
             </div>
@@ -140,7 +140,7 @@
                                     <i class="bi bi-hdd-stack text-primary me-2 fs-4"></i>
                                     <div>
                                         <h4 class="mb-0 fw-bold text-primary">{{ vulnerabilities|length }}</h4>
-                                        <small class="text-muted">Taranan Deployment</small>
+                                        <small class="text-muted">{{ t('vulns.stat_scanned_deployments') }}</small>
                                     </div>
                                 </div>
                             </div>
@@ -155,7 +155,7 @@
                                             {% endfor %}
                                             {{ total_vulns }}
                                         </h4>
-                                        <small class="text-muted">Toplam Zafiyet</small>
+                                        <small class="text-muted">{{ t('vulns.stat_total_vulns') }}</small>
                                     </div>
                                 </div>
                             </div>
@@ -166,7 +166,7 @@
                                         <h4 class="mb-0 fw-bold text-success">
                                             {{ ((vulnerabilities|length - (vulnerabilities|selectattr('1')|list|length)) / vulnerabilities|length * 100)|round(1) if vulnerabilities|length > 0 else 0 }}%
                                         </h4>
-                                        <small class="text-muted">Güvenlik Skoru</small>
+                                        <small class="text-muted">{{ t('vulns.stat_security_score') }}</small>
                                     </div>
                                 </div>
                             </div>
@@ -181,20 +181,20 @@
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4 class="mb-0">
-                        Zafiyet Detayları
+                        {{ t('vulns.detail_title') }}
                         {% if selected_namespace != 'all' %}
                             <span class="badge bg-primary ms-2">{{ selected_namespace }}</span>
                         {% endif %}
                     </h4>
                     <div class="btn-group" role="group">
                         <button type="button" class="btn btn-outline-secondary btn-sm" onclick="exportVulnerabilities()">
-                            <i class="bi bi-download me-1"></i>CSV İndir
+                            <i class="bi bi-download me-1"></i>{{ t('vulns.btn_export_csv') }}
                         </button>
                         <button type="button" class="btn btn-outline-secondary btn-sm" onclick="expandAll()">
-                            <i class="bi bi-arrows-expand me-1"></i>Tümünü Aç
+                            <i class="bi bi-arrows-expand me-1"></i>{{ t('vulns.btn_expand_all') }}
                         </button>
                         <button type="button" class="btn btn-outline-secondary btn-sm" onclick="collapseAll()">
-                            <i class="bi bi-arrows-collapse me-1"></i>Tümünü Kapat
+                            <i class="bi bi-arrows-collapse me-1"></i>{{ t('vulns.btn_collapse_all') }}
                         </button>
                     </div>
                 </div>
@@ -262,8 +262,8 @@
                                 {% else %}
                                     <div class="text-center py-4">
                                         <i class="bi bi-shield-check text-success fs-1 mb-3"></i>
-                                        <h5 class="text-success">Güvenlik Açığı Bulunamadı</h5>
-                                        <p class="text-muted mb-0">Bu deployment güvenlik kontrollerini başarıyla geçti.</p>
+                                        <h5 class="text-success">{{ t('vulns.no_vuln_found') }}</h5>
+                                        <p class="text-muted mb-0">{{ t('vulns.deployment_passed') }}</p>
                                     </div>
                                 {% endif %}
                             </div>
@@ -282,22 +282,22 @@
                         <i class="bi bi-shield-check text-success mb-3" style="font-size: 4rem;"></i>
                         <h3 class="text-success mb-3">
                             {% if selected_namespace == 'all' %}
-                                Tebrikler! Hiç Zafiyet Bulunamadı
+                                {{ t('vulns.congrats_title') }}
                             {% else %}
-                                {{ selected_namespace }} Namespace'inde Zafiyet Bulunamadı
+                                {{ selected_namespace }} {{ t('vulns.no_vuln_found') }}
                             {% endif %}
                         </h3>
                         <p class="text-muted mb-4">
                             {% if selected_namespace == 'all' %}
-                                Kubernetes cluster'ınız güvenlik kontrollerini başarıyla geçti.
+                                {{ t('vulns.cluster_passed') }}
                             {% else %}
-                                {{ selected_namespace }} namespace'i güvenlik kontrollerini başarıyla geçti.
+                                {{ selected_namespace }} {{ t('vulns.ns_passed') }}
                             {% endif %}
                         </p>
                         <div class="row justify-content-center">
                             <div class="col-md-8">
                                 <div class="bg-white rounded p-4 shadow-sm">
-                                    <h6 class="mb-3">Kontrol Edilen Güvenlik Alanları:</h6>
+                                    <h6 class="mb-3">{{ t('vulns.checked_areas') }}</h6>
                                     <div class="row text-start">
                                         <div class="col-md-6">
                                             <ul class="list-unstyled">
@@ -326,7 +326,7 @@
 
 <!-- Added floating action button for refresh -->
 <div class="position-fixed bottom-0 end-0 p-3">
-    <button class="btn btn-primary rounded-circle shadow-lg" onclick="refreshVulnerabilities()" title="Yenile">
+    <button class="btn btn-primary rounded-circle shadow-lg" onclick="refreshVulnerabilities()" title="{{ t('vulns.btn_refresh') }}">
         <i class="bi bi-arrow-clockwise fs-5"></i>
     </button>
 </div>
@@ -340,11 +340,12 @@
     const POD_IMAGES = {{ pod_images | default({}) | tojson }};
 
     function exportVulnerabilities() {
-        const headers = ['Deployment', 'Image', 'Zafiyet'];
+        const headers = ['Deployment', 'Image', (window.i18n?.['vulns.col_vulnerability']||{})[window.locale||'tr']||'Zafiyet'];
         const rows = [];
         const deployments = Object.keys(VULN_DATA);
         if (deployments.length === 0) {
-            showToast('Disa aktarilacak veri yok', 'warning');
+            const _noExportMsg = (window.i18n?.['vulns.no_export_data']||{})[window.locale||'tr'] || 'Dışa aktarılacak veri yok';
+            showToast(_noExportMsg, 'warning');
             return;
         }
         deployments.forEach(function(dep) {
@@ -359,7 +360,7 @@
             }
         });
         exportToCsv('zafiyetler_export.csv', headers, rows);
-        showToast('CSV indirildi', 'success');
+        showToast((window.i18n?.['vulns.toast_csv_downloaded']||{})[window.locale||'tr']||'CSV indirildi', 'success');
     }
 
     function expandAll() {

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Mesh Görselleştirme - Kubernetes Security Checker{% endblock %}
+{% block title %}{{ t('mesh.title') }}{% endblock %}
 
 {% block content %}
 <style>
@@ -16,16 +16,16 @@
             <div>
                 <h2 class="mb-2">
                     <i class="bi bi-diagram-3 text-primary me-2"></i>
-                    Kubernetes Service Mesh
+                    {{ t('mesh.title') }}
                 </h2>
-                <p class="text-muted mb-0">Pod iletişimi ve network topolojisi görselleştirmesi</p>
+                <p class="text-muted mb-0">{{ t('mesh.subtitle') }}</p>
             </div>
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-primary" onclick="refreshMeshData()">
-                    <i class="bi bi-arrow-clockwise me-1"></i>Yenile
+                    <i class="bi bi-arrow-clockwise me-1"></i>{{ t('mesh.btn_refresh') }}
                 </button>
                 <button class="btn btn-outline-secondary" onclick="exportMeshData()">
-                    <i class="bi bi-download me-1"></i>Dışa Aktar
+                    <i class="bi bi-download me-1"></i>{{ t('mesh.btn_export') }}
                 </button>
             </div>
         </div>
@@ -36,7 +36,7 @@
         <div class="card">
             <div class="card-header bg-primary text-white">
                 <h5 class="mb-0">
-                    <i class="bi bi-share me-2"></i>Network Topolojisi
+                    <i class="bi bi-share me-2"></i>{{ t('mesh.card_title') }}
                 </h5>
             </div>
             <div class="card-body p-0">
@@ -47,13 +47,13 @@
                     <div class="col-md-3">
                         <div class="d-flex align-items-center justify-content-center">
                             <div class="bg-primary rounded-circle me-2" style="width:12px;height:12px;"></div>
-                            <small class="text-muted">Services</small>
+                            <small class="text-muted">{{ t('mesh.legend_services') }}</small>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="d-flex align-items-center justify-content-center">
                             <div class="bg-danger rounded-circle me-2" style="width:12px;height:12px;"></div>
-                            <small class="text-muted">Pods</small>
+                            <small class="text-muted">{{ t('mesh.legend_pods') }}</small>
                         </div>
                     </div>
                     <div class="col-md-3">
@@ -78,18 +78,18 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">
-                    <i class="bi bi-table me-2"></i>Service Mesh Detayları
+                    <i class="bi bi-table me-2"></i>{{ t('mesh.details_title') }}
                 </h5>
                 <button class="btn btn-sm btn-outline-secondary" onclick="toggleTable()">
                     <i class="bi bi-eye-slash me-1"></i>
-                    <span id="toggle-text">Gizle</span>
+                    <span id="toggle-text">{{ t('mesh.btn_hide') }}</span>
                 </button>
             </div>
             <div class="card-body p-0" id="mesh-table-container">
                 <div id="mesh-table" class="table-responsive">
                     <div class="text-center p-4">
                         <div class="loading-spinner me-2"></div>
-                        Mesh verileri yükleniyor...
+                        {{ t('mesh.loading') }}
                     </div>
                 </div>
             </div>
@@ -124,10 +124,11 @@ async function fetchMeshData() {
         return data;
     } catch (error) {
         console.error('Error fetching mesh data:', error);
+        const _meshErrTitle = (window.i18n?.['mesh.error_title']||{})[window.locale||'tr'] || 'Hata oluştu';
         document.getElementById('mesh-table').innerHTML = `
             <div class="alert alert-danger m-3">
                 <i class="bi bi-exclamation-triangle me-2"></i>
-                API hatası: ${error.message}
+                ${_meshErrTitle}: ${error.message}
             </div>
         `;
         throw error;
@@ -137,14 +138,15 @@ async function fetchMeshData() {
 // Refresh functionality
 function refreshMeshData() {
     const refreshBtn = document.querySelector('[onclick="refreshMeshData()"]');
-    showLoading(refreshBtn, 'Yenileniyor...');
+    showLoading(refreshBtn, (window.i18n?.['mesh.loading_refresh']||{})[window.locale||'tr']||'Yenileniyor...');
     
+    const _refreshLbl = `<i class="bi bi-arrow-clockwise me-1"></i>${(window.i18n?.['mesh.btn_refresh']||{})[window.locale||'tr']||'Yenile'}`;
     fetchMeshData()
         .then(() => {
-            hideLoading(refreshBtn, '<i class="bi bi-arrow-clockwise me-1"></i>Yenile');
+            hideLoading(refreshBtn, _refreshLbl);
         })
         .catch(() => {
-            hideLoading(refreshBtn, '<i class="bi bi-arrow-clockwise me-1"></i>Yenile');
+            hideLoading(refreshBtn, _refreshLbl);
         });
 }
 
@@ -170,11 +172,11 @@ function toggleTable() {
     
     if (tableVisible) {
         container.style.display = 'block';
-        toggleText.textContent = 'Gizle';
+        toggleText.textContent = (window.i18n?.['mesh.btn_hide']||{})[window.locale||'tr']||'Gizle';
         toggleBtn.className = 'bi bi-eye-slash me-1';
     } else {
         container.style.display = 'none';
-        toggleText.textContent = 'Göster';
+        toggleText.textContent = (window.i18n?.['mesh.btn_show']||{})[window.locale||'tr']||'Göster';
         toggleBtn.className = 'bi bi-eye me-1';
     }
 }
@@ -200,7 +202,7 @@ function renderMeshTable() {
                 <th><i class="bi bi-layers me-1"></i>Namespace</th>
                 <th><i class="bi bi-gear me-1"></i>Service</th>
                 <th><i class="bi bi-router me-1"></i>Service IP</th>
-                <th><i class="bi bi-box me-1"></i>Bağlı Podlar</th>
+                <th><i class="bi bi-box me-1"></i>${(window.i18n?.['mesh.col_connected_pods']||{})[window.locale||'tr']||'Bağlı Podlar'}</th>
                 <th><i class="bi bi-hdd-network me-1"></i>Pod IP</th>
             </tr>
         </thead>
@@ -213,7 +215,7 @@ function renderMeshTable() {
     // Namespace filter
     let nsSet = new Set(tableFiltered.map(row => row.namespace));
     html += `<td><select class="form-select form-select-sm mesh-col-filter" data-col="0">
-        <option value="">Tümü</option>
+        <option value="">{{ t("cmsecrets.filter_all_ns") }}</option>
         ${Array.from(nsSet).sort().map(ns => 
             `<option value="${ns}"${meshColFilters[0]===ns?' selected':''}>${ns}</option>`
         ).join('')}
@@ -222,7 +224,7 @@ function renderMeshTable() {
     // Service filter
     let svcSet = new Set(tableFiltered.map(row => row.service));
     html += `<td><select class="form-select form-select-sm mesh-col-filter" data-col="1">
-        <option value="">Tümü</option>
+        <option value="">{{ t("cmsecrets.filter_all_ns") }}</option>
         ${Array.from(svcSet).sort().map(svc => 
             `<option value="${svc}"${meshColFilters[1]===svc?' selected':''}>${svc}</option>`
         ).join('')}
@@ -231,7 +233,7 @@ function renderMeshTable() {
     // Service IP filter
     let ipSet = new Set(tableFiltered.map(row => row.service_ip || '-'));
     html += `<td><select class="form-select form-select-sm mesh-col-filter" data-col="2">
-        <option value="">Tümü</option>
+        <option value="">{{ t("cmsecrets.filter_all_ns") }}</option>
         ${Array.from(ipSet).sort().map(ip => 
             `<option value="${ip}"${meshColFilters[2]===ip?' selected':''}>${ip}</option>`
         ).join('')}
@@ -241,7 +243,7 @@ function renderMeshTable() {
     let podSet = new Set();
     tableFiltered.forEach(row => row.pods.forEach(pod => podSet.add(pod)));
     html += `<td><select class="form-select form-select-sm mesh-col-filter" data-col="3">
-        <option value="">Tümü</option>
+        <option value="">{{ t("cmsecrets.filter_all_ns") }}</option>
         ${Array.from(podSet).sort().map(pod => 
             `<option value="${pod}"${meshColFilters[3]===pod?' selected':''}>${pod}</option>`
         ).join('')}
@@ -251,7 +253,7 @@ function renderMeshTable() {
     let podIpSet = new Set();
     tableFiltered.forEach(row => row.pod_ips.forEach(ip => podIpSet.add(ip)));
     html += `<td><select class="form-select form-select-sm mesh-col-filter" data-col="4">
-        <option value="">Tümü</option>
+        <option value="">{{ t("cmsecrets.filter_all_ns") }}</option>
         ${Array.from(podIpSet).sort().map(ip => 
             `<option value="${ip}"${meshColFilters[4]===ip?' selected':''}>${ip}</option>`
         ).join('')}
@@ -272,7 +274,7 @@ function renderMeshTable() {
             <td>`;
         
         if (row.pods.length === 0) {
-            html += '<span class="text-muted fst-italic">Bağlı pod yok</span>';
+            html += `<span class="text-muted fst-italic">${(window.i18n?.['mesh.empty_pods']||{})[window.locale||'tr']||'Bağlı pod yok'}</span>`;
         } else {
             html += row.pods.map(pod => 
                 `<span class="badge bg-danger me-1 mb-1">

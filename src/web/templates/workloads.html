@@ -7,7 +7,7 @@
     <div class="modal-content border-0 shadow">
       <div class="modal-header bg-primary text-white">
         <h5 class="modal-title" id="podPropertiesModalLabel">
-          <i class="bi bi-box me-2"></i>Pod Properties
+          <i class="bi bi-box me-2"></i>{{ t('workloads.modal_pod_properties') }}
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
@@ -15,7 +15,7 @@
         <div id="podPropertiesModalBody"></div>
         <hr class="my-4">
         <h6 class="fw-semibold mb-3">
-          <i class="bi bi-graph-up me-2"></i>Kaynak Kullanımı
+          <i class="bi bi-graph-up me-2"></i>{{ t('workloads.resource_usage') }}
         </h6>
         <div class="d-flex align-items-center justify-content-between mb-2">
           <div id="podMetricsSourceBadge" class="badge bg-secondary" style="display:none;">source</div>
@@ -29,7 +29,7 @@
       </div>
       <div class="modal-footer bg-light">
         <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">
-          <i class="bi bi-x-circle me-1"></i>Kapat
+          <i class="bi bi-x-circle me-1"></i>{{ t('workloads.btn_close') }}
         </button>
       </div>
     </div>
@@ -39,13 +39,13 @@
     <div class="col-12">
       <div class="workload-card">
         <div class="card-header bg-light">
-          <h6 class="mb-0 fw-bold">Kubernetes Events (Son 100)</h6>
+          <h6 class="mb-0 fw-bold">{{ t('workloads.events_title') }}</h6>
         </div>
         <div class="card-body">
           <div id="events-table-container">
             <div class="d-flex align-items-center justify-content-center py-4">
               <div class="loading-spinner me-2"></div>
-              <span class="text-muted">Events yükleniyor...</span>
+              <span class="text-muted">{{ t('workloads.loading_events') }}</span>
             </div>
           </div>
         </div>
@@ -60,7 +60,7 @@
     <div class="modal-content border-0 shadow">
       <div class="modal-header bg-warning text-white">
         <h5 class="modal-title" id="scaleStatefulSetModalLabel">
-          <i class="bi bi-arrows-expand me-2"></i>StatefulSet Scale
+          <i class="bi bi-arrows-expand me-2"></i>{{ t('workloads.scale_modal_statefulset') }}
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
@@ -69,16 +69,16 @@
           <strong id="scaleStatefulSetName" class="text-primary"></strong>
         </div>
         <div class="mb-3">
-          <label for="scaleStatefulSetReplicasInput" class="form-label fw-semibold">Replica Sayısı:</label>
+          <label for="scaleStatefulSetReplicasInput" class="form-label fw-semibold">{{ t('workloads.scale_replica_count') }}</label>
           <input type="number" min="0" class="form-control border-0 shadow-sm" id="scaleStatefulSetReplicasInput" style="width:120px;">
         </div>
       </div>
       <div class="modal-footer bg-light">
         <button type="button" class="btn btn-primary rounded-pill" id="scaleStatefulSetSaveBtn">
-          <i class="bi bi-check-circle me-1"></i>Kaydet
+          <i class="bi bi-check-circle me-1"></i>{{ t('workloads.btn_save') }}
         </button>
         <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">
-          <i class="bi bi-x-circle me-1"></i>Kapat
+          <i class="bi bi-x-circle me-1"></i>{{ t('workloads.btn_close') }}
         </button>
       </div>
     </div>
@@ -89,25 +89,25 @@
   <div class="modal-dialog modal-xl">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="podLogsModalLabel">Pod Logs</h5>
+        <h5 class="modal-title" id="podLogsModalLabel">{{ t('workloads.modal_logs_title') }}</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
         <div class="d-flex flex-wrap align-items-center gap-2 mb-2" id="podLogsToolbar">
           <div class="input-group" style="max-width: 360px;">
             <span class="input-group-text"><i class="bi bi-search"></i></span>
-            <input type="search" class="form-control" id="podLogsSearchInput" placeholder="Log içinde ara..." />
+            <input type="search" class="form-control" id="podLogsSearchInput" placeholder="{{ t('workloads.log_search_placeholder') }}" />
           </div>
           <div class="ms-auto d-flex align-items-center gap-2">
             <small class="text-muted" id="podLogsSearchInfo"></small>
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="podLogsClearSearchBtn"><i class="bi bi-x-circle me-1"></i>Temizle</button>
-            <button type="button" class="btn btn-outline-primary btn-sm" id="podLogsExportBtn"><i class="bi bi-download me-1"></i>Export</button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="podLogsClearSearchBtn"><i class="bi bi-x-circle me-1"></i>{{ t('workloads.btn_clear_search') }}</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="podLogsExportBtn"><i class="bi bi-download me-1"></i>{{ t('workloads.btn_export_log') }}</button>
           </div>
         </div>
         <pre id="podLogsModalBody" style="font-family:'Fira Code', 'Monaco', monospace; font-size:0.9em; white-space:pre-wrap; max-height:70vh; overflow:auto; background:#000; color:#e6e6e6; padding:12px; border-radius:6px;"></pre>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('workloads.btn_close') }}</button>
       </div>
     </div>
   </div>
@@ -119,7 +119,7 @@
     <div class="modal-content border-0 shadow">
       <div class="modal-header bg-success text-white">
         <h5 class="modal-title" id="yamlEditModalLabel">
-          <i class="bi bi-code-slash me-2"></i>YAML Edit
+          <i class="bi bi-code-slash me-2"></i>{{ t('workloads.modal_yaml_title') }}
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
@@ -129,10 +129,10 @@
       </div>
       <div class="modal-footer bg-light">
         <button type="button" class="btn btn-primary rounded-pill" id="saveYamlBtn">
-          <i class="bi bi-check-circle me-1"></i>Kaydet
+          <i class="bi bi-check-circle me-1"></i>{{ t('workloads.btn_save') }}
         </button>
         <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">
-          <i class="bi bi-x-circle me-1"></i>Kapat
+          <i class="bi bi-x-circle me-1"></i>{{ t('workloads.btn_close') }}
         </button>
       </div>
     </div>
@@ -148,7 +148,7 @@
     <div class="modal-content border-0 shadow">
       <div class="modal-header bg-info text-white">
         <h5 class="modal-title" id="describeModalLabel">
-          <i class="bi bi-info-circle me-2"></i>Resource Describe
+          <i class="bi bi-info-circle me-2"></i>{{ t('workloads.modal_describe_title') }}
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
@@ -157,7 +157,7 @@
       </div>
       <div class="modal-footer bg-light">
         <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">
-          <i class="bi bi-x-circle me-1"></i>Kapat
+          <i class="bi bi-x-circle me-1"></i>{{ t('workloads.btn_close') }}
         </button>
       </div>
     </div>
@@ -170,7 +170,7 @@
     <div class="modal-content border-0 shadow">
       <div class="modal-header bg-warning text-white">
         <h5 class="modal-title" id="scaleDeploymentModalLabel">
-          <i class="bi bi-arrows-expand me-2"></i>Deployment Scale
+          <i class="bi bi-arrows-expand me-2"></i>{{ t('workloads.scale_modal_deployment') }}
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
@@ -179,16 +179,16 @@
           <strong id="scaleDeploymentName" class="text-primary"></strong>
         </div>
         <div class="mb-3">
-          <label for="scaleReplicasInput" class="form-label fw-semibold">Replica Sayısı:</label>
+          <label for="scaleReplicasInput" class="form-label fw-semibold">{{ t('workloads.scale_replica_count') }}</label>
           <input type="number" min="0" class="form-control border-0 shadow-sm" id="scaleReplicasInput" style="width:120px;">
         </div>
       </div>
       <div class="modal-footer bg-light">
         <button type="button" class="btn btn-primary rounded-pill" id="scaleDeploymentSaveBtn">
-          <i class="bi bi-check-circle me-1"></i>Kaydet
+          <i class="bi bi-check-circle me-1"></i>{{ t('workloads.btn_save') }}
         </button>
         <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">
-          <i class="bi bi-x-circle me-1"></i>Kapat
+          <i class="bi bi-x-circle me-1"></i>{{ t('workloads.btn_close') }}
         </button>
       </div>
     </div>
@@ -541,10 +541,10 @@
         <div class="row align-items-center">
           <div class="col-lg-8">
             <h1 class="display-4 fw-bold mb-3">
-              <i class="bi bi-layers me-3"></i>Kubernetes Workloads
+              <i class="bi bi-layers me-3"></i>{{ t('workloads.title') }}
             </h1>
             <p class="lead mb-0 opacity-90">
-              Cluster'ınızdaki tüm workload'ları yönetin ve izleyin
+              {{ t('workloads.subtitle') }}
             </p>
           </div>
           <div class="col-lg-4">
@@ -553,14 +553,14 @@
                 <div class="metric-card bg-white bg-opacity-10 text-white">
                   <!-- Fixed text color to be dark instead of white -->
                   <div class="metric-number text-dark" id="total-workloads">0</div>
-                  <div class="metric-label text-dark">Toplam Workload</div>
+                  <div class="metric-label text-dark">{{ t('workloads.stat_total') }}</div>
                 </div>
               </div>
               <div class="col-6">
                 <div class="metric-card bg-white bg-opacity-10 text-white">
                   <!-- Fixed text color to be dark instead of white -->
                   <div class="metric-number text-dark" id="active-workloads">0</div>
-                  <div class="metric-label text-dark">Aktif Workload</div>
+                  <div class="metric-label text-dark">{{ t('workloads.stat_active') }}</div>
                 </div>
               </div>
             </div>
@@ -577,42 +577,42 @@
     <ul class="nav nav-pills nav-fill justify-content-center" id="workloadsTab" role="tablist">
       <li class="nav-item" role="presentation">
         <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">
-          <i class="bi bi-grid-3x3-gap me-2"></i>Genel Bakış
+          <i class="bi bi-grid-3x3-gap me-2"></i>{{ t('workloads.tab_overview') }}
         </button>
       </li>
       <li class="nav-item" role="presentation">
         <button class="nav-link" id="pods-tab" data-bs-toggle="tab" data-bs-target="#pods" type="button" role="tab">
-          <i class="bi bi-box me-2"></i>Pods
+          <i class="bi bi-box me-2"></i>{{ t('workloads.tab_pods') }}
         </button>
       </li>
       <li class="nav-item" role="presentation">
         <button class="nav-link" id="deployments-tab" data-bs-toggle="tab" data-bs-target="#deployments" type="button" role="tab">
-          <i class="bi bi-arrow-repeat me-2"></i>Deployments
+          <i class="bi bi-arrow-repeat me-2"></i>{{ t('workloads.tab_deployments') }}
         </button>
       </li>
       <li class="nav-item" role="presentation">
         <button class="nav-link" id="daemonsets-tab" data-bs-toggle="tab" data-bs-target="#daemonsets" type="button" role="tab">
-          <i class="bi bi-cpu me-2"></i>DaemonSets
+          <i class="bi bi-cpu me-2"></i>{{ t('workloads.tab_daemonsets') }}
         </button>
       </li>
       <li class="nav-item" role="presentation">
         <button class="nav-link" id="statefulsets-tab" data-bs-toggle="tab" data-bs-target="#statefulsets" type="button" role="tab">
-          <i class="bi bi-database me-2"></i>StatefulSets
+          <i class="bi bi-database me-2"></i>{{ t('workloads.tab_statefulsets') }}
         </button>
       </li>
       <li class="nav-item" role="presentation">
         <button class="nav-link" id="replicasets-tab" data-bs-toggle="tab" data-bs-target="#replicasets" type="button" role="tab">
-          <i class="bi bi-collection me-2"></i>ReplicaSets
+          <i class="bi bi-collection me-2"></i>{{ t('workloads.tab_replicasets') }}
         </button>
       </li>
       <li class="nav-item" role="presentation">
         <button class="nav-link" id="jobs-tab" data-bs-toggle="tab" data-bs-target="#jobs" type="button" role="tab">
-          <i class="bi bi-play-circle me-2"></i>Jobs
+          <i class="bi bi-play-circle me-2"></i>{{ t('workloads.tab_jobs') }}
         </button>
       </li>
       <li class="nav-item" role="presentation">
         <button class="nav-link" id="cronjobs-tab" data-bs-toggle="tab" data-bs-target="#cronjobs" type="button" role="tab">
-          <i class="bi bi-clock me-2"></i>CronJobs
+          <i class="bi bi-clock me-2"></i>{{ t('workloads.tab_cronjobs') }}
         </button>
       </li>
     </ul>
@@ -751,7 +751,7 @@
       <div class="col-12">
         <div class="workload-card">
           <div class="card-header text-white" style="background: var(--success-gradient);">
-            <h6 class="mb-0 fw-bold">Pod Durumları</h6>
+            <h6 class="mb-0 fw-bold">{{ t('workloads.pod_status_title') }}</h6>
           </div>
           <div class="card-body p-0">
             <div class="chart-container">
@@ -766,17 +766,17 @@
           <div class="card-header text-white" style="background: var(--success-gradient);">
             <div class="d-flex justify-content-between align-items-center">
               <h5 class="mb-0 fw-bold">
-                <i class="bi bi-box me-2"></i>Pods Listesi
+                <i class="bi bi-box me-2"></i>{{ t('workloads.pods_list_title') }}
               </h5>
               <div class="d-flex align-items-center gap-2">
                 <select id="podsNamespaceFilter" class="form-select form-select-sm" style="width:200px;">
-                  <option value="">Tüm Namespace'ler</option>
+                  <option value="">{{ t('workloads.all_namespaces') }}</option>
                 </select>
                 <button class="btn btn-outline-light btn-sm" onclick="fetchAndRenderPodsTable(true)">
-                  <i class="bi bi-arrow-clockwise me-1"></i>Yenile
+                  <i class="bi bi-arrow-clockwise me-1"></i>{{ t('workloads.btn_refresh') }}
                 </button>
                 <button class="btn btn-outline-light btn-sm" onclick="exportWorkloadsPods()">
-                  <i class="bi bi-download me-1"></i>CSV
+                  <i class="bi bi-download me-1"></i>{{ t('workloads.btn_csv') }}
                 </button>
               </div>
             </div>
@@ -787,7 +787,7 @@
             <div id="pods-table-container">
               <div class="d-flex align-items-center justify-content-center py-5">
                 <div class="loading-spinner me-2"></div>
-                <span class="text-muted">Pod listesi yükleniyor...</span>
+                <span class="text-muted">{{ t('workloads.loading_pods') }}</span>
               </div>
             </div>
           </div>
@@ -803,7 +803,7 @@
       <div class="col-12">
         <div class="workload-card">
           <div class="card-header text-white" style="background: var(--primary-gradient);">
-            <h6 class="mb-0 fw-bold">Deployment Durumları</h6>
+            <h6 class="mb-0 fw-bold">{{ t('workloads.deployments_status_title') }}</h6>
           </div>
           <div class="card-body p-0">
             <div class="chart-container">
@@ -818,17 +818,17 @@
           <div class="card-header text-white" style="background: var(--primary-gradient);">
             <div class="d-flex justify-content-between align-items-center">
               <h5 class="mb-0 fw-bold">
-                <i class="bi bi-arrow-repeat me-2"></i>Deployments Listesi
+                <i class="bi bi-arrow-repeat me-2"></i>{{ t('workloads.deployments_list_title') }}
               </h5>
               <div class="d-flex align-items-center gap-2">
                 <select id="deploymentsNamespaceFilter" class="form-select form-select-sm" style="width:200px;">
-                  <option value="">Tüm Namespace'ler</option>
+                  <option value="">{{ t('workloads.all_namespaces') }}</option>
                 </select>
                 <button class="btn btn-outline-light btn-sm" onclick="fetchAndRenderDeploymentsTable(true)">
-                  <i class="bi bi-arrow-clockwise me-1"></i>Yenile
+                  <i class="bi bi-arrow-clockwise me-1"></i>{{ t('workloads.btn_refresh') }}
                 </button>
                 <button class="btn btn-outline-light btn-sm" onclick="exportWorkloadsDeployments()">
-                  <i class="bi bi-download me-1"></i>CSV
+                  <i class="bi bi-download me-1"></i>{{ t('workloads.btn_csv') }}
                 </button>
               </div>
             </div>
@@ -837,7 +837,7 @@
             <div id="deployments-table-container">
               <div class="d-flex align-items-center justify-content-center py-5">
                 <div class="loading-spinner me-2"></div>
-                <span class="text-muted">Deployment listesi yükleniyor...</span>
+                <span class="text-muted">{{ t('workloads.loading_deployments') }}</span>
               </div>
             </div>
           </div>
@@ -853,7 +853,7 @@
       <div class="col-12">
         <div class="workload-card">
           <div class="card-header text-white" style="background: var(--info-gradient);">
-            <h6 class="mb-0 fw-bold">DaemonSet Durumu</h6>
+            <h6 class="mb-0 fw-bold">{{ t('workloads.daemonsets_status_title') }}</h6>
           </div>
           <div class="card-body p-0">
             <div class="chart-container">
@@ -868,10 +868,10 @@
           <div class="card-header text-white" style="background: var(--info-gradient);">
             <div class="d-flex justify-content-between align-items-center">
               <h5 class="mb-0 fw-bold">
-                <i class="bi bi-cpu me-2"></i>DaemonSet Listesi
+                <i class="bi bi-cpu me-2"></i>{{ t('workloads.daemonsets_list_title') }}
               </h5>
               <button class="btn btn-outline-light btn-sm" onclick="exportWorkloadsDaemonSets()">
-                <i class="bi bi-download me-1"></i>CSV
+                <i class="bi bi-download me-1"></i>{{ t('workloads.btn_csv') }}
               </button>
             </div>
           </div>
@@ -879,7 +879,7 @@
             <div id="daemonsets-table-container">
               <div class="d-flex align-items-center justify-content-center py-5">
                 <div class="loading-spinner me-2"></div>
-                <span class="text-muted">DaemonSet listesi yükleniyor...</span>
+                <span class="text-muted">{{ t('workloads.loading_daemonsets') }}</span>
               </div>
             </div>
           </div>
@@ -895,7 +895,7 @@
       <div class="col-12">
         <div class="workload-card">
           <div class="card-header text-white" style="background: var(--warning-gradient);">
-            <h6 class="mb-0 fw-bold">StatefulSet Durumu</h6>
+            <h6 class="mb-0 fw-bold">{{ t('workloads.statefulsets_status_title') }}</h6>
           </div>
           <div class="card-body p-0">
             <div class="chart-container">
@@ -909,16 +909,16 @@
         <div class="workload-card">
           <div class="card-header text-white" style="background: var(--warning-gradient);">
             <div class="d-flex justify-content-between align-items-center">
-              <h5 class="mb-0 fw-bold"><i class="bi bi-database me-2"></i>StatefulSet Listesi</h5>
+              <h5 class="mb-0 fw-bold"><i class="bi bi-database me-2"></i>{{ t('workloads.statefulsets_list_title') }}</h5>
               <div class="d-flex align-items-center gap-2">
                 <select id="statefulsetNamespaceFilter" class="form-select form-select-sm" style="width:200px;">
-                  <option value="">Tüm Namespace'ler</option>
+                  <option value="">{{ t('workloads.all_namespaces') }}</option>
                 </select>
                 <button class="btn btn-outline-light btn-sm" onclick="fetchAndRenderStatefulSetsTable()">
-                  <i class="bi bi-arrow-clockwise me-1"></i>Yenile
+                  <i class="bi bi-arrow-clockwise me-1"></i>{{ t('workloads.btn_refresh') }}
                 </button>
                 <button class="btn btn-outline-light btn-sm" onclick="exportWorkloadsStatefulSets()">
-                  <i class="bi bi-download me-1"></i>CSV
+                  <i class="bi bi-download me-1"></i>{{ t('workloads.btn_csv') }}
                 </button>
               </div>
             </div>
@@ -927,7 +927,7 @@
             <div id="statefulsets-table-container">
               <div class="d-flex align-items-center justify-content-center py-5">
                 <div class="loading-spinner me-2"></div>
-                <span class="text-muted">StatefulSet listesi yükleniyor...</span>
+                <span class="text-muted">{{ t('workloads.loading_statefulsets') }}</span>
               </div>
             </div>
           </div>
@@ -943,7 +943,7 @@
       <div class="col-12">
         <div class="workload-card">
           <div class="card-header text-white" style="background: var(--danger-gradient);">
-            <h6 class="mb-0 fw-bold">ReplicaSet Durumu</h6>
+            <h6 class="mb-0 fw-bold">{{ t('workloads.replicasets_status_title') }}</h6>
           </div>
           <div class="card-body p-0">
             <div class="chart-container">
@@ -957,16 +957,16 @@
         <div class="workload-card">
           <div class="card-header text-white" style="background: var(--danger-gradient);">
             <div class="d-flex justify-content-between align-items-center">
-              <h5 class="mb-0 fw-bold"><i class="bi bi-collection me-2"></i>ReplicaSet Listesi</h5>
+              <h5 class="mb-0 fw-bold"><i class="bi bi-collection me-2"></i>{{ t('workloads.replicasets_list_title') }}</h5>
               <div class="d-flex align-items-center gap-2">
                 <select id="replicasetsNamespaceFilter" class="form-select form-select-sm" style="width:150px;">
-                  <option value="">Tüm Namespace'ler</option>
+                  <option value="">{{ t('workloads.all_namespaces') }}</option>
                 </select>
                 <button class="btn btn-outline-light btn-sm" onclick="fetchAndRenderReplicaSetsTable()">
-                  <i class="bi bi-arrow-clockwise me-1"></i>Yenile
+                  <i class="bi bi-arrow-clockwise me-1"></i>{{ t('workloads.btn_refresh') }}
                 </button>
                 <button class="btn btn-outline-light btn-sm" onclick="exportWorkloadsReplicaSets()">
-                  <i class="bi bi-download me-1"></i>CSV
+                  <i class="bi bi-download me-1"></i>{{ t('workloads.btn_csv') }}
                 </button>
               </div>
             </div>
@@ -975,7 +975,7 @@
             <div id="replicasets-table-container">
               <div class="d-flex align-items-center justify-content-center py-5">
                 <div class="loading-spinner me-2"></div>
-                <span class="text-muted">ReplicaSet listesi yükleniyor...</span>
+                <span class="text-muted">{{ t('workloads.loading_replicasets') }}</span>
               </div>
             </div>
           </div>
@@ -992,7 +992,7 @@
           <div class="card-header text-white" style="background: var(--primary-gradient);">
             <div class="d-flex align-items-center">
               <i class="bi bi-play-circle me-2"></i>
-              <span class="fw-bold">Job Durumu</span>
+              <span class="fw-bold">{{ t('workloads.jobs_status_title') }}</span>
             </div>
           </div>
           <div class="card-body p-0">
@@ -1007,17 +1007,17 @@
           <div class="card-header bg-light d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
               <i class="bi bi-list-ul me-2 text-primary"></i>
-              <span class="fw-bold">Job Listesi</span>
+              <span class="fw-bold">{{ t('workloads.jobs_list_title') }}</span>
             </div>
             <div class="d-flex align-items-center gap-2">
               <select id="jobsNamespaceFilter" class="form-select form-select-sm" style="width:200px;">
-                <option value="">Tüm Namespace'ler</option>
+                <option value="">{{ t('workloads.all_namespaces') }}</option>
               </select>
               <button class="btn btn-outline-primary btn-sm" onclick="fetchAndRenderJobsTable()">
-                <i class="bi bi-arrow-clockwise me-1"></i>Yenile
+                <i class="bi bi-arrow-clockwise me-1"></i>{{ t('workloads.btn_refresh') }}
               </button>
               <button class="btn btn-outline-secondary btn-sm" onclick="exportWorkloadsJobs()">
-                <i class="bi bi-download me-1"></i>CSV
+                <i class="bi bi-download me-1"></i>{{ t('workloads.btn_csv') }}
               </button>
             </div>
           </div>
@@ -1025,7 +1025,7 @@
             <div id="jobs-table-container">
               <div class="d-flex align-items-center justify-content-center py-5">
                 <div class="loading-spinner me-2"></div>
-                <span class="text-muted">Job listesi yükleniyor...</span>
+                <span class="text-muted">{{ t('workloads.loading_jobs') }}</span>
               </div>
             </div>
           </div>
@@ -1042,7 +1042,7 @@
           <div class="card-header text-white" style="background: var(--dark-gradient);">
             <div class="d-flex align-items-center">
               <i class="bi bi-clock me-2"></i>
-              <span class="fw-bold">CronJob Durumu</span>
+              <span class="fw-bold">{{ t('workloads.cronjobs_status_title') }}</span>
             </div>
           </div>
           <div class="card-body p-0">
@@ -1057,17 +1057,17 @@
           <div class="card-header bg-light d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center">
               <i class="bi bi-list-ul me-2 text-dark"></i>
-              <span class="fw-bold">CronJob Listesi</span>
+              <span class="fw-bold">{{ t('workloads.cronjobs_list_title') }}</span>
             </div>
             <div class="d-flex align-items-center gap-2">
               <select id="cronjobsNamespaceFilter" class="form-select form-select-sm" style="width:200px;">
-                <option value="">Tüm Namespace'ler</option>
+                <option value="">{{ t('workloads.all_namespaces') }}</option>
               </select>
               <button class="btn btn-outline-primary btn-sm" onclick="fetchAndRenderCronJobsTable()">
-                <i class="bi bi-arrow-clockwise me-1"></i>Yenile
+                <i class="bi bi-arrow-clockwise me-1"></i>{{ t('workloads.btn_refresh') }}
               </button>
               <button class="btn btn-outline-secondary btn-sm" onclick="exportWorkloadsCronJobs()">
-                <i class="bi bi-download me-1"></i>CSV
+                <i class="bi bi-download me-1"></i>{{ t('workloads.btn_csv') }}
               </button>
             </div>
           </div>
@@ -1075,7 +1075,7 @@
             <div id="cronjobs-table-container">
               <div class="d-flex align-items-center justify-content-center py-5">
                 <div class="loading-spinner me-2"></div>
-                <span class="text-muted">CronJob listesi yükleniyor...</span>
+                <span class="text-muted">{{ t('workloads.loading_cronjobs') }}</span>
               </div>
             </div>
           </div>
@@ -1147,7 +1147,7 @@ function renderCacheMeta(meta, containerId) {
   // Durum 4: Cache henuz dolmamis (updated_at === 0)
   if (!meta || meta.updated_at === 0) {
     container.innerHTML = '<div class="alert alert-info d-flex align-items-center mb-0 py-2" role="alert">'
-      + '<i class="bi bi-hourglass-split me-2"></i>Veriler yükleniyor, lütfen birkaç saniye bekleyin...</div>';
+      + '<i class="bi bi-hourglass-split me-2"></i>{{ t("workloads.cache_loading") }}</div>';
     return;
   }
   // age_seconds backend'den gelir -- client-side Date.now() ile hesaplama yapilmaz (AC-10)
@@ -1222,12 +1222,12 @@ async function loadOverviewData() {
 async function fetchAndRenderEventsTable() {
   const container = document.getElementById('events-table-container');
   if (!container) return;
-  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-4"><div class="loading-spinner me-2"></div><span class="text-muted">Events yükleniyor...</span></div>';
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-4"><div class="loading-spinner me-2"></div><span class="text-muted">{{ t("workloads.loading_events") }}</span></div>';
   try {
   const data = await fetchJsonWithTimeout('/exec-events', {}, 10000);
     const events = data.events || [];
     if (events.length === 0) {
-      container.innerHTML = '<div class="empty-state"><i class="bi bi-bell"></i><h6>Event yok</h6><p class="text-muted">Gösterilecek event bulunmuyor.</p></div>';
+      container.innerHTML = '<div class="empty-state"><i class="bi bi-bell"></i><h6>{{ t("workloads.empty_events") }}</h6><p class="text-muted">{{ t("workloads.empty_events_desc") }}</p></div>';
       return;
     }
     let html = '<div class="table-responsive"><table class="table table-modern table-hover"><thead><tr><th>Time</th><th>Namespace</th><th>Name</th><th>Kind</th><th>Type</th><th>Reason</th><th>Message</th><th>Source</th></tr></thead><tbody>';
@@ -1238,7 +1238,7 @@ async function fetchAndRenderEventsTable() {
     html += '</tbody></table></div>';
     container.innerHTML = html;
   } catch (e) {
-    container.innerHTML = '<div class="alert alert-danger">Events yüklenirken hata oluştu: ' + e + '</div>';
+    container.innerHTML = '<div class="alert alert-danger">{{ t("workloads.error_events") }} ' + e + '</div>';
   }
 }
 
@@ -1291,8 +1291,8 @@ function handleTabChange(tabId) {
 
 async function fetchAndRenderPodsTable(forceRefresh = false) {
   const container = document.getElementById('pods-table-container');
-  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Pod listesi yükleniyor...</span></div>';
-  
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">{{ t("workloads.loading_pods") }}</span></div>';
+
   try {
     // Always fetch fresh server data when explicitly refreshed or first load
     const data = await fetchJsonWithTimeout('/k8s-explorer/pods-summary', {}, 10000);
@@ -1305,7 +1305,7 @@ async function fetchAndRenderPodsTable(forceRefresh = false) {
     const nsFilter = document.getElementById('podsNamespaceFilter');
     if (nsFilter && !nsFilter.dataset.filled) {
       const namespaces = [...new Set(pods.map(p => p.namespace))].sort();
-      nsFilter.innerHTML = '<option value="">Tüm Namespace\'ler</option>' + namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
+      nsFilter.innerHTML = '<option value="">{{ t("workloads.all_namespaces") }}</option>' + namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
       nsFilter.dataset.filled = '1';
       nsFilter.addEventListener('change', () => fetchAndRenderPodsTable());
     }
@@ -1316,7 +1316,7 @@ async function fetchAndRenderPodsTable(forceRefresh = false) {
     lastPodsData = pods;  // export icin sakla
 
     if (pods.length === 0) {
-      container.innerHTML = '<div class="empty-state"><i class="bi bi-box"></i><h5>Pod Bulunamadı</h5><p class="text-muted">Cluster\'da hiç Pod bulunmuyor.</p></div>';
+      container.innerHTML = '<div class="empty-state"><i class="bi bi-box"></i><h5>{{ t("workloads.empty_pods") }}</h5></div>';
       updatePodsPieChart([], 'pie-pods-tab');
       return;
     }
@@ -1330,7 +1330,7 @@ async function fetchAndRenderPodsTable(forceRefresh = false) {
          '<th class="sortable" data-sort-key="age">Age</th>'+
          '<th class="sortable" data-sort-key="cpu">CPU</th>'+
          '<th class="sortable" data-sort-key="mem">Memory</th>'+
-         '<th>İşlemler</th>'+
+         '<th>{{ t("workloads.col_actions") }}</th>'+
          '</tr></thead><tbody>';
     
     pods.forEach(pod => {
@@ -1372,7 +1372,7 @@ async function fetchAndRenderPodsTable(forceRefresh = false) {
     fetchMetricsForPods(pods);
     updatePodsPieChart(pods, 'pie-pods-tab');
   } catch (error) {
-    container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>Pod listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+    container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>{{ t("workloads.error_pods") }} ' + error.message + '</div>';
   }
 }
 
@@ -1468,8 +1468,8 @@ async function fetchMetricsForPods(pods) {
 
 async function fetchAndRenderDeploymentsTable(forceRefresh = false) {
   const container = document.getElementById('deployments-table-container');
-  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Deployment listesi yükleniyor...</span></div>';
-  
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">{{ t("workloads.loading_deployments") }}</span></div>';
+
   try {
     const data = await fetchJsonWithTimeout('/k8s-explorer/deployments-summary', {}, 10000);
     let deployments = data.deployments || [];
@@ -1477,7 +1477,7 @@ async function fetchAndRenderDeploymentsTable(forceRefresh = false) {
     const nsFilter = document.getElementById('deploymentsNamespaceFilter');
     if (nsFilter && !nsFilter.dataset.filled) {
       const namespaces = [...new Set(deployments.map(d => d.namespace))].sort();
-      nsFilter.innerHTML = '<option value="">Tüm Namespace\'ler</option>' + namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
+      nsFilter.innerHTML = '<option value="">{{ t("workloads.all_namespaces") }}</option>' + namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
       nsFilter.dataset.filled = '1';
       nsFilter.addEventListener('change', () => fetchAndRenderDeploymentsTable());
     }
@@ -1487,12 +1487,12 @@ async function fetchAndRenderDeploymentsTable(forceRefresh = false) {
     lastDeploymentsData = deployments;  // export icin sakla
 
     if (deployments.length === 0) {
-      container.innerHTML = '<div class="empty-state"><i class="bi bi-arrow-repeat"></i><h5>Deployment Bulunamadı</h5><p class="text-muted">Cluster\'da hiç Deployment bulunmuyor.</p></div>';
+      container.innerHTML = '<div class="empty-state"><i class="bi bi-arrow-repeat"></i><h5>{{ t("workloads.empty_deployments") }}</h5></div>';
       updateDeploymentsPieChart([], 'pie-deployments-tab');
       return;
     }
-    
-  let html = '<div class="table-responsive"><table class="table table-modern table-hover" id="deployments-table"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Up-to-date</th><th>Available</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
+
+  let html = '<div class="table-responsive"><table class="table table-modern table-hover" id="deployments-table"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Up-to-date</th><th>Available</th><th>Age</th><th>{{ t("workloads.col_actions") }}</th></tr></thead><tbody>';
     
     deployments.forEach(dep => {
       const age = calculateAge(dep.creation_timestamp);
@@ -1524,27 +1524,27 @@ async function fetchAndRenderDeploymentsTable(forceRefresh = false) {
     container.innerHTML = html;
     updateDeploymentsPieChart(deployments, 'pie-deployments-tab');
   } catch (error) {
-    container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>Deployment listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+    container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>{{ t("workloads.error_deployments") }} ' + error.message + '</div>';
   }
 }
 
 // DaemonSets functions
 async function fetchAndRenderDaemonSetsTable() {
   const container = document.getElementById('daemonsets-table-container');
-  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">DaemonSet listesi yükleniyor...</span></div>';
-  
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">{{ t("workloads.loading_daemonsets") }}</span></div>';
+
   try {
   const data = await fetchJsonWithTimeout('/k8s-explorer/daemonsets-summary', {}, 10000);
     const daemonsets = data.daemonsets || [];
     lastDaemonSetsData = daemonsets;  // export icin sakla
 
     if (daemonsets.length === 0) {
-      container.innerHTML = '<div class="empty-state"><i class="bi bi-cpu"></i><h5>DaemonSet Bulunamadı</h5><p class="text-muted">Cluster\'da hiç DaemonSet bulunmuyor.</p></div>';
+      container.innerHTML = '<div class="empty-state"><i class="bi bi-cpu"></i><h5>{{ t("workloads.empty_daemonsets") }}</h5></div>';
       updateDaemonSetsPieChart([], 'pie-daemonsets-tab');
       return;
     }
-    
-  let html = '<div class="table-responsive"><table class="table table-modern table-hover" id="daemonsets-table"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Current</th><th>Desired</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
+
+  let html = '<div class="table-responsive"><table class="table table-modern table-hover" id="daemonsets-table"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Current</th><th>Desired</th><th>Age</th><th>{{ t("workloads.col_actions") }}</th></tr></thead><tbody>';
     
     daemonsets.forEach(ds => {
       const age = calculateAge(ds.creation_timestamp);
@@ -1574,21 +1574,21 @@ async function fetchAndRenderDaemonSetsTable() {
     container.innerHTML = html;
     updateDaemonSetsPieChart(daemonsets, 'pie-daemonsets-tab');
   } catch (error) {
-    container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>DaemonSet listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+    container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>{{ t("workloads.error_daemonsets") }} ' + error.message + '</div>';
   }
 }
 
 // StatefulSets functions
 async function fetchAndRenderStatefulSetsTable() {
   const container = document.getElementById('statefulsets-table-container');
-  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">StatefulSet listesi yükleniyor...</span></div>';
-  
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">{{ t("workloads.loading_statefulsets") }}</span></div>';
+
   try {
     const nsFilter = document.getElementById('statefulsetNamespaceFilter');
     const selectedNs = nsFilter.value;
     let url = '/k8s-explorer/statefulsets-summary';
     if (selectedNs) url += `?namespace=${encodeURIComponent(selectedNs)}`;
-    
+
   const data = await fetchJsonWithTimeout(url, {}, 10000);
     const statefulsets = data.statefulsets || [];
     lastStatefulSetsData = statefulsets;  // export icin sakla
@@ -1596,19 +1596,19 @@ async function fetchAndRenderStatefulSetsTable() {
     // Populate namespace filter
     if (!nsFilter.dataset.filled) {
       const namespaces = [...new Set(statefulsets.map(ss => ss.namespace))];
-      nsFilter.innerHTML = '<option value="">Tüm Namespace\'ler</option>' + 
+      nsFilter.innerHTML = '<option value="">{{ t("workloads.all_namespaces") }}</option>' +
         namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
       nsFilter.dataset.filled = '1';
       nsFilter.addEventListener('change', fetchAndRenderStatefulSetsTable);
     }
-    
+
     if (statefulsets.length === 0) {
-      container.innerHTML = '<div class="empty-state"><i class="bi bi-database"></i><h5>StatefulSet Bulunamadı</h5><p class="text-muted">Seçilen namespace\'de hiç StatefulSet bulunmuyor.</p></div>';
+      container.innerHTML = '<div class="empty-state"><i class="bi bi-database"></i><h5>{{ t("workloads.empty_statefulsets") }}</h5></div>';
       updateStatefulSetsPieChart([], 'pie-statefulsets-tab');
       return;
     }
-    
-  let html = '<div class="table-responsive"><table class="table table-modern table-hover" id="statefulsets-table"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Replicas</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
+
+  let html = '<div class="table-responsive"><table class="table table-modern table-hover" id="statefulsets-table"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Replicas</th><th>Age</th><th>{{ t("workloads.col_actions") }}</th></tr></thead><tbody>';
     
     statefulsets.forEach(ss => {
       const age = calculateAge(ss.creation_timestamp);
@@ -1641,24 +1641,24 @@ async function fetchAndRenderStatefulSetsTable() {
     container.innerHTML = html;
     updateStatefulSetsPieChart(statefulsets, 'pie-statefulsets-tab');
   } catch (error) {
-    container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>StatefulSet listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+    container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>{{ t("workloads.error_statefulsets") }} ' + error.message + '</div>';
   }
 }
 
 // ReplicaSets functions
 async function fetchAndRenderReplicaSetsTable() {
   const container = document.getElementById('replicasets-table-container');
-  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">ReplicaSet listesi yükleniyor...</span></div>';
-  
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">{{ t("workloads.loading_replicasets") }}</span></div>';
+
   try {
   const data = await fetchJsonWithTimeout('/k8s-explorer/replicasets-summary', {}, 10000);
     const replicasets = data.replicasets || [];
-    
+
     // Populate namespace filter
     const nsFilter = document.getElementById('replicasetsNamespaceFilter');
     if (!nsFilter.dataset.filled) {
       const namespaces = [...new Set(replicasets.map(rs => rs.namespace))];
-      nsFilter.innerHTML = '<option value="">Tüm Namespace\'ler</option>' + 
+      nsFilter.innerHTML = '<option value="">{{ t("workloads.all_namespaces") }}</option>' +
         namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
       nsFilter.dataset.filled = '1';
       nsFilter.addEventListener('change', () => {
@@ -1670,7 +1670,7 @@ async function fetchAndRenderReplicaSetsTable() {
     renderReplicaSetsTable(replicasets);
     updateReplicaSetsPieChart(replicasets, 'pie-replicasets-tab');
   } catch (error) {
-    container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>ReplicaSet listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+    container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>{{ t("workloads.error_replicasets") }} ' + error.message + '</div>';
   }
 }
 
@@ -1679,11 +1679,11 @@ function renderReplicaSetsTable(replicasets) {
   lastReplicaSetsData = replicasets;  // export icin sakla
 
   if (replicasets.length === 0) {
-    container.innerHTML = '<div class="empty-state"><i class="bi bi-collection"></i><h5>ReplicaSet Bulunamadı</h5><p class="text-muted">Seçilen kriterlerde hiç ReplicaSet bulunmuyor.</p></div>';
+    container.innerHTML = '<div class="empty-state"><i class="bi bi-collection"></i><h5>{{ t("workloads.empty_replicasets") }}</h5></div>';
     return;
   }
   
-  let html = '<div class="table-responsive"><table class="table table-modern table-hover" id="replicasets-table"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Desired</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
+  let html = '<div class="table-responsive"><table class="table table-modern table-hover" id="replicasets-table"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Desired</th><th>Age</th><th>{{ t("workloads.col_actions") }}</th></tr></thead><tbody>';
   
   replicasets.forEach(rs => {
     const age = calculateAge(rs.creation_timestamp);
@@ -1712,17 +1712,17 @@ function renderReplicaSetsTable(replicasets) {
 // Jobs functions
 async function fetchAndRenderJobsTable() {
   const container = document.getElementById('jobs-table-container');
-  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">Job listesi yükleniyor...</span></div>';
-  
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">{{ t("workloads.loading_jobs") }}</span></div>';
+
   try {
   const data = await fetchJsonWithTimeout('/k8s-explorer/jobs-summary', {}, 10000);
     const jobs = data.jobs || [];
-    
+
     // Populate namespace filter
     const nsFilter = document.getElementById('jobsNamespaceFilter');
     if (!nsFilter.dataset.filled) {
       const namespaces = [...new Set(jobs.map(job => job.namespace))];
-      nsFilter.innerHTML = '<option value="">Tüm Namespace\'ler</option>' + 
+      nsFilter.innerHTML = '<option value="">{{ t("workloads.all_namespaces") }}</option>' +
         namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
       nsFilter.dataset.filled = '1';
       nsFilter.addEventListener('change', () => {
@@ -1734,7 +1734,7 @@ async function fetchAndRenderJobsTable() {
     renderJobsTable(jobs);
     updateJobsPieChart(jobs, 'pie-jobs-tab');
   } catch (error) {
-    container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>Job listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+    container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>{{ t("workloads.error_jobs") }} ' + error.message + '</div>';
   }
 }
 
@@ -1743,11 +1743,11 @@ function renderJobsTable(jobs) {
   lastJobsData = jobs;  // export icin sakla
 
   if (jobs.length === 0) {
-    container.innerHTML = '<div class="empty-state"><i class="bi bi-play-circle"></i><h5>Job Bulunamadı</h5><p class="text-muted">Seçilen kriterlerde hiç Job bulunmuyor.</p></div>';
+    container.innerHTML = '<div class="empty-state"><i class="bi bi-play-circle"></i><h5>{{ t("workloads.empty_jobs") }}</h5></div>';
     return;
   }
   
-  let html = '<div class="table-responsive"><table class="table table-modern table-hover"><thead><tr><th>Namespace</th><th>Name</th><th>Succeeded</th><th>Failed</th><th>Completions</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
+  let html = '<div class="table-responsive"><table class="table table-modern table-hover"><thead><tr><th>Namespace</th><th>Name</th><th>Succeeded</th><th>Failed</th><th>Completions</th><th>Age</th><th>{{ t("workloads.col_actions") }}</th></tr></thead><tbody>';
   
   jobs.forEach(job => {
     const age = calculateAge(job.creation_timestamp);
@@ -1777,17 +1777,17 @@ function renderJobsTable(jobs) {
 // CronJobs functions
 async function fetchAndRenderCronJobsTable() {
   const container = document.getElementById('cronjobs-table-container');
-  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">CronJob listesi yükleniyor...</span></div>';
-  
+  container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">{{ t("workloads.loading_cronjobs") }}</span></div>';
+
   try {
   const data = await fetchJsonWithTimeout('/k8s-explorer/cronjobs-summary', {}, 10000);
     const cronjobs = data.cronjobs || [];
-    
+
     // Populate namespace filter
     const nsFilter = document.getElementById('cronjobsNamespaceFilter');
     if (!nsFilter.dataset.filled) {
       const namespaces = [...new Set(cronjobs.map(cj => cj.namespace))];
-      nsFilter.innerHTML = '<option value="">Tüm Namespace\'ler</option>' + 
+      nsFilter.innerHTML = '<option value="">{{ t("workloads.all_namespaces") }}</option>' +
         namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
       nsFilter.dataset.filled = '1';
       nsFilter.addEventListener('change', () => {
@@ -1799,7 +1799,7 @@ async function fetchAndRenderCronJobsTable() {
     renderCronJobsTable(cronjobs);
     updateCronJobsPieChart(cronjobs, 'pie-cronjobs-tab');
   } catch (error) {
-    container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>CronJob listesi yüklenirken hata oluştu: ' + error.message + '</div>';
+    container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>{{ t("workloads.error_cronjobs") }} ' + error.message + '</div>';
   }
 }
 
@@ -1808,11 +1808,11 @@ function renderCronJobsTable(cronjobs) {
   lastCronJobsData = cronjobs;  // export icin sakla
 
   if (cronjobs.length === 0) {
-    container.innerHTML = '<div class="empty-state"><i class="bi bi-clock"></i><h5>CronJob Bulunamadı</h5><p class="text-muted">Seçilen kriterlerde hiç CronJob bulunmuyor.</p></div>';
+    container.innerHTML = '<div class="empty-state"><i class="bi bi-clock"></i><h5>{{ t("workloads.empty_cronjobs") }}</h5></div>';
     return;
   }
   
-  let html = '<div class="table-responsive"><table class="table table-modern table-hover"><thead><tr><th>Namespace</th><th>Name</th><th>Schedule</th><th>Suspended</th><th>Active</th><th>Last Schedule</th><th>Age</th><th>İşlemler</th></tr></thead><tbody>';
+  let html = '<div class="table-responsive"><table class="table table-modern table-hover"><thead><tr><th>Namespace</th><th>Name</th><th>Schedule</th><th>Suspended</th><th>Active</th><th>Last Schedule</th><th>Age</th><th>{{ t("workloads.col_actions") }}</th></tr></thead><tbody>';
   
   cronjobs.forEach(cj => {
     const age = calculateAge(cj.creation_timestamp);
@@ -1906,7 +1906,7 @@ function createPieChart(containerId, title, data) {
   if (!container) return;
   
   if (data.every(item => item.y === 0)) {
-    container.innerHTML = '<div class="empty-state"><i class="bi bi-pie-chart"></i><h6>Veri Yok</h6><p class="text-muted mb-0">Gösterilecek veri bulunmuyor.</p></div>';
+    container.innerHTML = '<div class="empty-state"><i class="bi bi-pie-chart"></i><h6>{{ t("workloads.no_data") }}</h6><p class="text-muted mb-0">{{ t("workloads.no_data_desc") }}</p></div>';
     return;
   }
   
@@ -1972,11 +1972,11 @@ function showDaemonSetProperties(name, namespace) {
   const label = document.getElementById('podPropertiesModalLabel');
   const body = document.getElementById('podPropertiesModalBody');
   if (!modalEl || !label || !body) {
-    alert('Properties modal bulunamadı.');
+    alert('{{ t("workloads.properties_modal_missing") }}');
     return;
   }
-  label.textContent = `DaemonSet Properties: ${namespace}/${name}`;
-  body.textContent = 'Yükleniyor...';
+  label.textContent = `{{ t("workloads.modal_daemonset_properties") }} ${namespace}/${name}`;
+  body.textContent = '{{ t("workloads.loading") }}';
   if (!document.body.contains(modalEl)) document.body.appendChild(modalEl);
   const bs = bootstrap.Modal.getOrCreateInstance(modalEl);
   bs.show();
@@ -1984,34 +1984,34 @@ function showDaemonSetProperties(name, namespace) {
     .then(r => r.json())
     .then(data => {
       if (data.error) {
-        body.innerHTML = `<div class="text-danger">Properties alınamadı: ${data.error}</div>`;
+        body.innerHTML = `<div class="text-danger">{{ t("workloads.error_properties") }} ${data.error}</div>`;
         return;
       }
       // show readable JSON
       body.innerHTML = `<pre style="white-space:pre-wrap;">${JSON.stringify(data.daemonset || data, null, 2)}</pre>`;
     }).catch(e => {
-      body.innerHTML = `<div class="text-danger">Properties alınırken hata oluştu: ${e}</div>`;
+      body.innerHTML = `<div class="text-danger">{{ t("workloads.error_properties_detail") }} ${e}</div>`;
     });
 }
 
 function restartDaemonSet(name, namespace) {
-  openConfirmModal({ message: namespace + '/' + name + " DaemonSet'ini yeniden başlatmak istiyor musunuz?", onConfirm: async () => {
+  openConfirmModal({ message: namespace + '/' + name + ' {{ t("workloads.confirm_restart_daemonset") }}', onConfirm: async () => {
     try {
       const r = await fetch('/k8s-explorer/restart-daemonset', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, namespace })
       });
       if (r.ok) {
-        showToast('İşleminiz başarılı şekilde yapıldı', 'success');
+        showToast('{{ t("workloads.action_success") }}', 'success');
         if (typeof fetchAndRenderDaemonSetsTable === 'function') fetchAndRenderDaemonSetsTable();
         if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
         if (typeof loadOverviewData === 'function') loadOverviewData();
       } else {
         const txt = await r.text();
-        showToast('Restart başarısız: ' + txt, 'error');
+        showToast('{{ t("workloads.error_restart") }} ' + txt, 'error');
       }
     } catch (e) {
-      showToast('Restart isteği başarısız: ' + e, 'error');
+      showToast('{{ t("workloads.error_restart_request") }} ' + e, 'error');
     }
   }});
 }
@@ -2025,11 +2025,11 @@ function showPodLogs(name, namespace) {
   const clearBtn = document.getElementById('podLogsClearSearchBtn');
   const infoEl = document.getElementById('podLogsSearchInfo');
   if (!modalEl || !body || !label) {
-    alert('Logs modal bulunamadı.');
+    alert('{{ t("workloads.logs_modal_missing") }}');
     return;
   }
-  label.textContent = `Pod Logs: ${namespace}/${name}`;
-  body.textContent = 'Yükleniyor...';
+  label.textContent = `{{ t("workloads.modal_pod_logs_title") }} ${namespace}/${name}`;
+  body.textContent = '{{ t("workloads.loading") }}';
   body.setAttribute('data-original', '');
   if (searchInput) searchInput.value = '';
   if (infoEl) infoEl.textContent = '';
@@ -2040,11 +2040,11 @@ function showPodLogs(name, namespace) {
     .then(async r => {
       if (!r.ok) {
         const txt = await r.text();
-        body.textContent = 'Log alınamadı: ' + txt;
+        body.textContent = '{{ t("workloads.error_log") }} ' + txt;
         return;
       }
       const txt = await r.text();
-      const content = txt || '(Boş log)';
+      const content = txt || '{{ t("workloads.log_empty") }}';
       body.textContent = content;
       body.setAttribute('data-original', content);
       // Wire up export
@@ -2059,7 +2059,7 @@ function showPodLogs(name, namespace) {
         };
       }
     }).catch(e => {
-      body.textContent = 'Log alınırken hata oluştu: ' + e;
+      body.textContent = '{{ t("workloads.error_log_detail") }} ' + e;
     });
 }
 
@@ -2075,7 +2075,7 @@ function exportLogsToFile(filename, text) {
     a.remove();
     URL.revokeObjectURL(url);
   } catch (e) {
-    alert('Export başarısız: ' + e);
+    alert('{{ t("workloads.error_export") }} ' + e);
   }
 }
 
@@ -2096,7 +2096,7 @@ function filterLogs(bodyEl, query, infoEl) {
       if (ln.toLowerCase().includes(q)) { filtered.push(ln); matches++; }
     }
     bodyEl.textContent = filtered.join('\n');
-    if (infoEl) infoEl.textContent = `${matches} eşleşme`;
+    if (infoEl) infoEl.textContent = `${matches} {{ t("workloads.log_matches_suffix") }}`;
   } catch (e) {
     bodyEl.textContent = original;
     if (infoEl) infoEl.textContent = '';
@@ -2108,11 +2108,11 @@ function showStatefulSetProperties(name, namespace) {
   const label = document.getElementById('podPropertiesModalLabel');
   const body = document.getElementById('podPropertiesModalBody');
   if (!modalEl || !label || !body) {
-    alert('Properties modal bulunamadı.');
+    alert('{{ t("workloads.properties_modal_missing") }}');
     return;
   }
-  label.textContent = `StatefulSet Properties: ${namespace}/${name}`;
-  body.textContent = 'Yükleniyor...';
+  label.textContent = `{{ t("workloads.modal_statefulset_properties") }} ${namespace}/${name}`;
+  body.textContent = '{{ t("workloads.loading") }}';
   if (!document.body.contains(modalEl)) document.body.appendChild(modalEl);
   const bs = bootstrap.Modal.getOrCreateInstance(modalEl);
   bs.show();
@@ -2120,33 +2120,33 @@ function showStatefulSetProperties(name, namespace) {
     .then(r => r.json())
     .then(data => {
       if (data.error) {
-        body.innerHTML = `<div class="text-danger">Properties alınamadı: ${data.error}</div>`;
+        body.innerHTML = `<div class="text-danger">{{ t("workloads.error_properties") }} ${data.error}</div>`;
         return;
       }
       body.innerHTML = `<pre style="white-space:pre-wrap;">${JSON.stringify(data.statefulset || data, null, 2)}</pre>`;
     }).catch(e => {
-      body.innerHTML = `<div class="text-danger">Properties alınırken hata oluştu: ${e}</div>`;
+      body.innerHTML = `<div class="text-danger">{{ t("workloads.error_properties_detail") }} ${e}</div>`;
     });
 }
 
 function restartStatefulSet(name, namespace) {
-  openConfirmModal({ message: namespace + '/' + name + " StatefulSet'ini yeniden başlatmak istiyor musunuz?", onConfirm: async () => {
+  openConfirmModal({ message: namespace + '/' + name + ' {{ t("workloads.confirm_restart_statefulset") }}', onConfirm: async () => {
     try {
       const r = await fetch('/k8s-explorer/restart-statefulset', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, namespace })
       });
       if (r.ok) {
-        showToast('İşleminiz başarılı şekilde yapıldı', 'success');
+        showToast('{{ t("workloads.action_success") }}', 'success');
         if (typeof fetchAndRenderStatefulSetsTable === 'function') fetchAndRenderStatefulSetsTable();
         if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
         if (typeof loadOverviewData === 'function') loadOverviewData();
       } else {
         const txt = await r.text();
-        showToast('Restart başarısız: ' + txt, 'error');
+        showToast('{{ t("workloads.error_restart") }} ' + txt, 'error');
       }
     } catch (e) {
-      showToast('Restart isteği başarısız: ' + e, 'error');
+      showToast('{{ t("workloads.error_restart_request") }} ' + e, 'error');
     }
   }});
 }
@@ -2159,18 +2159,18 @@ function showScaleDeploymentModal(name, namespace, replicas) {
   const inputEl = document.getElementById('scaleReplicasInput');
   const saveBtn = document.getElementById('scaleDeploymentSaveBtn');
   if (!modalEl || !labelEl || !nameEl || !inputEl || !saveBtn) {
-    alert('Scale modal bulunamadı.');
+    alert('{{ t("workloads.scale_modal_missing") }}');
     return;
   }
   // Set fields
-  labelEl.textContent = 'Deployment Scale';
+  labelEl.textContent = '{{ t("workloads.scale_modal_deployment") }}';
   nameEl.textContent = `${namespace}/${name}`;
   inputEl.value = (typeof replicas === 'number' ? replicas : (parseInt(replicas) || 0));
 
   // Wire save button
   saveBtn.onclick = async () => {
     const val = parseInt(inputEl.value);
-  if (isNaN(val) || val < 0) { showToast('Geçerli bir sayı girin', 'warning'); return; }
+  if (isNaN(val) || val < 0) { showToast('{{ t("workloads.scale_invalid_number") }}', 'warning'); return; }
     try {
       saveBtn.disabled = true;
       const r = await fetch('/k8s-explorer/scale-deployment', {
@@ -2181,16 +2181,16 @@ function showScaleDeploymentModal(name, namespace, replicas) {
       if (r.ok) {
         // Close modal
         bootstrap.Modal.getOrCreateInstance(modalEl).hide();
-  showToast('İşleminiz başarılı şekilde yapıldı', 'success');
+  showToast('{{ t("workloads.action_success") }}', 'success');
         if (typeof fetchAndRenderDeploymentsTable === 'function') fetchAndRenderDeploymentsTable();
         if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
         if (typeof loadOverviewData === 'function') loadOverviewData();
       } else {
         const txt = await r.text();
-        showToast('Scale başarısız: ' + txt, 'error');
+        showToast('{{ t("workloads.error_scale") }} ' + txt, 'error');
       }
     } catch (e) {
-      showToast('Scale isteği başarısız: ' + e, 'error');
+      showToast('{{ t("workloads.error_scale_request") }} ' + e, 'error');
     } finally {
       saveBtn.disabled = false;
     }
@@ -2203,23 +2203,23 @@ function showScaleDeploymentModal(name, namespace, replicas) {
 
 
 function restartDeployment(name, namespace) {
-  openConfirmModal({ message: namespace + '/' + name + " Deployment'ını yeniden başlatmak istiyor musunuz?", onConfirm: async () => {
+  openConfirmModal({ message: namespace + '/' + name + ' {{ t("workloads.confirm_restart_deployment") }}', onConfirm: async () => {
     try {
       const r = await fetch('/k8s-explorer/restart-deployment', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, namespace })
       });
       if (r.ok) {
-        showToast('İşleminiz başarılı şekilde yapıldı', 'success');
+        showToast('{{ t("workloads.action_success") }}', 'success');
         if (typeof fetchAndRenderDeploymentsTable === 'function') fetchAndRenderDeploymentsTable();
         if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
         if (typeof loadOverviewData === 'function') loadOverviewData();
       } else {
         const txt = await r.text();
-        showToast('Restart başarısız: ' + txt, 'error');
+        showToast('{{ t("workloads.error_restart") }} ' + txt, 'error');
       }
     } catch (e) {
-      showToast('Restart isteği başarısız: ' + e, 'error');
+      showToast('{{ t("workloads.error_restart_request") }} ' + e, 'error');
     }
   }});
 }
@@ -2230,11 +2230,11 @@ function showPodProperties(name, namespace) {
   const label = document.getElementById('podPropertiesModalLabel');
   const body = document.getElementById('podPropertiesModalBody');
   if (!modalEl || !label || !body) {
-    alert('Pod properties modal yapılandırması eksik.');
+    alert('{{ t("workloads.properties_modal_missing") }}');
     return;
   }
-  label.textContent = `Pod Properties: ${namespace}/${name}`;
-  body.textContent = 'Yükleniyor...';
+  label.textContent = `{{ t("workloads.modal_pod_properties_title") }} ${namespace}/${name}`;
+  body.textContent = '{{ t("workloads.loading") }}';
   // Ensure modal is attached to body (Bootstrap quirk)
   if (!document.body.contains(modalEl)) document.body.appendChild(modalEl);
   const bs = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -2242,7 +2242,7 @@ function showPodProperties(name, namespace) {
   fetchJsonWithTimeout(`/k8s-explorer/pod-properties?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`, {}, 10000)
     .then(data => {
       if (data.error) {
-        body.innerHTML = `<div class="text-danger">Properties alınamadı: ${data.error}</div>`;
+        body.innerHTML = `<div class="text-danger">{{ t("workloads.error_properties") }} ${data.error}</div>`;
         return;
       }
       // Build a compact resources table (per-container requests/limits)
@@ -2277,11 +2277,11 @@ function showPodProperties(name, namespace) {
       // Fetch and render metrics beneath
       const chartDiv = document.getElementById('podResourceChart');
       if (chartDiv) {
-        chartDiv.innerHTML = '<div class="d-flex align-items-center text-muted"><div class="loading-spinner me-2"></div>Metrikler yükleniyor...</div>';
+        chartDiv.innerHTML = '<div class="d-flex align-items-center text-muted"><div class="loading-spinner me-2"></div>{{ t("workloads.loading_metrics") }}</div>';
   fetchJsonWithTimeout(`/k8s-explorer/pod-metrics?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(name)}`, {}, 10000)
           .then(m=>{
             if (m.error) {
-              chartDiv.innerHTML = `<div class="text-danger">Metrikler alınamadı: ${m.error}</div>`;
+              chartDiv.innerHTML = `<div class="text-danger">{{ t("workloads.error_metrics") }} ${m.error}</div>`;
               return;
             }
             const cpu = (m.cpu_mcores||0);
@@ -2329,13 +2329,13 @@ function showPodProperties(name, namespace) {
               const canvas = document.getElementById('podMetricChartCanvas');
               if (!canvas) return;
               if (!resp || !resp.cpu || !resp.memory) {
-                canvas.innerHTML = '<div class="text-muted">Zaman serisi verisi bulunamadı.</div>';
+                canvas.innerHTML = '<div class="text-muted">{{ t("workloads.no_timeseries") }}</div>';
                 return;
               }
               const cpuData = (resp.cpu.data || []).map(([t, v]) => [t * 1000, (v || 0) * 1000]); // cores->mCores
               const memData = (resp.memory.data || []).map(([t, v]) => [t * 1000, (v || 0) / (1024*1024)]); // bytes->MB
               if (!cpuData.length && !memData.length) {
-                canvas.innerHTML = '<div class="text-muted">Grafik için zaman serisi verisi bulunamadı.</div>';
+                canvas.innerHTML = '<div class="text-muted">{{ t("workloads.no_timeseries_chart") }}</div>';
                 return;
               }
               Highcharts.chart('podMetricChartCanvas', {
@@ -2353,7 +2353,7 @@ function showPodProperties(name, namespace) {
               });
               if (sourceBadge) {
                 const srcName = (resp.source || 'unknown');
-                sourceBadge.textContent = `Data Source: ${srcName}`;
+                sourceBadge.textContent = `{{ t("workloads.metrics_data_source") }} ${srcName}`;
                 sourceBadge.className = 'badge rounded-pill ' + (srcName === 'prometheus' ? 'bg-primary' : 'bg-secondary');
                 sourceBadge.style.display = 'inline-block';
               }
@@ -2368,16 +2368,16 @@ function showPodProperties(name, namespace) {
                 } else {
                   const canvas = document.getElementById('podMetricChartCanvas');
                   const reason = r && r.error ? (': ' + r.error) : '';
-                  if (canvas) canvas.innerHTML = `<div class="text-muted">Zaman serisi alınamadı${reason}. Anlık değerler yukarıda gösteriliyor.</div>`;
+                  if (canvas) canvas.innerHTML = `<div class="text-muted">{{ t("workloads.error_timeseries") }}${reason}. {{ t("workloads.metrics_current_shown") }}</div>`;
                   if (sourceBadge) {
-                    sourceBadge.textContent = `Data Source: ${r && r.source ? r.source : 'unknown'}`;
+                    sourceBadge.textContent = `{{ t("workloads.metrics_data_source") }} ${r && r.source ? r.source : 'unknown'}`;
                     sourceBadge.className = 'badge rounded-pill bg-secondary';
                     sourceBadge.style.display = 'inline-block';
                   }
                 }
               } catch (e) {
                 const canvas = document.getElementById('podMetricChartCanvas');
-                if (canvas) canvas.innerHTML = `<div class=\"text-muted\">Grafik getirilemedi: ${e}</div>`;
+                if (canvas) canvas.innerHTML = `<div class=\"text-muted\">{{ t("workloads.error_chart_fetch") }} ${e}</div>`;
               }
             }
 
@@ -2398,31 +2398,31 @@ function showPodProperties(name, namespace) {
             fetchAndRenderRange('30','30s');
           })
           .catch(e=>{
-            const msg = (''+e).includes('AbortError') ? 'İstek zaman aşımına uğradı (10s). Ağ/erişim ayarlarını kontrol edin ve tekrar deneyin.' : (''+e);
-            chartDiv.innerHTML = `<div class=\"alert alert-warning\">Metrikler alınırken hata: ${msg} <button class=\"btn btn-sm btn-outline-secondary ms-2\" onclick=\"showPodProperties('${name}','${namespace}')\">Tekrar Dene</button></div>`;
+            const msg = (''+e).includes('AbortError') ? '{{ t("workloads.request_timeout_detail") }}' : (''+e);
+            chartDiv.innerHTML = `<div class=\"alert alert-warning\">{{ t("workloads.error_metrics_detail") }} ${msg} <button class=\"btn btn-sm btn-outline-secondary ms-2\" onclick=\"showPodProperties('${name}','${namespace}')\">{{ t("workloads.btn_retry") }}</button></div>`;
           });
       }
     }).catch(e => {
-      body.innerHTML = `<div class="text-danger">Properties alınırken hata oluştu: ${e}</div>`;
+      body.innerHTML = `<div class="text-danger">{{ t("workloads.error_properties_detail") }} ${e}</div>`;
     });
 }
 
 function restartPod(name, namespace) {
-  openConfirmModal({ message: namespace + '/' + name + ' podunu yeniden başlatmak istiyor musunuz?', onConfirm: async () => {
+  openConfirmModal({ message: namespace + '/' + name + ' {{ t("workloads.confirm_restart_pod") }}', onConfirm: async () => {
     try {
       const r = await fetch('/k8s-explorer/restart-pod', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, namespace })
       });
       if (r.ok) {
-        showToast('İşleminiz başarılı şekilde yapıldı', 'success');
+        showToast('{{ t("workloads.action_success") }}', 'success');
         if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
       } else {
         const txt = await r.text();
-        showToast('Restart başarısız: ' + txt, 'error');
+        showToast('{{ t("workloads.error_restart") }} ' + txt, 'error');
       }
     } catch (e) {
-      showToast('Restart isteği başarısız: ' + e, 'error');
+      showToast('{{ t("workloads.error_restart_request") }} ' + e, 'error');
     }
   }});
 }
@@ -2434,16 +2434,16 @@ function showScaleStatefulSetModal(name, namespace, replicas) {
   const inputEl = document.getElementById('scaleStatefulSetReplicasInput');
   const saveBtn = document.getElementById('scaleStatefulSetSaveBtn');
   if (!modalEl || !labelEl || !nameEl || !inputEl || !saveBtn) {
-    alert('Scale modal bulunamadı.');
+    alert('{{ t("workloads.scale_modal_missing") }}');
     return;
   }
-  labelEl.textContent = 'StatefulSet Scale';
+  labelEl.textContent = '{{ t("workloads.scale_modal_statefulset") }}';
   nameEl.textContent = `${namespace}/${name}`;
   inputEl.value = (typeof replicas === 'number' ? replicas : (parseInt(replicas) || 0));
 
   saveBtn.onclick = async () => {
     const val = parseInt(inputEl.value);
-    if (isNaN(val) || val < 0) { return showToast('Geçerli bir sayı girin', 'warning'); }
+    if (isNaN(val) || val < 0) { return showToast('{{ t("workloads.scale_invalid_number") }}', 'warning'); }
     try {
       saveBtn.disabled = true;
       const r = await fetch('/k8s-explorer/scale-statefulset', {
@@ -2452,16 +2452,16 @@ function showScaleStatefulSetModal(name, namespace, replicas) {
       });
       if (r.ok) {
         bootstrap.Modal.getOrCreateInstance(modalEl).hide();
-        showToast('İşleminiz başarılı şekilde yapıldı', 'success');
+        showToast('{{ t("workloads.action_success") }}', 'success');
         if (typeof fetchAndRenderStatefulSetsTable === 'function') fetchAndRenderStatefulSetsTable();
         if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
         if (typeof loadOverviewData === 'function') loadOverviewData();
       } else {
         const txt = await r.text();
-        showToast('Scale başarısız: ' + txt, 'error');
+        showToast('{{ t("workloads.error_scale") }} ' + txt, 'error');
       }
     } catch (e) {
-      showToast('Scale isteği başarısız: ' + e, 'error');
+      showToast('{{ t("workloads.error_scale_request") }} ' + e, 'error');
     } finally {
       saveBtn.disabled = false;
     }
@@ -2472,7 +2472,7 @@ function showScaleStatefulSetModal(name, namespace, replicas) {
 }
 
 function deleteReplicaSet(name, namespace) {
-  openConfirmModal({ message: namespace + '/' + name + " ReplicaSet'ini silmek istiyor musunuz?", onConfirm: async () => {
+  openConfirmModal({ message: namespace + '/' + name + ' {{ t("workloads.confirm_delete_replicaset") }}', onConfirm: async () => {
     try {
       const r = await fetch('/k8s-explorer/delete-replicasets', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -2481,44 +2481,44 @@ function deleteReplicaSet(name, namespace) {
       let txt = '';
       try { txt = await r.text(); } catch(e) { txt = '' + e; }
       if (!r.ok && r.status !== 207) {
-        return showToast('Delete başarısız: ' + txt, 'error');
+        return showToast('{{ t("workloads.error_delete") }} ' + txt, 'error');
       }
       let json = {};
       try { json = JSON.parse(txt || '{}'); } catch(e) { json = { deleted: [], errors: [{ error: txt }] }; }
       const deleted = json.deleted || [];
       const errors = json.errors || [];
       if (deleted.length > 0) {
-        showToast('ReplicaSet silindi: ' + name + ' (ns: ' + namespace + ')', 'success');
+        showToast('{{ t("workloads.replicaset_deleted") }} ' + name + ' (ns: ' + namespace + ')', 'success');
       }
       if (errors.length > 0) {
         console.warn('Delete errors:', errors);
-        showToast('Bazı hatalar oluştu. Konsolu kontrol edin.', 'warning');
+        showToast('{{ t("workloads.delete_partial_errors") }}', 'warning');
       }
       if (typeof fetchAndRenderReplicaSetsTable === 'function') fetchAndRenderReplicaSetsTable();
       if (typeof fetchAndRenderPodsTable === 'function') fetchAndRenderPodsTable();
       if (typeof loadOverviewData === 'function') loadOverviewData();
     } catch (e) {
-      showToast('Delete isteği başarısız: ' + e, 'error');
+      showToast('{{ t("workloads.error_delete_request") }} ' + e, 'error');
     }
   }});
 }
 
 function deleteJob(name, namespace) {
-  if (confirm(`${namespace}/${name} Job'unu silmek istediğinizden emin misiniz?`)) {
-    alert('Delete functionality will be implemented');
+  if (confirm(`${namespace}/${name} {{ t("workloads.confirm_delete_job") }}`)) {
+    alert('{{ t("workloads.stub_not_implemented") }}');
   }
 }
 
 function toggleCronJobSuspend(name, namespace, currentSuspended) {
   const action = currentSuspended ? 'resume' : 'suspend';
-  if (confirm(`${namespace}/${name} CronJob'unu ${action} etmek istediğinizden emin misiniz?`)) {
-    alert(`${action} functionality will be implemented`);
+  if (confirm(`${namespace}/${name} {{ t("workloads.confirm_suspend_cronjob") }}`)) {
+    alert('{{ t("workloads.stub_not_implemented") }}');
   }
 }
 
 function deleteCronJob(name, namespace) {
-  if (confirm(`${namespace}/${name} CronJob'unu silmek istediğinizden emin misiniz?`)) {
-    alert('Delete functionality will be implemented');
+  if (confirm(`${namespace}/${name} {{ t("workloads.confirm_delete_cronjob") }}`)) {
+    alert('{{ t("workloads.stub_not_implemented") }}');
   }
 }
 
@@ -2550,17 +2550,17 @@ function updateDeploymentsPieChart(deployments, containerId) {
 // ---- Tab bazli CSV export fonksiyonlari ----
 
 function exportWorkloadsPods() {
-  if (!lastPodsData.length) { showToast('Henuz veri yuklenmedi', 'warning'); return; }
+  if (!lastPodsData.length) { showToast('{{ t("workloads.no_export_data") }}', 'warning'); return; }
   const headers = ['Namespace', 'Ad', 'Durum', 'Hazir', 'Yeniden Baslatma', 'Yas'];
   const rows = lastPodsData.map(function(pod) {
     return [pod.namespace, pod.name, pod.status, pod.ready, pod.restarts, calculateAge(pod.creation_timestamp)];
   });
   exportToCsv('pods_export.csv', headers, rows);
-  showToast('CSV indirildi', 'success');
+  showToast('{{ t("workloads.csv_downloaded") }}', 'success');
 }
 
 function exportWorkloadsDeployments() {
-  if (!lastDeploymentsData.length) { showToast('Henuz veri yuklenmedi', 'warning'); return; }
+  if (!lastDeploymentsData.length) { showToast('{{ t("workloads.no_export_data") }}', 'warning'); return; }
   const headers = ['Namespace', 'Ad', 'Hazir', 'Guncel', 'Kullanilabilir', 'Yas'];
   const rows = lastDeploymentsData.map(function(dep) {
     const ready_replicas = (dep.ready_replicas !== undefined && dep.ready_replicas !== null) ? dep.ready_replicas : 0;
@@ -2568,58 +2568,58 @@ function exportWorkloadsDeployments() {
     return [dep.namespace, dep.name, ready_replicas + '/' + replicas, dep.updated_replicas, dep.available_replicas, calculateAge(dep.creation_timestamp)];
   });
   exportToCsv('deployments_export.csv', headers, rows);
-  showToast('CSV indirildi', 'success');
+  showToast('{{ t("workloads.csv_downloaded") }}', 'success');
 }
 
 function exportWorkloadsDaemonSets() {
-  if (!lastDaemonSetsData.length) { showToast('Henuz veri yuklenmedi', 'warning'); return; }
+  if (!lastDaemonSetsData.length) { showToast('{{ t("workloads.no_export_data") }}', 'warning'); return; }
   const headers = ['Namespace', 'Ad', 'Hazir', 'Mevcut', 'Istenen', 'Yas'];
   const rows = lastDaemonSetsData.map(function(ds) {
     return [ds.namespace, ds.name, ds.ready, ds.current, ds.desired, calculateAge(ds.creation_timestamp)];
   });
   exportToCsv('daemonsets_export.csv', headers, rows);
-  showToast('CSV indirildi', 'success');
+  showToast('{{ t("workloads.csv_downloaded") }}', 'success');
 }
 
 function exportWorkloadsStatefulSets() {
-  if (!lastStatefulSetsData.length) { showToast('Henuz veri yuklenmedi', 'warning'); return; }
+  if (!lastStatefulSetsData.length) { showToast('{{ t("workloads.no_export_data") }}', 'warning'); return; }
   const headers = ['Namespace', 'Ad', 'Hazir', 'Replika', 'Yas'];
   const rows = lastStatefulSetsData.map(function(ss) {
     return [ss.namespace, ss.name, ss.ready, ss.replicas, calculateAge(ss.creation_timestamp)];
   });
   exportToCsv('statefulsets_export.csv', headers, rows);
-  showToast('CSV indirildi', 'success');
+  showToast('{{ t("workloads.csv_downloaded") }}', 'success');
 }
 
 function exportWorkloadsReplicaSets() {
-  if (!lastReplicaSetsData.length) { showToast('Henuz veri yuklenmedi', 'warning'); return; }
+  if (!lastReplicaSetsData.length) { showToast('{{ t("workloads.no_export_data") }}', 'warning'); return; }
   const headers = ['Namespace', 'Ad', 'Hazir', 'Istenen', 'Yas'];
   const rows = lastReplicaSetsData.map(function(rs) {
     return [rs.namespace, rs.name, rs.ready, rs.desired, calculateAge(rs.creation_timestamp)];
   });
   exportToCsv('replicasets_export.csv', headers, rows);
-  showToast('CSV indirildi', 'success');
+  showToast('{{ t("workloads.csv_downloaded") }}', 'success');
 }
 
 function exportWorkloadsJobs() {
-  if (!lastJobsData.length) { showToast('Henuz veri yuklenmedi', 'warning'); return; }
+  if (!lastJobsData.length) { showToast('{{ t("workloads.no_export_data") }}', 'warning'); return; }
   const headers = ['Namespace', 'Ad', 'Basarili', 'Basarisiz', 'Tamamlanma', 'Yas'];
   const rows = lastJobsData.map(function(job) {
     return [job.namespace, job.name, job.succeeded, job.failed, job.completions || '', calculateAge(job.creation_timestamp)];
   });
   exportToCsv('jobs_export.csv', headers, rows);
-  showToast('CSV indirildi', 'success');
+  showToast('{{ t("workloads.csv_downloaded") }}', 'success');
 }
 
 function exportWorkloadsCronJobs() {
-  if (!lastCronJobsData.length) { showToast('Henuz veri yuklenmedi', 'warning'); return; }
+  if (!lastCronJobsData.length) { showToast('{{ t("workloads.no_export_data") }}', 'warning'); return; }
   const headers = ['Namespace', 'Ad', 'Program', 'Askida', 'Aktif', 'Son Calistirma', 'Yas'];
   const rows = lastCronJobsData.map(function(cj) {
     const lastSchedule = cj.last_schedule_time ? new Date(cj.last_schedule_time).toLocaleString('tr-TR') : '';
     return [cj.namespace, cj.name, cj.schedule, cj.suspended ? 'Evet' : 'Hayir', cj.active || 0, lastSchedule, calculateAge(cj.creation_timestamp)];
   });
   exportToCsv('cronjobs_export.csv', headers, rows);
-  showToast('CSV indirildi', 'success');
+  showToast('{{ t("workloads.csv_downloaded") }}', 'success');
 }
 
 </script>

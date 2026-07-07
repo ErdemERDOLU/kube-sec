@@ -147,6 +147,39 @@ app.register_blueprint(bp_security)
 from web.blueprints.explorer import bp_explorer
 app.register_blueprint(bp_explorer)
 
+@app.route('/api/version-check')
+def api_version_check():
+    """Güncelleme kontrolü endpoint'i — GitHub Releases API üzerinden yeni sürüm var mı kontrol eder.
+
+    Tüm hata durumlarında (ağ, 404, parse) sessizce ``update_available: false`` döner.
+    Sonuç 1 saat bellekte cache'lenir.
+
+    :returns: JSON — ``{update_available, current_version?, latest_version?, release_url?, disabled?}``
+
+    ---
+    tags:
+      - version
+    responses:
+      200:
+        description: Sürüm kontrol sonucu
+        schema:
+          type: object
+          properties:
+            update_available:
+              type: boolean
+            current_version:
+              type: string
+            latest_version:
+              type: string
+            release_url:
+              type: string
+            disabled:
+              type: boolean
+    """
+    from web.version_check import get_cached_version_info
+    return jsonify(get_cached_version_info())
+
+
 @app.route('/set-locale')
 def set_locale():
     lang = request.args.get('lang', 'tr')

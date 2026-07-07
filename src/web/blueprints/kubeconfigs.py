@@ -13,6 +13,7 @@ import time
 from flask import Blueprint, jsonify, request, session
 
 import web.kubeconfig_manager as _kcm
+import web.background as _bg
 from web.kubeconfig_manager import (
     KUBECONFIG_ACTIVE_KEY,
     KUBECONFIG_UPLOAD_DIR,
@@ -83,6 +84,13 @@ def kubeconfigs_activate():
         # Modül referansıyla güncelle; from ... import ile alınan kopya değil gerçek modül değişkeni
         with _kcm._KUBECONFIG_LOCK:
             _kcm.KUBECONFIG_ACTIVE_GLOBAL = name
+        # Yeni cluster için ardışık hata sayaçlarını sıfırla (spec R-3):
+        # önceki cluster'ın hataları yeni cluster'a taşınmamalı.
+        _bg._wsc_consecutive_errors = 0
+        _bg._psc_consecutive_errors = 0
+        _bg._msl_consecutive_errors = 0
+        _bg._pss_consecutive_errors = 0
+        _bg._npc_consecutive_errors = 0
         # Aktifleştirme sonrası cache'leri yeni kubeconfig ile tazele (hata yutsa da sorun yok)
         try:
             update_pods_summary_cache()

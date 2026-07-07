@@ -2224,10 +2224,19 @@ def k8s_explorer_health():
     instead of whatever the default KUBECONFIG env might point to. This matches the cluster actually used
     by backend requests (load_kube_config_active()).
     """
+    current_context_name = None
+    ok = False
+    error = None
     try:
-        current_context_name = None
         # Ensure active kubeconfig is loaded (this sets default client configuration)
         load_kube_config_active()
+    except Exception as e:
+        # NOT: load_kube_config_active() başarısız olsa bile AŞAĞIDAKİ AC-4 bloğu
+        # (background_caches/degraded) HER ZAMAN hesaplanmalı -- tam da cluster
+        # erişilemezken health endpoint'inin en bilgilendirici olması gerektiği an.
+        # Bu yüzden burada erken return YAPILMAZ, sadece ok/error set edilir.
+        error = str(e)
+    else:
         # After loading, try to list contexts from the same file path to get current context name
         try:
             active_path = get_active_kubeconfig_path()
@@ -2261,6 +2270,8 @@ def k8s_explorer_health():
         except Exception as e:
             ok = False
             error = str(e)
+
+    try:
         # --- AC-4: Arka plan cache durumlarını ekle ---
         now = time.time()
 

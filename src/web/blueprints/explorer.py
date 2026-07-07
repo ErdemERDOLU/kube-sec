@@ -2261,7 +2261,58 @@ def k8s_explorer_health():
         except Exception as e:
             ok = False
             error = str(e)
-        return jsonify({'ok': ok, 'context': current_context_name, 'error': error})
+        # --- AC-4: Arka plan cache durumlarını ekle ---
+        now = time.time()
+
+        def _cache_info(last_error, consecutive_errors, last_success_time):
+            """Tek bir cache için durum dict'i oluşturur."""
+            age = None
+            if last_success_time and last_success_time > 0:
+                age = int(now - last_success_time)
+            return {
+                'consecutive_errors': consecutive_errors,
+                'last_error': last_error,
+                'last_success_age_sec': age,
+            }
+
+        background_caches = {
+            'workload_stats': _cache_info(
+                _bg._wsc_last_error,
+                _bg._wsc_consecutive_errors,
+                _bg.workload_stats_cache_time,
+            ),
+            'pods_summary': _cache_info(
+                _bg._psc_last_error,
+                _bg._psc_consecutive_errors,
+                _bg.pods_summary_cache_time,
+            ),
+            'metrics_sampler': _cache_info(
+                _bg._msl_last_error,
+                _bg._msl_consecutive_errors,
+                _bg._msl_last_success_time,
+            ),
+            'pss': _cache_info(
+                _bg._pss_last_error,
+                _bg._pss_consecutive_errors,
+                _bg.pss_cache_time,
+            ),
+            'netpol_coverage': _cache_info(
+                _bg._npc_last_error,
+                _bg._npc_consecutive_errors,
+                _bg.netpol_coverage_cache_time,
+            ),
+        }
+        degraded = any(
+            info['consecutive_errors'] >= _bg.MAX_CONSECUTIVE_ERRORS
+            for info in background_caches.values()
+        )
+        return jsonify({
+            'ok': ok,
+            'context': current_context_name,
+            'error': error,
+            'background_caches': background_caches,
+            'degraded': degraded,
+        })
     except Exception as e:
         return jsonify({'ok': False, 'context': None, 'error': str(e)}), 500
 

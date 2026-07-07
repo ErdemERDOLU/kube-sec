@@ -854,5 +854,99 @@
 
     <script src="{{ url_for('static', filename='js/common.js') }}"></script>
     {% block scripts %}{% endblock %}
+
+    <!-- Güncelleme bildirimi toast (AC-6) -->
+    <div aria-live="polite" aria-atomic="true" class="position-fixed top-0 end-0 p-3" style="z-index: 2200; margin-top: 60px;">
+        <div id="kubesecUpdateToast"
+             class="toast align-items-center text-bg-primary border-0"
+             role="alert" aria-live="assertive" aria-atomic="true"
+             data-bs-autohide="false"
+             style="display:none; min-width: 300px;">
+            <div class="d-flex">
+                <div class="toast-body" id="kubesecUpdateToastBody">
+                    <i class="bi bi-arrow-up-circle me-1"></i>
+                    <span id="kubesecUpdateMsg">{{ t('update.new_version_available') }}</span>
+                    <a id="kubesecUpdateLink" href="#" target="_blank" rel="noopener noreferrer"
+                       class="ms-2 text-white fw-bold">{{ t('update.download') }}</a>
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                        id="kubesecUpdateDismiss"
+                        aria-label="{{ t('update.dismiss') }}"></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function () {
+        'use strict';
+        var SESSION_KEY = 'kubesec_update_dismissed';
+        var CHECK_DELAY_MS = 10000; // 10 saniye sonra kontrol et
+
+        function showUpdateBanner(latestVersion, releaseUrl, locale) {
+            try {
+                var toastEl = document.getElementById('kubesecUpdateToast');
+                var msgEl = document.getElementById('kubesecUpdateMsg');
+                var linkEl = document.getElementById('kubesecUpdateLink');
+                var dismissBtn = document.getElementById('kubesecUpdateDismiss');
+                if (!toastEl || !msgEl || !linkEl) return;
+
+                var label = (locale === 'en')
+                    ? 'New version available: v' + latestVersion
+                    : 'Yeni sürüm mevcut: v' + latestVersion;
+                var downloadLabel = (locale === 'en') ? 'Click to download' : 'İndirmek için tıklayın';
+
+                msgEl.textContent = label;
+                linkEl.textContent = downloadLabel;
+                if (releaseUrl) linkEl.href = releaseUrl;
+
+                toastEl.style.display = 'block';
+                if (typeof bootstrap !== 'undefined' && bootstrap.Toast) {
+                    var t = bootstrap.Toast.getOrCreateInstance(toastEl);
+                    t.show();
+                }
+
+                if (dismissBtn) {
+                    dismissBtn.addEventListener('click', function () {
+                        try { sessionStorage.setItem(SESSION_KEY, '1'); } catch (e) {}
+                        toastEl.style.display = 'none';
+                    }, { once: true });
+                }
+            } catch (e) {
+                // sessizce yut
+            }
+        }
+
+        function runVersionCheck() {
+            try {
+                if (sessionStorage.getItem(SESSION_KEY)) return; // bu oturumda zaten kapatıldı
+            } catch (e) {}
+
+            fetch('/api/version-check', { credentials: 'same-origin' })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (data) {
+                    if (!data || !data.update_available) return;
+                    try {
+                        if (sessionStorage.getItem(SESSION_KEY)) return;
+                    } catch (e) {}
+                    var locale = (document.documentElement.lang || 'tr').toLowerCase().split('-')[0];
+                    showUpdateBanner(
+                        data.latest_version || '',
+                        data.release_url || '',
+                        locale
+                    );
+                })
+                .catch(function () { /* sessizce yut */ });
+        }
+
+        // Sayfa yüklendikten 10 saniye sonra kontrol et
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function () {
+                setTimeout(runVersionCheck, CHECK_DELAY_MS);
+            });
+        } else {
+            setTimeout(runVersionCheck, CHECK_DELAY_MS);
+        }
+    })();
+    </script>
 </body>
 </html>

@@ -21,13 +21,66 @@ from web.kubeconfig_manager import load_kube_config_active
 
 
 # =============================================================================
+# Backoff sabitleri — KUBESEC_* env değişkenleriyle override edilebilir (AC-7)
+# =============================================================================
+
+def _parse_backoff_env(name: str, default: int, min_val: int = 1) -> int:
+    """Ortam değişkenini int'e çevirir; geçersiz değerde varsayılan döner, stderr'e uyarı yazar."""
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        val = int(raw)
+        if val < min_val:
+            raise ValueError(f"değer {val} < minimum {min_val}")
+        return val
+    except (ValueError, TypeError) as exc:
+        print(
+            f'BACKOFF UYARI: {name}={raw!r} geçersiz ({exc}); varsayılan {default} kullanılıyor.',
+            file=sys.stderr
+        )
+        return default
+
+
+BACKOFF_INITIAL: int = _parse_backoff_env('KUBESEC_BACKOFF_INITIAL', 5)
+BACKOFF_MAX: int = _parse_backoff_env('KUBESEC_BACKOFF_MAX', 300)
+MAX_CONSECUTIVE_ERRORS: int = _parse_backoff_env('KUBESEC_MAX_CONSECUTIVE_ERRORS', 10)
+
+
+def compute_backoff_sleep(consecutive_errors: int, base_ttl: float) -> float:
+    """Ardışık hata sayısına göre bekleme süresini hesaplar (AC-1).
+
+    - consecutive_errors <= 0: ``base_ttl`` döner (normal durum).
+    - consecutive_errors > 0: ``min(BACKOFF_INITIAL * 2^(n-1), BACKOFF_MAX)`` döner.
+
+    :param consecutive_errors: Ardışık hata sayısı (0'dan küçükse normal TTL döner).
+    :param base_ttl: Başarılı durumda bekleme süresi (saniye).
+    :returns: Uygulanacak bekleme süresi (saniye).
+    """
+    if consecutive_errors <= 0:
+        return float(base_ttl)
+    delay = BACKOFF_INITIAL * (2 ** (consecutive_errors - 1))
+    return float(min(delay, BACKOFF_MAX))
+
+
+def _should_log(consecutive_errors: int) -> bool:
+    """Throttled logging: 1., 2., 5., 10. ve sonrasında her 10.'da True döner (AC-8)."""
+    if consecutive_errors in (1, 2, 5):
+        return True
+    if consecutive_errors >= 10 and consecutive_errors % 10 == 0:
+        return True
+    return False
+
+
+# =============================================================================
 # Workload Stats In-Memory Cache
 # =============================================================================
 
 workload_stats_cache = None
 workload_stats_cache_time = 0
 WORKLOAD_STATS_CACHE_TTL = 20  # 20 saniye
-_wsc_last_error = None  # str | None -- son workload-stats yenileme hatası (başarılı ise None)
+_wsc_last_error = None           # str | None -- son workload-stats yenileme hatası (başarılı ise None)
+_wsc_consecutive_errors: int = 0  # ardışık hata sayacı (AC-3)
 
 
 def update_workload_stats_cache():
@@ -149,14 +202,33 @@ def update_workload_stats_cache():
         workload_stats_cache_time = time.time()
         _wsc_last_error = None  # başarılı güncelleme -- hata durumunu sıfırla
     except Exception as e:
-        print('WORKLOAD STATS CACHE ERROR:', e, file=sys.stderr)
-        _wsc_last_error = str(e)  # başarısız güncelleme -- hatayı kaydet (cache değişmez)
+        _wsc_last_error = str(e)  # başarısız güncelleme -- hatayı kaydet (cache değişmez); refresher loglar
 
 
 def workload_stats_cache_refresher():
+    """Workload stats cache'ini TTL aralıklarla yenileyen daemon döngüsü (AC-2)."""
+    global _wsc_consecutive_errors
     while True:
+        prev_error = _wsc_last_error
         update_workload_stats_cache()
-        time.sleep(WORKLOAD_STATS_CACHE_TTL)
+        if _wsc_last_error is None:
+            # Başarılı güncelleme
+            if prev_error is not None and _wsc_consecutive_errors > 0:
+                print(
+                    f'WORKLOAD STATS CACHE: kurtarıldı ({_wsc_consecutive_errors} ardışık hata sonrası).',
+                    file=sys.stderr
+                )
+            _wsc_consecutive_errors = 0
+            time.sleep(WORKLOAD_STATS_CACHE_TTL)
+        else:
+            # Başarısız güncelleme
+            _wsc_consecutive_errors += 1
+            if _should_log(_wsc_consecutive_errors):
+                print(
+                    f'WORKLOAD STATS CACHE: ardışık hata #{_wsc_consecutive_errors}: {_wsc_last_error}',
+                    file=sys.stderr
+                )
+            time.sleep(compute_backoff_sleep(_wsc_consecutive_errors, WORKLOAD_STATS_CACHE_TTL))
 
 
 def start_workload_stats_cache():
@@ -172,7 +244,8 @@ def start_workload_stats_cache():
 pods_summary_cache = None
 pods_summary_cache_time = 0
 PODS_SUMMARY_CACHE_TTL = 180  # 3 dakika
-_psc_last_error = None  # str | None -- son pods-summary yenileme hatası (başarılı ise None)
+_psc_last_error = None           # str | None -- son pods-summary yenileme hatası (başarılı ise None)
+_psc_consecutive_errors: int = 0  # ardışık hata sayacı (AC-3)
 
 
 def update_pods_summary_cache():
@@ -214,14 +287,31 @@ def update_pods_summary_cache():
         pods_summary_cache_time = time.time()
         _psc_last_error = None  # başarılı güncelleme -- hata durumunu sıfırla
     except Exception as e:
-        print('PODS SUMMARY CACHE ERROR:', e, file=sys.stderr)
-        _psc_last_error = str(e)  # başarısız güncelleme -- hatayı kaydet (cache değişmez)
+        _psc_last_error = str(e)  # başarısız güncelleme -- hatayı kaydet (cache değişmez); refresher loglar
 
 
 def pods_summary_cache_refresher():
+    """Pods summary cache'ini TTL aralıklarla yenileyen daemon döngüsü (AC-2)."""
+    global _psc_consecutive_errors
     while True:
+        prev_error = _psc_last_error
         update_pods_summary_cache()
-        time.sleep(PODS_SUMMARY_CACHE_TTL)
+        if _psc_last_error is None:
+            if prev_error is not None and _psc_consecutive_errors > 0:
+                print(
+                    f'PODS SUMMARY CACHE: kurtarıldı ({_psc_consecutive_errors} ardışık hata sonrası).',
+                    file=sys.stderr
+                )
+            _psc_consecutive_errors = 0
+            time.sleep(PODS_SUMMARY_CACHE_TTL)
+        else:
+            _psc_consecutive_errors += 1
+            if _should_log(_psc_consecutive_errors):
+                print(
+                    f'PODS SUMMARY CACHE: ardışık hata #{_psc_consecutive_errors}: {_psc_last_error}',
+                    file=sys.stderr
+                )
+            time.sleep(compute_backoff_sleep(_psc_consecutive_errors, PODS_SUMMARY_CACHE_TTL))
 
 
 def start_pods_summary_cache():
@@ -239,6 +329,11 @@ _METRICS_TS = {}
 _METRICS_TS_LOCK = threading.Lock()
 _METRICS_TS_MAXLEN = 600  # ~600 örnek (ör: 10s interval ile ~100 dakika)
 _METRICS_TS_INTERVAL = float(os.environ.get('METRICS_TS_INTERVAL_SEC', '10'))
+
+# Metrics sampler durum izleme (AC-3)
+_msl_last_error = None           # str | None -- son metrics-sampler hatası (başarılı ise None)
+_msl_last_success_time: float = 0.0  # son başarılı örnekleme zamanı (epoch saniye)
+_msl_consecutive_errors: int = 0  # ardışık hata sayacı
 
 
 def _parse_cpu_to_mcores(cpu_str: str) -> float:
@@ -275,8 +370,11 @@ def _parse_mem_to_bytes(mem_str: str) -> float:
 
 
 def _metrics_sampler_loop():
-    """Arka planda metrics.k8s.io'dan tüm podlar için CPU/Memory kullanımlarını örnekler."""
+    """Arka planda metrics.k8s.io'dan tüm podlar için CPU/Memory kullanımlarını örnekler (AC-2)."""
+    global _msl_last_error, _msl_last_success_time, _msl_consecutive_errors
+    base_interval = max(5.0, _METRICS_TS_INTERVAL)
     while True:
+        sleep_time = base_interval
         try:
             load_kube_config_active()
             c = client.Configuration.get_default_copy()
@@ -314,13 +412,30 @@ def _metrics_sampler_loop():
                             dq = deque(maxlen=_METRICS_TS_MAXLEN)
                             _METRICS_TS[key] = dq
                         dq.append((now, int(round(total_cpu_m)), int(round(total_mem_b))))
+            # Başarılı örnekleme
+            if _msl_last_error is not None and _msl_consecutive_errors > 0:
+                print(
+                    f'METRICS SAMPLER: kurtarıldı ({_msl_consecutive_errors} ardışık hata sonrası).',
+                    file=sys.stderr
+                )
+            _msl_last_success_time = time.time()
+            _msl_last_error = None
+            _msl_consecutive_errors = 0
+            sleep_time = base_interval
         except Exception as e:
-            try:
-                print('METRICS SAMPLER ERROR:', e, file=sys.stderr)
-            except Exception:
-                pass
+            _msl_consecutive_errors += 1
+            _msl_last_error = str(e)
+            if _should_log(_msl_consecutive_errors):
+                try:
+                    print(
+                        f'METRICS SAMPLER: ardışık hata #{_msl_consecutive_errors}: {e}',
+                        file=sys.stderr
+                    )
+                except Exception:
+                    pass
+            sleep_time = compute_backoff_sleep(_msl_consecutive_errors, base_interval)
         # bir sonraki örnekleme
-        time.sleep(max(5.0, _METRICS_TS_INTERVAL))
+        time.sleep(sleep_time)
 
 
 def start_metrics_sampler():
@@ -440,6 +555,8 @@ def _evaluate_pod_pss_compliance(pod, profile):
 pss_cache = None
 pss_cache_time = 0
 PSS_CACHE_TTL = 30  # 30 saniye; büyük cluster'larda artırılabilir
+_pss_last_error = None           # str | None -- son PSS yenileme hatası (başarılı ise None) (AC-3)
+_pss_consecutive_errors: int = 0  # ardışık hata sayacı (AC-3)
 
 
 def update_pss_cache():
@@ -448,7 +565,7 @@ def update_pss_cache():
 
     kubeconfigs_activate() tarafından kubeconfig değişiminde de çağrılır.
     """
-    global pss_cache, pss_cache_time
+    global pss_cache, pss_cache_time, _pss_last_error
     try:
         load_kube_config_active()
         c = client.Configuration.get_default_copy()
@@ -525,14 +642,33 @@ def update_pss_cache():
 
         pss_cache = {'namespaces': result}
         pss_cache_time = time.time()
+        _pss_last_error = None  # başarılı güncelleme -- hata durumunu sıfırla
     except Exception as e:
-        print('PSS CACHE ERROR:', e, file=sys.stderr)
+        _pss_last_error = str(e)  # başarısız güncelleme -- hatayı kaydet; refresher loglar
 
 
 def pss_cache_refresher():
+    """PSS cache'ini TTL aralıklarla yenileyen daemon döngüsü (AC-2)."""
+    global _pss_consecutive_errors
     while True:
+        prev_error = _pss_last_error
         update_pss_cache()
-        time.sleep(PSS_CACHE_TTL)
+        if _pss_last_error is None:
+            if prev_error is not None and _pss_consecutive_errors > 0:
+                print(
+                    f'PSS CACHE: kurtarıldı ({_pss_consecutive_errors} ardışık hata sonrası).',
+                    file=sys.stderr
+                )
+            _pss_consecutive_errors = 0
+            time.sleep(PSS_CACHE_TTL)
+        else:
+            _pss_consecutive_errors += 1
+            if _should_log(_pss_consecutive_errors):
+                print(
+                    f'PSS CACHE: ardışık hata #{_pss_consecutive_errors}: {_pss_last_error}',
+                    file=sys.stderr
+                )
+            time.sleep(compute_backoff_sleep(_pss_consecutive_errors, PSS_CACHE_TTL))
 
 
 def start_pss_cache():
@@ -635,6 +771,8 @@ def _netpol_pod_selector_summary(pod_selector) -> str:
 netpol_coverage_cache = None        # dict veya None
 netpol_coverage_cache_time = 0      # epoch seconds
 NETPOL_COVERAGE_CACHE_TTL = 30      # saniye; büyük cluster'larda artırılabilir
+_npc_last_error = None              # str | None -- son netpol-coverage hatası (başarılı ise None) (AC-3)
+_npc_consecutive_errors: int = 0   # ardışık hata sayacı (AC-3)
 
 
 def update_netpol_coverage_cache():
@@ -644,7 +782,7 @@ def update_netpol_coverage_cache():
     kubeconfigs_activate() tarafından kubeconfig değişiminde de çağrılır.
     Toplam süre 5 saniyeyi aşarsa stderr'e uyarı yazar.
     """
-    global netpol_coverage_cache, netpol_coverage_cache_time
+    global netpol_coverage_cache, netpol_coverage_cache_time, _npc_last_error
     _start = time.time()
     try:
         load_kube_config_active()
@@ -752,6 +890,7 @@ def update_netpol_coverage_cache():
             'namespaces': ns_results,
         }
         netpol_coverage_cache_time = time.time()
+        _npc_last_error = None  # başarılı güncelleme -- hata durumunu sıfırla
 
         elapsed = time.time() - _start
         if elapsed > 5:
@@ -760,14 +899,31 @@ def update_netpol_coverage_cache():
                 file=sys.stderr
             )
     except Exception as e:
-        print('NETPOL COVERAGE CACHE ERROR:', e, file=sys.stderr)
+        _npc_last_error = str(e)  # başarısız güncelleme -- hatayı kaydet; refresher loglar
 
 
 def netpol_coverage_cache_refresher():
-    """Daemon thread döngüsü: TTL aralıklarla netpol kapsam cache'ini yeniler."""
+    """Daemon thread döngüsü: TTL aralıklarla netpol kapsam cache'ini yeniler (AC-2)."""
+    global _npc_consecutive_errors
     while True:
+        prev_error = _npc_last_error
         update_netpol_coverage_cache()
-        time.sleep(NETPOL_COVERAGE_CACHE_TTL)
+        if _npc_last_error is None:
+            if prev_error is not None and _npc_consecutive_errors > 0:
+                print(
+                    f'NETPOL COVERAGE CACHE: kurtarıldı ({_npc_consecutive_errors} ardışık hata sonrası).',
+                    file=sys.stderr
+                )
+            _npc_consecutive_errors = 0
+            time.sleep(NETPOL_COVERAGE_CACHE_TTL)
+        else:
+            _npc_consecutive_errors += 1
+            if _should_log(_npc_consecutive_errors):
+                print(
+                    f'NETPOL COVERAGE CACHE: ardışık hata #{_npc_consecutive_errors}: {_npc_last_error}',
+                    file=sys.stderr
+                )
+            time.sleep(compute_backoff_sleep(_npc_consecutive_errors, NETPOL_COVERAGE_CACHE_TTL))
 
 
 def start_netpol_coverage_cache():

@@ -215,6 +215,10 @@ I18N = {
     'cache.live_data': {'tr': 'Canli veri', 'en': 'Live data'},
     # YAML Linter
     'yaml_linter.empty_content': {'tr': 'YAML içeriği boş', 'en': 'YAML content is empty'},
+    # Güncelleme bildirimi (AC-6)
+    'update.new_version_available': {'tr': 'Yeni sürüm mevcut', 'en': 'New version available'},
+    'update.download': {'tr': 'İndirmek için tıklayın', 'en': 'Click to download'},
+    'update.dismiss': {'tr': 'Kapat', 'en': 'Dismiss'},
 }
 
 

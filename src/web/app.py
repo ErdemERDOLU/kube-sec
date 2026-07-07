@@ -1,22 +1,8 @@
-from flask import Flask, render_template, jsonify, request, redirect, make_response, session, send_from_directory
+from flask import Flask, render_template, jsonify, request, redirect, send_from_directory
 from flask_cors import CORS
-from scanner.k8s_scanner import K8sScanner
-from kubernetes import client, config
-from kubernetes.client.rest import ApiException
-from datetime import datetime
 from flasgger import Swagger
-import threading, time, sys, traceback, os, subprocess, json, yaml, urllib.parse, requests, secrets
+import sys, traceback, os, secrets
 from pathlib import Path
-from version import __version__ as APP_VERSION
-from collections import deque
-import traceback
-import urllib.parse
-import sys
-import os
-import json
-from datetime import datetime
-from flasgger import Swagger
-from scanner.k8s_scanner import K8sScanner
 
 CORS_ORIGINS = ["http://localhost:8080", "http://127.0.0.1:8080"]
 
@@ -135,34 +121,14 @@ def _debug_list_templates():
     except Exception as e:
         return jsonify({'error': str(e)})
 
-# ---- Kubeconfig Manager — kubeconfig_manager.py'den import edildi ----
-from web.kubeconfig_manager import (
-    KUBECONFIG_STORE,
-    KUBECONFIG_ACTIVE_KEY,
-    KUBECONFIG_UPLOAD_DIR,
-    KUBECONFIG_ACTIVE_GLOBAL,
-    KUBECONFIG_LAST_PATH,
-    _KUBECONFIG_LOCK,
-    list_kubeconfigs,
-    get_active_kubeconfig_path,
-    load_kube_config_active,
-)
-
-# ---- Arka Plan Cache Sistemi — background.py'den import edildi ----
-# Modül referansı: cache veri değişkenleri _bg.xxx ile erişilir (Python name binding semantiği)
-import web.background as _bg
+# ---- Arka Plan Cache Sistemi — background.py'den import edildi (sadece thread başlatıcılar; ----
+# ---- route'ların ihtiyaç duyduğu cache erişimi kendi blueprint modüllerinde yapılır) ----
 from web.background import (
-    update_workload_stats_cache,
-    update_pods_summary_cache,
-    update_pss_cache,
-    update_netpol_coverage_cache,
     start_workload_stats_cache,
     start_pods_summary_cache,
     start_metrics_sampler,
     start_pss_cache,
     start_netpol_coverage_cache,
-    _METRICS_TS,
-    _METRICS_TS_LOCK,
 )
 
 # ---- Blueprint: kubeconfigs (GET/POST/DELETE /kubeconfigs, POST /kubeconfigs/activate) ----

@@ -22,7 +22,7 @@ Kube-Sec, mevcut haliyle kullanıcıya tarayıcı sekmesi açan bir Flask sunucu
 | Aşama 2 — CDN Bağımlılıklarının Yerelleştirilmesi | ✅ Tamamlandı (2026-07-05) | `eb20a66` |
 | Aşama 3 — Native Pencere (pywebview Entegrasyonu) | ✅ Tamamlandı (2026-07-06; paketlenmiş `.app` üzerinde gerçek build alınıp ekran görüntüsüyle doğrulandı — çift tıklandığında `USE_PYWEBVIEW` varsayılan olarak devrede, tarayıcı sekmesi değil native pencere açılıyor) | `a69fe59` |
 | Aşama 4 — Blueprint Refactor (app.py Parçalanması) | ✅ Tamamlandı (2026-07-07; `app.py` 6412 → 185 satır, 123 route 4 Blueprint + 3 yardımcı modüle bölündü, tümü gerçek cluster'a bağlanarak yeniden test edildi, regresyon yok) | `fa3f366`..`2d25f07` |
-| Aşama 5 — Arka Plan İş Parçacıklarının Sağlamlaştırılması ve Güncelleme Kontrolü | ⏳ Bekliyor | — |
+| Aşama 5 — Arka Plan İş Parçacıklarının Sağlamlaştırılması ve Güncelleme Kontrolü | ✅ Tamamlandı (2026-07-07; 5 refresher'a exponential backoff + ardışık hata sayacı eklendi, `/k8s-explorer/health` degraded durumunu yansıtıyor, `/api/version-check` GitHub Releases ile sessiz-hata toleranslı güncelleme kontrolü + 10s sonra frontend bildirimi; bozuk kubeconfig ile gerçek arıza senaryosu test edildi) | `183cd2f`..`f59b870` |
 
 Her aşamanın ayrıntıları ve kabul kriterleri için §6 "Geçiş Planı" bölümüne bakın.
 

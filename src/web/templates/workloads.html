@@ -34,24 +34,6 @@
       </div>
     </div>
   </div>
-  <!-- Kubernetes Events Table -->
-  <div class="row mt-4">
-    <div class="col-12">
-      <div class="workload-card">
-        <div class="card-header bg-light">
-          <h6 class="mb-0 fw-bold">{{ t('workloads.events_title') }}</h6>
-        </div>
-        <div class="card-body">
-          <div id="events-table-container">
-            <div class="d-flex align-items-center justify-content-center py-4">
-              <div class="loading-spinner me-2"></div>
-              <span class="text-muted">{{ t('workloads.loading_events') }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 </div>
 
 <!-- Scale StatefulSet Modal -->
@@ -1078,6 +1060,25 @@
                 <span class="text-muted">{{ t('workloads.loading_cronjobs') }}</span>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Kubernetes Events Table -->
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="workload-card">
+      <div class="card-header bg-light">
+        <h6 class="mb-0 fw-bold">{{ t('workloads.events_title') }}</h6>
+      </div>
+      <div class="card-body">
+        <div id="events-table-container">
+          <div class="d-flex align-items-center justify-content-center py-4">
+            <div class="loading-spinner me-2"></div>
+            <span class="text-muted">{{ t('workloads.loading_events') }}</span>
           </div>
         </div>
       </div>
@@ -2245,7 +2246,7 @@ function showPodProperties(name, namespace) {
         body.innerHTML = `<div class="text-danger">{{ t("workloads.error_properties") }} ${data.error}</div>`;
         return;
       }
-      // Build a compact resources table (per-container requests/limits)
+      // Build a compact resources table (per-container requests/limits) — AC-4, AC-8
       let resHtml = '';
       if (Array.isArray(data.containers)) {
         const rows = data.containers.map(c => {
@@ -2255,7 +2256,11 @@ function showPodProperties(name, namespace) {
           const rMem = r.memory || '-';
           const lCpu = l.cpu || '-';
           const lMem = l.memory || '-';
-          return `<tr><td><code>${c.name}</code></td><td>${rCpu}</td><td>${rMem}</td><td>${lCpu}</td><td>${lMem}</td></tr>`;
+          const restarts = (typeof c.restart_count === 'number') ? c.restart_count : (parseInt(c.restart_count) || 0);
+          const restartBadge = restarts > 0
+            ? `<span class="badge bg-warning text-dark">${restarts}</span>`
+            : `<span class="badge bg-success">0</span>`;
+          return `<tr><td><code>${c.name}</code></td><td>${rCpu}</td><td>${rMem}</td><td>${lCpu}</td><td>${lMem}</td><td>${restartBadge}</td></tr>`;
         }).join('');
         resHtml = `
           <div class="table-responsive mb-3">
@@ -2267,13 +2272,64 @@ function showPodProperties(name, namespace) {
                   <th>Req Mem</th>
                   <th>Limit CPU</th>
                   <th>Limit Mem</th>
+                  <th>Restarts</th>
                 </tr>
               </thead>
               <tbody>${rows}</tbody>
             </table>
           </div>`;
       }
-      body.innerHTML = `${resHtml}<pre style="white-space:pre-wrap;">${JSON.stringify(data, null, 2)}</pre>`;
+      // Pod Genel Bilgileri bolumu — AC-2, AC-3, AC-9
+      const statusClass = data.status === 'Running' ? 'status-running' :
+                          data.status === 'Pending' ? 'status-pending' :
+                          data.status === 'Failed' ? 'status-failed' : 'status-succeeded';
+      const containerCount = Array.isArray(data.containers) ? data.containers.length : 0;
+      const tsRaw = data.creation_timestamp;
+      const tsFormatted = tsRaw ? new Date(tsRaw).toLocaleString('tr-TR') : '-';
+      const podInfoHtml = `
+        <div class="workload-card mb-3">
+          <div class="card-header bg-light">
+            <h6 class="mb-0 fw-bold">
+              <i class="bi bi-info-circle me-2"></i>{{ t('workloads.pod_info_title') }}
+              <span class="badge rounded-pill bg-primary ms-2">${containerCount} {{ t('workloads.pod_info_container_count') }}</span>
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-sm-6">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="fw-semibold text-muted">{{ t('workloads.pod_info_name') }}</span>
+                  <code>${data.name || '-'}</code>
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="fw-semibold text-muted">{{ t('workloads.pod_info_namespace') }}</span>
+                  <span class="badge bg-secondary rounded-pill">${data.namespace || '-'}</span>
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="fw-semibold text-muted">{{ t('workloads.pod_info_status') }}</span>
+                  <span class="status-badge ${statusClass}">${data.status || '-'}</span>
+                </div>
+              </div>
+              <div class="col-sm-6">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="fw-semibold text-muted">{{ t('workloads.pod_info_node') }}</span>
+                  <span class="badge bg-info text-dark rounded-pill">${data.node || '-'}</span>
+                </div>
+              </div>
+              <div class="col-12">
+                <div class="d-flex align-items-center gap-2">
+                  <span class="fw-semibold text-muted">{{ t('workloads.pod_info_created') }}</span>
+                  <span><i class="bi bi-clock me-1"></i>${tsFormatted}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      body.innerHTML = `${podInfoHtml}${resHtml}`;
       // Fetch and render metrics beneath
       const chartDiv = document.getElementById('podResourceChart');
       if (chartDiv) {

@@ -317,13 +317,8 @@ function exportTable(tableId) {
         csv += rowData.join(',') + '\n';
     }
     
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = tableId + '_export.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
+    // Indirme adimi: pywebview native mod veya tarayici fallback (common.js:downloadCsvString)
+    downloadCsvString(tableId + '_export.csv', csv);
 }
 
 // --- Table filtering & pagination helpers ---

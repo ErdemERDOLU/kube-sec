@@ -196,10 +196,60 @@ function openConfirmModal({ title = 'Onay', message = 'Emin misiniz?', confirmTe
 }
 
 /**
- * CSV dosyasi olusturur ve tarayici ile indirir.
+ * CSV icerigini dosyaya indirir.
+ * pywebview native modu algilanirsa window.pywebview.api.save_csv ile kaydeder;
+ * tarayici modunda klasik Blob + <a download> kalibini kullanir.
+ *
+ * Pywebview sozlesmesi (backend agent tarafindan uygulaniyor):
+ *   window.pywebview.api.save_csv(filename, csvString) -> Promise
+ *   Cozum: {success: true, path: "..."} | {cancelled: true} | {error: "..."}
+ *
+ * @param {string} filename  - Dosya adi (ornek: 'export.csv')
+ * @param {string} csvString - Ham CSV icerigi (BOM dahil veya harici)
+ */
+function downloadCsvString(filename, csvString) {
+  if (window.pywebview && window.pywebview.api && window.pywebview.api.save_csv) {
+    // Native pywebview modu -- Blob URL olusturma, native kaydet diyalogi kullan
+    try {
+      window.pywebview.api.save_csv(filename, csvString)
+        .then(function(result) {
+          if (result && result.success) {
+            var msg = 'CSV kaydedildi' + (result.path ? ': ' + result.path : '');
+            showToast(msg, 'success');
+          } else if (result && result.cancelled) {
+            // Kullanici iptal etti -- sessizce don, hata bildirimi yapma
+          } else if (result && result.error) {
+            showToast('CSV kaydedilemedi: ' + result.error, 'error');
+          }
+        })
+        .catch(function(err) {
+          var msg = err && err.message ? err.message : String(err);
+          showToast('CSV kaydedilemedi: ' + msg, 'error');
+        });
+    } catch (e) {
+      var msg = e && e.message ? e.message : String(e);
+      showToast('CSV kaydedilemedi: ' + msg, 'error');
+    }
+  } else {
+    // Tarayici modu -- klasik Blob + <a download> kalibini kullan (regresyon yok)
+    var blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+}
+
+/**
+ * CSV dosyasi olusturur ve indirir (tarayici veya pywebview native modu).
  * UTF-8 BOM icerir -- Excel'de Turkce karakterlerin dogru goruntulenmesi icin zorunludur.
  * Tum hucreler cift tirnak ile sarmalanir; hucre icindeki cift tirnaklar "" ile escape edilir.
  * null / undefined degerler bos string olarak yazilir.
+ * Indirme adimi downloadCsvString() uzerinden yapilir (pywebview uyumlulugu).
  * @param {string} filename - Indirilecek dosya adi (ornek: 'export.csv')
  * @param {string[]} headers - CSV baslik satiri (string dizisi)
  * @param {(string|number|null|undefined)[][]} rows - CSV veri satirlari (her satir bir dizi)
@@ -217,13 +267,5 @@ function exportToCsv(filename, headers, rows) {
   ];
   // ﻿ = UTF-8 BOM -- Excel bu isaretciye gore kodlamayi dogru algilar
   const csvContent = '﻿' + lines.join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  downloadCsvString(filename, csvContent);
 }

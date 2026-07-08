@@ -62,6 +62,55 @@ def _wait_for_server(host: str, port: int, timeout: float = 5.0):
         except OSError:
             time.sleep(0.1)
 
+class CsvExportApi:
+    """pywebview js_api köprüsü: JavaScript'ten CSV dosyası kaydetmek için kullanılır.
+
+    JS erişim noktası: ``window.pywebview.api.save_csv(filename, csvContent)``
+
+    Dönüş sözleşmesi (JS tarafı bu dict'i Promise olarak alır):
+
+    - ``{"success": True, "path": str}``  -- dosya başarıyla yazıldı
+    - ``{"cancelled": True}``             -- kullanıcı native diyaloğu iptal etti
+    - ``{"error": str}``                  -- yazma veya diyalog hatası; exception asla üste fırlatılmaz
+    """
+
+    def __init__(self) -> None:
+        # _start_with_pywebview tarafından create_window'dan sonra atanır
+        self._window = None
+
+    def save_csv(self, filename: str, csv_content: str) -> dict:
+        """Native 'Farklı Kaydet' diyaloğu açar ve CSV içeriğini seçilen yola yazar.
+
+        Args:
+            filename:    Varsayılan dosya adı (örn. 'nodes.csv').
+            csv_content: Yazılacak CSV içeriği. BOM (``\\xEF\\xBB\\xBF``) çağıran
+                         tarafça eklenmiş olmalıdır; bu metod ekstra BOM eklemez.
+
+        Returns:
+            dict: ``{"success": True, "path": str}`` | ``{"cancelled": True}`` | ``{"error": str}``
+        """
+        import webview as _webview  # modül bu noktada zaten yüklü; lazy referans
+
+        try:
+            result = self._window.create_file_dialog(
+                _webview.SAVE_DIALOG,
+                save_filename=filename,
+                file_types=('CSV Dosyaları (*.csv)', 'Tüm Dosyalar (*.*)')
+            )
+            # pywebview sürümüne göre None veya boş tuple/liste dönebilir (iptal durumu)
+            if not result:
+                return {"cancelled": True}
+            # SAVE_DIALOG genellikle tek elemanlı tuple döner
+            path = result[0] if isinstance(result, (tuple, list)) else str(result)
+            if not path:
+                return {"cancelled": True}
+            with open(path, 'w', encoding='utf-8') as fh:
+                fh.write(csv_content)
+            return {"success": True, "path": path}
+        except Exception as exc:  # noqa: BLE001
+            return {"error": str(exc)}
+
+
 def _start_with_pywebview(url: str, host: str, port: int, debug: bool):
     """pywebview ile native pencere aç. Ana thread'i bloklar (pywebview gereksinimi)."""
     import webview  # lazy import -- sadece bu dalda gerekli
@@ -77,8 +126,14 @@ def _start_with_pywebview(url: str, host: str, port: int, debug: bool):
     # Flask'in ayağa kalkmasını bekle (port açılana kadar, maks ~5sn)
     _wait_for_server(host, port, timeout=5.0)
 
-    # Native pencere oluştur
-    window = webview.create_window('Kube-Sec', url)
+    # js_api köprüsü: JavaScript'e window.pywebview.api.save_csv() erişimi sağlar
+    api = CsvExportApi()
+
+    # Native pencere oluştur; js_api parametresiyle API köprüsünü create_window'a geçir
+    window = webview.create_window('Kube-Sec', url, js_api=api)
+
+    # API'ye pencere referansını ver -- create_file_dialog bu referans üzerinden çağrılır
+    api._window = window
 
     def _on_closed():
         """Pencere kapanınca process'i sonlandır."""

@@ -541,13 +541,8 @@
             }).join(',') + '\n';
         });
 
-        var blob = new Blob([csv], { type: 'text/csv' });
-        var url  = window.URL.createObjectURL(blob);
-        var a    = document.createElement('a');
-        a.href     = url;
-        a.download = 'pss_namespace_analysis.csv';
-        a.click();
-        window.URL.revokeObjectURL(url);
+        // Indirme adimi: pywebview native mod veya tarayici fallback (common.js:downloadCsvString)
+        downloadCsvString('pss_namespace_analysis.csv', csv);
     };
 
     /* -------------------------------------------------------

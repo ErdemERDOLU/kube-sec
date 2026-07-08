@@ -81,9 +81,12 @@ def kubeconfigs_activate():
         if not any(i['name'] == name for i in lst):
             return jsonify({'error': 'bulunamadı'}), 404
         session[KUBECONFIG_ACTIVE_KEY] = name
-        # Modül referansıyla güncelle; from ... import ile alınan kopya değil gerçek modül değişkeni
+        # Modül referansıyla güncelle; from ... import ile alınan kopya değil gerçek modül değişkeni.
+        # Aynı kilit bloğunda aktivasyon sayacını ve zaman damgasını da güncelle (thread-safe).
         with _kcm._KUBECONFIG_LOCK:
             _kcm.KUBECONFIG_ACTIVE_GLOBAL = name
+            _kcm._KUBECONFIG_ACTIVATION_VERSION += 1
+            _kcm._KUBECONFIG_ACTIVATION_TS = time.time()
         # Yeni cluster için ardışık hata sayaçlarını sıfırla (spec R-3):
         # önceki cluster'ın hataları yeni cluster'a taşınmamalı.
         _bg._wsc_consecutive_errors = 0
@@ -111,6 +114,32 @@ def kubeconfigs_activate():
         return jsonify({'ok': True, 'active': name})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@bp_kubeconfigs.route('/kubeconfigs/active-info', methods=['GET'])
+def kubeconfigs_active_info():
+    """Aktif kubeconfig bilgilerini cluster API çağrısı yapmadan döndür.
+
+    Cluster bağlantısı kurulmaz; yalnızca bellekteki değerler okunur.
+    Bu endpoint milisaniyeler içinde yanıt verir ve frontend polling için kullanılır.
+
+    ---
+    GET /kubeconfigs/active-info
+    Returns:
+        200: {name: str|null, version: int, activated_at: float}
+            name        — KUBECONFIG_ACTIVE_GLOBAL değeri (seçili kubeconfig adı, yoksa null)
+            version     — Şimdiye kadar gerçekleşen aktivasyon sayısı (0'dan başlar)
+            activated_at — Son aktivasyonun Unix epoch zamanı (ilk aktivasyondan önce 0.0)
+    """
+    with _kcm._KUBECONFIG_LOCK:
+        name = _kcm.KUBECONFIG_ACTIVE_GLOBAL
+        version = _kcm._KUBECONFIG_ACTIVATION_VERSION
+        activated_at = _kcm._KUBECONFIG_ACTIVATION_TS
+    return jsonify({
+        'name': name,
+        'version': version,
+        'activated_at': activated_at,
+    })
 
 
 @bp_kubeconfigs.route('/kubeconfigs', methods=['DELETE'])

@@ -874,6 +874,29 @@ I18N = {
     'workloads.csv_downloaded': {'tr': 'CSV indirildi', 'en': 'CSV downloaded'},
     'workloads.replicaset_deleted': {'tr': 'ReplicaSet silindi:', 'en': 'ReplicaSet deleted:'},
     'workloads.delete_partial_errors': {'tr': 'Bazı hatalar oluştu. Konsolu kontrol edin.', 'en': 'Some errors occurred. Check the console.'},
+
+    # ── Pod Properties Modal — Pod Genel Bilgileri bölümü (AC-6) ────────────
+    'workloads.pod_info_title': {'tr': 'Pod Genel Bilgileri', 'en': 'Pod General Info'},
+    'workloads.pod_info_name': {'tr': 'Ad:', 'en': 'Name:'},
+    'workloads.pod_info_namespace': {'tr': 'Namespace:', 'en': 'Namespace:'},
+    'workloads.pod_info_status': {'tr': 'Durum:', 'en': 'Status:'},
+    'workloads.pod_info_node': {'tr': 'Node:', 'en': 'Node:'},
+    'workloads.pod_info_created': {'tr': 'Oluşturulma:', 'en': 'Created:'},
+    'workloads.pod_info_container_count': {'tr': 'container', 'en': 'container(s)'},
+
+    # ── Kubeconfig çoklu sekme uyarıları (backlog #10) ──────────────────────
+    'base.context_switch_warning': {
+        'tr': 'Aktif kubeconfig değişti. Bu sayfadaki veriler eski cluster\'a ait olabilir.',
+        'en': 'Active kubeconfig changed. Data on this page may belong to the previous cluster.',
+    },
+    'base.context_switch_reload': {
+        'tr': 'Sayfayı Yenile',
+        'en': 'Reload Page',
+    },
+    'base.context_switched_to': {
+        'tr': 'Aktif cluster değiştirildi:',
+        'en': 'Active cluster switched to:',
+    },
 }
 
 

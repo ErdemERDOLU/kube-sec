@@ -21,6 +21,11 @@ KUBECONFIG_ACTIVE_GLOBAL = None  # Seçilen kubeconfig adı
 KUBECONFIG_LAST_PATH = None      # Son başarılı yüklenen kubeconfig dosya yolu
 _KUBECONFIG_LOCK = _Lock()
 
+# Aktivasyon sayacı: her kubeconfig değişiminde 1 artar; frontend bunu polling ile izler.
+# _KUBECONFIG_LOCK ile korunur.
+_KUBECONFIG_ACTIVATION_VERSION: int = 0   # Her aktivasyonda 1 artar
+_KUBECONFIG_ACTIVATION_TS: float = 0.0    # Son aktivasyon zamanı (Unix epoch, time.time())
+
 
 def list_kubeconfigs():
     result = []

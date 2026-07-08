@@ -29,11 +29,38 @@
     </div>
 
     <!-- MVP Disclaimer (Risk #3) -->
-    <div class="row mb-3">
+    <div class="row mb-2">
         <div class="col-12">
             <div class="alert alert-info d-flex align-items-start gap-2 mb-0" role="alert">
                 <i class="bi bi-info-circle-fill flex-shrink-0 mt-1"></i>
                 <div>{{ t('pss.disclaimer') }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sayfa açıklama bloğu (AC-5) — varsayılan kapalı, Bootstrap collapse -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div>
+                <a class="text-decoration-none small text-muted"
+                   data-bs-toggle="collapse"
+                   href="#pssInfoCollapse"
+                   role="button"
+                   aria-expanded="false"
+                   aria-controls="pssInfoCollapse">
+                    <i class="bi bi-question-circle me-1"></i>{{ t('pss.info_toggle') }}
+                    <i class="bi bi-chevron-down ms-1"></i>
+                </a>
+                <div class="collapse" id="pssInfoCollapse">
+                    <div class="card card-body mt-2 bg-light border-0 small">
+                        <ul class="mb-0 ps-3">
+                            <li class="mb-2">{{ t('pss.info_what_is_psa') }}</li>
+                            <li class="mb-2">{{ t('pss.info_profiles') }}</li>
+                            <li class="mb-2">{{ t('pss.info_columns') }}</li>
+                            <li class="mb-0">{{ t('pss.info_detail_btn') }}</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -254,6 +281,8 @@
         preparingAnalysis:  {{ t('pss.preparing_analysis')   | tojson }},
         namespacesLoaded:   {{ t('pss.namespaces_loaded')    | tojson }},
         apiErrorPrefix:     {{ t('pss.api_error_prefix')     | tojson }},
+        noEnforceLabel:     {{ t('pss.no_enforce_label')     | tojson }},
+        noEnforceLabelCmd:  {{ t('pss.no_enforce_label_cmd') | tojson }},
     };
 
     /* -------------------------------------------------------
@@ -574,10 +603,29 @@
                     return;
                 }
 
-                var pods       = data.pods || [];
-                var noncompliant = pods.filter(function (p) { return !p.compliant; });
+                var pods         = data.pods || [];
+                // AC-1: compliant===null (enforce etiketi yok → değerlendirilemedi) ile
+                //        compliant===false (gerçekten uyumsuz) ayrımı yapılır.
+                var noncompliant = pods.filter(function (p) { return p.compliant === false; });
+
+                if (!data.profile) {
+                    // AC-2: Enforce etiketi yok — bilgi mesajı göster, tablo YOK
+                    var cmdExample = 'kubectl label ns ' + namespace +
+                        ' pod-security.kubernetes.io/enforce=<profil>';
+                    bodyEl.innerHTML = [
+                        '<div class="alert alert-warning">',
+                        '  <i class="bi bi-exclamation-triangle-fill me-2"></i>',
+                        '  ' + escapeHtml(I18N.noEnforceLabel),
+                        '  <hr class="my-2">',
+                        '  <p class="mb-1 small">' + escapeHtml(I18N.noEnforceLabelCmd) + '</p>',
+                        '  <code class="small d-block">' + escapeHtml(cmdExample) + '</code>',
+                        '</div>'
+                    ].join('');
+                    return;
+                }
 
                 if (noncompliant.length === 0) {
+                    // AC-3: Enforce etiketi var, tüm podlar uyumlu — yeşil başarı mesajı (regresyon YOK)
                     bodyEl.innerHTML = [
                         '<div class="alert alert-success d-flex align-items-center gap-2">',
                         '  <i class="bi bi-check-circle-fill flex-shrink-0"></i>',
@@ -587,6 +635,7 @@
                     return;
                 }
 
+                // AC-4: Gerçekten compliant===false olan podlar var — tablo göster
                 var profileBadgeHtml = data.profile
                     ? '<span class="badge badge-profile-' + escapeHtml(data.profile) + ' me-2">' + escapeHtml(data.profile) + '</span>'
                     : '';

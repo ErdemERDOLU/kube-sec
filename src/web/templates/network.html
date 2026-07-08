@@ -1514,15 +1514,8 @@
       ].join(','));
     });
 
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = 'netpol-coverage.csv';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Indirme adimi: pywebview native mod veya tarayici fallback (common.js:downloadCsvString)
+    downloadCsvString('netpol-coverage.csv', csvRows.join('\n'));
   }
 </script>
 {% endblock %}

@@ -161,6 +161,33 @@ I18N = {
     },
     'pss.namespaces_loaded': {'tr': 'namespace yüklendi.', 'en': 'namespaces loaded.'},
     'pss.api_error_prefix': {'tr': 'API hatası: ', 'en': 'API error: '},
+    # Sayfa açıklama bloğu — collapsible bilgi paneli (AC-5, AC-6)
+    'pss.info_toggle': {'tr': 'Bu ekran nedir?', 'en': 'What is this screen?'},
+    'pss.info_what_is_psa': {
+        'tr': "Pod Security Standards (PSS), Kubernetes'in namespace bazlı pod güvenlik profili uygulama mekanizmasıdır. Bir namespace'e PSA (Pod Security Admission) etiketi ekleyerek o namespace'deki podların hangi güvenlik profiline uyması gerektiğini tanımlarsınız.",
+        'en': "Pod Security Standards (PSS) is Kubernetes's mechanism for enforcing pod security profiles at the namespace level. By adding a PSA (Pod Security Admission) label to a namespace, you define which security profile pods in that namespace must comply with.",
+    },
+    'pss.info_profiles': {
+        'tr': 'Üç profil vardır: Privileged — kısıtlama yok (sistem bileşenleri için); Baseline — yaygın ayrıcalık yükseltme risklerini önler; Restricted — en sıkı güvenlik kurallarını uygular.',
+        'en': 'There are three profiles: Privileged — no restrictions (for system components); Baseline — prevents common privilege escalation risks; Restricted — enforces the strictest security rules.',
+    },
+    'pss.info_columns': {
+        'tr': "Tablodaki sütunlar: Enforce — profille eşleşmeyen podlar reddedilir; Warn — kullanıcıya uyarı verilir ama pod yine de oluşturulur; Audit — ihlal audit log'a yazılır, müdahale edilmez.",
+        'en': 'Table columns: Enforce — pods that do not match the profile are rejected; Warn — a warning is issued but the pod is still created; Audit — violations are written to the audit log without intervention.',
+    },
+    'pss.info_detail_btn': {
+        'tr': '"Detay" butonu, seçilen namespace\'deki podları ve ihlal ettikleri kuralları gösterir. Uyumluluk değerlendirmesi yalnızca enforce etiketi tanımlı namespace\'lerde yapılır.',
+        'en': 'The "Detail" button shows pods in the selected namespace and the rules they violate. Compliance assessment is only performed for namespaces that have an enforce label defined.',
+    },
+    # Modal mesajı — enforce etiketi olmayan namespace'ler (AC-2, AC-7)
+    'pss.no_enforce_label': {
+        'tr': "Bu namespace'te PSA enforce etiketi tanımlı değil; uyumluluk değerlendirmesi yapılamadı.",
+        'en': 'No PSA enforce label is defined for this namespace; compliance assessment cannot be performed.',
+    },
+    'pss.no_enforce_label_cmd': {
+        'tr': "Bu namespace'e PSA etiketi tanımlamak için aşağıdaki komutu kullanabilirsiniz:",
+        'en': 'To define a PSA label for this namespace, you can use the following command:',
+    },
     # NetworkPolicy Kapsam Analizi
     'netpol.tab_title': {'tr': 'NetworkPolicy Kapsam', 'en': 'NetworkPolicy Coverage'},
     'netpol.coverage_title': {'tr': 'NetworkPolicy Kapsam Analizi', 'en': 'NetworkPolicy Coverage Analysis'},

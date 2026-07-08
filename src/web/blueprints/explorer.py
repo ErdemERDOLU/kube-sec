@@ -30,6 +30,7 @@ from kubernetes.client.rest import ApiException
 
 from version import __version__ as APP_VERSION
 import web.background as _bg
+import web.kubeconfig_manager as _kcm
 from web.background import (
     update_pods_summary_cache,
     update_workload_stats_cache,
@@ -2323,6 +2324,7 @@ def k8s_explorer_health():
             'error': error,
             'background_caches': background_caches,
             'degraded': degraded,
+            'activation_version': _kcm._KUBECONFIG_ACTIVATION_VERSION,
         })
     except Exception as e:
         return jsonify({'ok': False, 'context': None, 'error': str(e)}), 500

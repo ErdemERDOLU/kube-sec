@@ -82,6 +82,7 @@ def favicon():
 
 # --- i18n — i18n.py'den import edildi ---
 from web.i18n import I18N, translate
+import web.kubeconfig_manager as _kcm
 
 @app.context_processor
 def inject_i18n():
@@ -89,10 +90,15 @@ def inject_i18n():
         lang = request.cookies.get('lang') or 'tr'
     except Exception:
         lang = 'tr'
+    # active_kubeconfig_name: her template render'ında aktif kubeconfig adını sağlar.
+    # base.html'de {{ active_kubeconfig_name or t('base.context_none') }} ile kullanılır.
+    # _kcm modül referansından okuma thread-safe'dir (CPython GIL; sadece okuma).
+    active_kubeconfig_name = _kcm.KUBECONFIG_ACTIVE_GLOBAL
     return {
         't': lambda key: translate(key, lang),
         'current_locale': lang,
-        'i18n_json': I18N
+        'i18n_json': I18N,
+        'active_kubeconfig_name': active_kubeconfig_name,
     }
 
 

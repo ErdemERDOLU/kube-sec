@@ -192,9 +192,9 @@
 **Sorun:** Birden fazla kullanıcı veya aynı kullanıcının birden fazla sekmesi farklı cluster'larla çalışırken veri tutarsızlıkları yaşanır. Kullanıcı Cluster-A'ya bakarken Cluster-B verisi görebilir.
 
 **Kabul kriterleri:**
-- [ ] Aktif kubeconfig'in hangi cluster'a ait olduğu her sayfanın üst çubuğunda görünür şekilde gösterilir (base.html'deki `activeContextBadge` şu an yalnızca health check ile dolduruluyor; her sayfa yüklendiğinde anında güncellenir).
-- [ ] Kubeconfig değiştiğinde, o anda açık olan sayfalardaki verinin eski cluster'a ait olabileceği konusunda kullanıcıya uyarı gösterilir veya sayfa otomatik yenilenir.
-- [ ] Dokümantasyona (CLAUDE.md veya README) çoklu kullanıcı/çoklu sekme sınırlılığı açıkça belgelenir.
+- [x] Aktif kubeconfig'in hangi cluster'a ait olduğu her sayfanın üst çubuğunda görünür şekilde gösterilir (base.html'deki `activeContextBadge` şu an yalnızca health check ile dolduruluyor; her sayfa yüklendiğinde anında güncellenir).
+- [x] Kubeconfig değiştiğinde, o anda açık olan sayfalardaki verinin eski cluster'a ait olabileceği konusunda kullanıcıya uyarı gösterilir veya sayfa otomatik yenilenir.
+- [x] Dokümantasyona (CLAUDE.md veya README) çoklu kullanıcı/çoklu sekme sınırlılığı açıkça belgelenir.
 
 ---
 

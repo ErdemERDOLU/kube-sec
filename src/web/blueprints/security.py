@@ -43,6 +43,7 @@ from web.background import (
     _netpol_pod_selector_summary,
 )
 from web.kubeconfig_manager import load_kube_config_active, get_active_kubeconfig_path
+from web.audit_log import record_audit_event, _short_session_id
 from scanner.k8s_scanner import K8sScanner
 
 bp_security = Blueprint('security', __name__)
@@ -715,6 +716,14 @@ def trivy_operator_install():
             code, out, err = _run_cmd(install_cmd, timeout=300)
             if code != 0:
                 return jsonify({'error': f'helm install error: {err or out}', 'cmd': install_cmd}), 500
+            record_audit_event(
+                action='install',
+                resource_type='TrivyOperator',
+                resource_name='trivy-operator',
+                namespace='trivy-system',
+                session_id=_short_session_id(request.cookies.get('session')),
+                details='method=helm',
+            )
             return jsonify({'ok': True, 'method': 'helm', 'output': out})
         else:
             # Fallback to static manifest apply from GitHub raw (requires network on client)
@@ -727,12 +736,28 @@ def trivy_operator_install():
                 code, out, err = _run_cmd(cmd, timeout=300)
                 if code != 0:
                     return jsonify({'error': f'kubectl apply failed: {err or out}'}), 500
+                record_audit_event(
+                    action='install',
+                    resource_type='TrivyOperator',
+                    resource_name='trivy-operator',
+                    namespace='trivy-system',
+                    session_id=_short_session_id(request.cookies.get('session')),
+                    details='method=kubectl-url',
+                )
                 return jsonify({'ok': True, 'method': 'kubectl-url', 'output': out})
             else:
                 cmd = _kubectl_base_args() + ["apply", "-f", manifest_path]
                 code, out, err = _run_cmd(cmd, timeout=300)
                 if code != 0:
                     return jsonify({'error': f'kubectl apply failed: {err or out}'}), 500
+                record_audit_event(
+                    action='install',
+                    resource_type='TrivyOperator',
+                    resource_name='trivy-operator',
+                    namespace='trivy-system',
+                    session_id=_short_session_id(request.cookies.get('session')),
+                    details='method=kubectl-file',
+                )
                 return jsonify({'ok': True, 'method': 'kubectl-file', 'output': out})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -886,6 +911,21 @@ def trivy_operator_scan():
                 for ns in [n.metadata.name for n in core.list_namespace().items]:
                     list_and_patch_all_in_ns(ns)
 
+        _scan_detail_parts = [f'target={target}']
+        if namespace:
+            _scan_detail_parts.append(f'namespace={namespace}')
+        if kind:
+            _scan_detail_parts.append(f'kind={kind}')
+        if name:
+            _scan_detail_parts.append(f'name={name}')
+        record_audit_event(
+            action='scan_trigger',
+            resource_type='TrivyOperator',
+            resource_name='trivy-operator',
+            namespace=namespace or None,
+            session_id=_short_session_id(request.cookies.get('session')),
+            details=', '.join(_scan_detail_parts),
+        )
         return jsonify({'ok': True, 'patched': patched, 'errors': errors})
     except Exception as e:
         return jsonify({'error': str(e)}), 500

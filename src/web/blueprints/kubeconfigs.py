@@ -25,6 +25,7 @@ from web.background import (
     update_pss_cache,
     update_netpol_coverage_cache,
 )
+from web.audit_log import record_audit_event, _short_session_id
 
 bp_kubeconfigs = Blueprint('kubeconfigs', __name__)
 
@@ -58,6 +59,14 @@ def kubeconfigs_add():
         path = os.path.join(KUBECONFIG_UPLOAD_DIR, safe_name)
         with open(path, 'w') as f:
             f.write(content)
+        record_audit_event(
+            action='add',
+            resource_type='Kubeconfig',
+            resource_name=safe_name,
+            namespace=None,
+            session_id=_short_session_id(request.cookies.get('session')),
+            details=f'filename={safe_name}',
+        )
         return jsonify({'ok': True, 'name': safe_name})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -111,6 +120,14 @@ def kubeconfigs_activate():
             update_netpol_coverage_cache()
         except Exception:
             pass
+        record_audit_event(
+            action='activate',
+            resource_type='Kubeconfig',
+            resource_name=name,
+            namespace=None,
+            session_id=_short_session_id(request.cookies.get('session')),
+            details=f'name={name}',
+        )
         return jsonify({'ok': True, 'active': name})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -164,6 +181,13 @@ def kubeconfigs_delete():
                 with _kcm._KUBECONFIG_LOCK:
                     if _kcm.KUBECONFIG_ACTIVE_GLOBAL == name:
                         _kcm.KUBECONFIG_ACTIVE_GLOBAL = None
+            record_audit_event(
+                action='delete',
+                resource_type='Kubeconfig',
+                resource_name=name,
+                namespace=None,
+                session_id=_short_session_id(request.cookies.get('session')),
+            )
             return jsonify({'ok': True})
         return jsonify({'error': 'bulunamadı'}), 404
     except Exception as e:

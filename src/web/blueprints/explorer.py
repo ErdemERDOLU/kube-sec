@@ -41,6 +41,7 @@ from web.kubeconfig_manager import (
     get_active_kubeconfig_path,
     load_kube_config_active,
 )
+from web.audit_log import record_audit_event, _short_session_id
 
 bp_explorer = Blueprint('explorer', __name__)
 
@@ -167,6 +168,14 @@ def update_hpa():
                 return jsonify({'error': 'max_replicas must be an integer'}), 400
         patch_body = {'spec': patch_spec}
         autoscaling_v1.patch_namespaced_horizontal_pod_autoscaler(name=name, namespace=namespace, body=patch_body)
+        record_audit_event(
+            action='update',
+            resource_type='HPA',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+            details=f'min_replicas={min_r}, max_replicas={max_r}',
+        )
         return jsonify({'status': 'ok', 'name': name, 'namespace': namespace})
     except ApiException as e:
         try:
@@ -192,6 +201,13 @@ def delete_hpa():
         client.Configuration.set_default(c)
         autoscaling_v1 = client.AutoscalingV1Api()
         autoscaling_v1.delete_namespaced_horizontal_pod_autoscaler(name=name, namespace=namespace)
+        record_audit_event(
+            action='delete',
+            resource_type='HPA',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
         return jsonify({'status': 'deleted', 'name': name, 'namespace': namespace})
     except ApiException as e:
         try:
@@ -561,6 +577,13 @@ def update_runtime_class():
         client.Configuration.set_default(c)
         co = client.CustomObjectsApi()
         co.patch_cluster_custom_object(group="node.k8s.io", version="v1", plural="runtimeclasses", name=name, body=patch_body)
+        record_audit_event(
+            action='update',
+            resource_type='RuntimeClass',
+            resource_name=name,
+            namespace=None,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
         return jsonify({'status': 'ok', 'name': name})
     except ApiException as e:
         try:
@@ -585,6 +608,13 @@ def delete_runtime_class():
         client.Configuration.set_default(c)
         co = client.CustomObjectsApi()
         co.delete_cluster_custom_object(group="node.k8s.io", version="v1", plural="runtimeclasses", name=name)
+        record_audit_event(
+            action='delete',
+            resource_type='RuntimeClass',
+            resource_name=name,
+            namespace=None,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
         return jsonify({'status': 'deleted', 'name': name})
     except ApiException as e:
         try:
@@ -668,6 +698,13 @@ def update_priority_class():
             return jsonify({'error': 'nothing to update'}), 400
 
         scheduling_v1.patch_priority_class(name=name, body=patch_body)
+        record_audit_event(
+            action='update',
+            resource_type='PriorityClass',
+            resource_name=name,
+            namespace=None,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
         return jsonify({'status': 'ok', 'name': name})
     except ApiException as e:
         try:
@@ -692,6 +729,13 @@ def delete_priority_class():
         client.Configuration.set_default(c)
         scheduling_v1 = client.SchedulingV1Api()
         scheduling_v1.delete_priority_class(name=name)
+        record_audit_event(
+            action='delete',
+            resource_type='PriorityClass',
+            resource_name=name,
+            namespace=None,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
         return jsonify({'status': 'deleted', 'name': name})
     except ApiException as e:
         try:
@@ -792,6 +836,14 @@ def update_pdb():
 
         patch_body = {'spec': patch_spec}
         policy_v1.patch_namespaced_pod_disruption_budget(name=name, namespace=namespace, body=patch_body)
+        record_audit_event(
+            action='update',
+            resource_type='PDB',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+            details=f'min_available={min_av}, max_unavailable={max_un}',
+        )
         return jsonify({'status': 'ok', 'name': name, 'namespace': namespace})
     except ApiException as e:
         try:
@@ -817,6 +869,13 @@ def delete_pdb():
         client.Configuration.set_default(c)
         policy_v1 = client.PolicyV1Api()
         policy_v1.delete_namespaced_pod_disruption_budget(name=name, namespace=namespace)
+        record_audit_event(
+            action='delete',
+            resource_type='PDB',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
         return jsonify({'status': 'deleted', 'name': name, 'namespace': namespace})
     except ApiException as e:
         try:
@@ -1092,6 +1151,13 @@ def restart_statefulset():
             }
         }
         apps_v1.patch_namespaced_stateful_set(name, namespace, patch)
+        record_audit_event(
+            action='restart',
+            resource_type='StatefulSet',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1168,6 +1234,14 @@ def scale_statefulset():
         # Patch the statefulset with new replica count
         body = {"spec": {"replicas": int(replicas)}}
         apps_v1.patch_namespaced_stateful_set_scale(name, namespace, body)
+        record_audit_event(
+            action='scale',
+            resource_type='StatefulSet',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+            details=f'replicas={replicas}',
+        )
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1309,6 +1383,13 @@ def restart_daemonset():
             }
         }
         apps_v1.patch_namespaced_daemon_set(name, namespace, patch)
+        record_audit_event(
+            action='restart',
+            resource_type='DaemonSet',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1389,6 +1470,14 @@ def scale_deployment():
             update_workload_stats_cache()
         except Exception:
             pass
+        record_audit_event(
+            action='scale',
+            resource_type='Deployment',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+            details=f'replicas={replicas}',
+        )
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1416,6 +1505,13 @@ def restart_pod():
             update_pods_summary_cache()
         except Exception:
             pass
+        record_audit_event(
+            action='restart',
+            resource_type='Pod',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1459,6 +1555,13 @@ def restart_deployment():
             update_workload_stats_cache()
         except Exception:
             pass
+        record_audit_event(
+            action='restart',
+            resource_type='Deployment',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
         return jsonify({'ok': True})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -2139,12 +2242,27 @@ def k8s_explorer_delete():
         c = client.Configuration.get_default_copy(); c.verify_ssl=False; c.assert_hostname=False; client.Configuration.set_default(c)
         core_v1 = client.CoreV1Api(); apps_v1 = client.AppsV1Api(); storage_v1 = client.StorageV1Api(); rbac_v1 = client.RbacAuthorizationV1Api()
 
+        _DELETE_RESOURCE_TYPE_MAP = {
+            'pod': 'Pod', 'service': 'Service', 'deployment': 'Deployment',
+            'replicaset': 'ReplicaSet', 'daemonset': 'DaemonSet', 'statefulset': 'StatefulSet',
+            'endpoints': 'Endpoints', 'pvc': 'PVC', 'pv': 'PV', 'storageclass': 'StorageClass',
+            'serviceaccount': 'ServiceAccount', 'role': 'Role', 'rolebinding': 'RoleBinding',
+            'clusterrole': 'ClusterRole', 'clusterrolebinding': 'ClusterRoleBinding',
+        }
+
         def ok(resp_type, extra=None):
             d = {'ok': True, 'deleted': {'type': resp_type, 'name': name}}
             if namespace:
                 d['deleted']['namespace'] = namespace
             if extra:
                 d['deleted'].update(extra)
+            record_audit_event(
+                action='delete',
+                resource_type=_DELETE_RESOURCE_TYPE_MAP.get(resp_type, resp_type.capitalize()),
+                resource_name=name,
+                namespace=namespace or None,
+                session_id=_short_session_id(request.cookies.get('session')),
+            )
             return jsonify(d), 200
 
         if obj_type == 'pod':
@@ -2572,6 +2690,13 @@ def delete_replicasets():
                 # Foreground propagation -> orphanDependents=False ensures pods may be deleted depending policy
                 apps_v1.delete_namespaced_replica_set(name=name, namespace=ns)
                 deleted.append({'namespace': ns, 'name': name})
+                record_audit_event(
+                    action='delete',
+                    resource_type='ReplicaSet',
+                    resource_name=name,
+                    namespace=ns,
+                    session_id=_short_session_id(request.cookies.get('session')),
+                )
             except Exception as ie:
                 errors.append({'namespace': ns, 'name': name, 'error': str(ie)})
         status_code = 207 if errors else 200
@@ -2744,6 +2869,13 @@ def update_configmap():
                 # re-raise for outer handler
                 raise
         # Refresh server side caches if any
+        record_audit_event(
+            action='update',
+            resource_type='ConfigMap',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
         return jsonify({'status': 'ok'})
     except ApiException as ae:
         # Return API exception details (status and body) to help debug conflicts
@@ -2847,6 +2979,14 @@ def update_secret():
                     time.sleep(0.2 * attempt)
                     continue
                 raise
+        record_audit_event(
+            action='update',
+            resource_type='Secret',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+            details=f'{len(data) if isinstance(data, dict) else "?"} adet anahtar güncellendi',
+        )
         return jsonify({'status': 'ok'})
     except ApiException as ae:
         parsed_body = None
@@ -2877,6 +3017,13 @@ def delete_secret():
         client.Configuration.set_default(c)
         v1 = client.CoreV1Api()
         v1.delete_namespaced_secret(name, namespace)
+        record_audit_event(
+            action='delete',
+            resource_type='Secret',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
         return jsonify({'status': 'ok'})
     except ApiException as ae:
         parsed_body = None
@@ -2961,6 +3108,13 @@ def k8s_explorer_node_uncordon():
         # Node'u uncordon et
         body = {"spec": {"unschedulable": False}}
         kube_client.core_v1.patch_node(node_name, body)
+        record_audit_event(
+            action='uncordon',
+            resource_type='Node',
+            resource_name=node_name,
+            namespace=None,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
         return 'Node uncordon (schedulable) yapıldı.'
     except Exception as e:
         return str(e), 500
@@ -2984,6 +3138,13 @@ def k8s_explorer_node_cordon():
         # Node'u cordon et
         body = {"spec": {"unschedulable": True}}
         kube_client.core_v1.patch_node(node_name, body)
+        record_audit_event(
+            action='cordon',
+            resource_type='Node',
+            resource_name=node_name,
+            namespace=None,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
         return 'Node cordon (unschedulable) yapıldı.'
     except Exception as e:
         return str(e), 500
@@ -3023,6 +3184,13 @@ def k8s_explorer_node_drain():
             except Exception as ex:
                 log_lines.append(f"Pod {pod.metadata.name} (ns: {pod.metadata.namespace}) drain edilirken hata: {str(ex)}")
         log_lines.append("Drain işlemi tamamlandı.")
+        record_audit_event(
+            action='drain',
+            resource_type='Node',
+            resource_name=node_name,
+            namespace=None,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
         return {"logs": log_lines}, 200
     except Exception as e:
         return {"logs": [str(e)]}, 500
@@ -3230,6 +3398,24 @@ def k8s_explorer_yaml():
                 return 'Bilinmeyen obje tipi', 400
             # YAML edit sonrası pods_summary_cache'i hemen güncelle
             update_pods_summary_cache()
+            _YAML_RESOURCE_TYPE_MAP = {
+                'ingress': 'Ingress', 'service': 'Service', 'endpoints': 'Endpoints',
+                'deployment': 'Deployment', 'daemonset': 'DaemonSet', 'statefulset': 'StatefulSet',
+                'pod': 'Pod', 'serviceaccount': 'ServiceAccount', 'sa': 'ServiceAccount',
+                'role': 'Role', 'rolebinding': 'RoleBinding',
+                'clusterrole': 'ClusterRole', 'clusterrolebinding': 'ClusterRoleBinding',
+                'pvc': 'PVC', 'persistentvolumeclaim': 'PVC',
+                'pv': 'PV', 'persistentvolume': 'PV',
+                'storageclass': 'StorageClass', 'storageclasses': 'StorageClass',
+                'storage-class': 'StorageClass', 'sc': 'StorageClass',
+            }
+            record_audit_event(
+                action='yaml_update',
+                resource_type=_YAML_RESOURCE_TYPE_MAP.get(obj_type, obj_type.capitalize() if obj_type else 'Unknown'),
+                resource_name=name,
+                namespace=namespace or None,
+                session_id=_short_session_id(request.cookies.get('session')),
+            )
             return 'ok', 200
     except Exception as e:
         return str(e), 500

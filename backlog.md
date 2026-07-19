@@ -280,8 +280,8 @@
 **Sorun:** Uyumluluk ve güvenlik denetimi için değişiklik geçmişi gereklidir. Bir sorun yaşandığında kimin hangi değişikliği yaptığının iz sürülememesi operasyonel riski artırır.
 
 **Kabul kriterleri:**
-- [ ] Uygulama üzerinden yapılan her mutasyon işlemi (YAML güncelleme, silme, scale, ConfigMap düzenleme) en azından sunucu loguna kayıt edilir (tarih, kullanıcı/session, kaynak türü, kaynak adı, namespace, işlem türü).
-- [ ] UI'da bir "Son Değişiklikler" veya "Aktivite Geçmişi" görünümü eklenir; son 100 işlem listelenir.
+- [x] Uygulama üzerinden yapılan her mutasyon işlemi (YAML güncelleme, silme, scale, ConfigMap düzenleme) en azından sunucu loguna kayıt edilir (tarih, kullanıcı/session, kaynak türü, kaynak adı, namespace, işlem türü).
+- [x] UI'da bir "Son Değişiklikler" veya "Aktivite Geçmişi" görünümü eklenir; son 100 işlem listelenir.
 
 ---
 

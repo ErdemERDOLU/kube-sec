@@ -15,6 +15,7 @@ Bağımlılık zinciri: kubeconfig_manager <- bu modül <- app.py
 from flask import Blueprint, jsonify, render_template, request
 from kubernetes import client
 
+from web.audit_log import get_recent_events
 from web.kubeconfig_manager import load_kube_config_active
 
 bp_workloads = Blueprint('workloads', __name__)
@@ -98,6 +99,33 @@ def mesh():
     Returns: HTML (mesh.html şablonu)
     """
     return render_template('mesh.html')
+
+
+@bp_workloads.route('/audit-trail')
+def audit_trail_page():
+    """Aktivite Geçmişi sayfasını render et.
+    ---
+    GET /audit-trail
+    Returns: HTML (audit_trail.html şablonu)
+    """
+    return render_template('audit_trail.html')
+
+
+@bp_workloads.route('/api/audit-trail')
+def audit_trail_api():
+    """Audit trail JSON API endpoint'i.
+    ---
+    GET /api/audit-trail?limit=100
+    Query Params:
+      limit (int): Döndürülecek maksimum kayıt sayısı (varsayılan 100)
+    Returns: JSON {events: [AuditEvent, ...]}
+    """
+    try:
+        limit = int(request.args.get('limit', 100))
+    except (ValueError, TypeError):
+        limit = 100
+    events = get_recent_events(limit=limit)
+    return jsonify({'events': events})
 
 
 @bp_workloads.route('/mesh-data')

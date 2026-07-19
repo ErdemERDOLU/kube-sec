@@ -90,10 +90,15 @@ if (Test-Path $versionFile) {
 Write-Host "Uygulama versiyonu: $appVersion"
 
 # Versiyon parçalarını ayır (PyInstaller version-file için dördüzlü gerekiyor)
+# NOT: $appVersion "1.0.0-rc1" gibi pre-release suffix içerebilir. '.' ile bölünce
+# üçüncü parça "0-rc1" olur ve [int]"0-rc1" PowerShell'de InvalidArgument fırlatır.
+# Bu yüzden her parçanın baştaki sayısal karakterlerini (-match '^\d+') ayırıyor,
+# suffix'i yok sayıyoruz. Eşleşme yoksa (örn. "abc") 0 kabul ediyoruz.
+# $appVersion'ın kendisi değişmiyor — StringStruct satırlarında suffix dahil kullanılıyor.
 $vParts = $appVersion -split '\.'
-$vMajor = if ($vParts.Count -ge 1) { [int]$vParts[0] } else { 1 }
-$vMinor = if ($vParts.Count -ge 2) { [int]$vParts[1] } else { 0 }
-$vPatch = if ($vParts.Count -ge 3) { [int]$vParts[2] } else { 0 }
+$vMajor = if ($vParts.Count -ge 1) { if ($vParts[0] -match '^\d+') { [int]$matches[0] } else { 0 } } else { 1 }
+$vMinor = if ($vParts.Count -ge 2) { if ($vParts[1] -match '^\d+') { [int]$matches[0] } else { 0 } } else { 0 }
+$vPatch = if ($vParts.Count -ge 3) { if ($vParts[2] -match '^\d+') { [int]$matches[0] } else { 0 } } else { 0 }
 $vBuild = 0
 
 # Windows VSVersionInfo şablonunu dinamik oluştur

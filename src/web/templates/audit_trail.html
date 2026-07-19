@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+{% block title %}{{ t('audit.page_title') }} - Kubernetes Security Checker{% endblock %}
+{% block page_title %}{{ t('audit.page_title') }}{% endblock %}
+{% block content %}
+
+<!-- Sayfa Başlığı — Gradient Banner (nodes.html deseniyle tutarlı) -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card border-0" style="background: linear-gradient(135deg, #0d9488 0%, #0891b2 100%);">
+      <div class="card-body text-white p-4">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+          <div>
+            <h2 class="card-title mb-2 fw-bold text-white">
+              <i class="bi bi-clock-history me-3"></i>{{ t('audit.page_title') }}
+            </h2>
+            <p class="card-text mb-0 text-white opacity-90">
+              {{ t('audit.page_desc') }}
+            </p>
+          </div>
+          <div class="d-flex gap-2 align-items-center">
+            <span class="badge bg-white text-dark small py-2 px-3">
+              <i class="bi bi-arrow-repeat me-1"></i>{{ t('audit.auto_refresh') }}
+            </span>
+            <button class="btn btn-light btn-lg" onclick="loadAuditTrail()" id="refreshBtn">
+              <i class="bi bi-arrow-clockwise me-2"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filtreler -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body py-3">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-4">
+        <div class="input-group">
+          <span class="input-group-text bg-light border-end-0">
+            <i class="bi bi-search"></i>
+          </span>
+          <input type="text"
+                 id="auditSearch"
+                 class="form-control border-start-0"
+                 placeholder="{{ t('audit.search_placeholder') }}"
+                 aria-label="{{ t('audit.search_placeholder') }}"
+                 oninput="applyFilters()" />
+        </div>
+      </div>
+      <div class="col-md-3">
+        <select id="auditResourceTypeFilter"
+                class="form-select"
+                onchange="applyFilters()"
+                aria-label="{{ t('audit.filter_resource_type') }}">
+          <option value="">{{ t('audit.filter_resource_type') }}: {{ t('audit.filter_all') }}</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <select id="auditActionFilter"
+                class="form-select"
+                onchange="applyFilters()"
+                aria-label="{{ t('audit.filter_action') }}">
+          <option value="">{{ t('audit.filter_action') }}: {{ t('audit.filter_all') }}</option>
+        </select>
+      </div>
+      <div class="col-md-2 text-end">
+        <span class="badge bg-secondary fs-6" id="auditRowCount" aria-live="polite">0</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Audit Tablosu -->
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle" id="auditTable">
+        <thead>
+          <tr>
+            <th style="min-width:180px">{{ t('audit.col_time') }}</th>
+            <th style="min-width:140px">{{ t('audit.col_action') }}</th>
+            <th style="min-width:140px">{{ t('audit.col_resource_type') }}</th>
+            <th>{{ t('audit.col_resource_name') }}</th>
+            <th style="min-width:120px">{{ t('audit.col_namespace') }}</th>
+            <th style="min-width:90px">{{ t('audit.col_session') }}</th>
+            <th>{{ t('audit.col_details') }}</th>
+          </tr>
+        </thead>
+        <tbody id="auditTableBody">
+          <tr id="auditLoadingRow">
+            <td colspan="7" class="text-center py-5">
+              <span class="loading-spinner me-2"></span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // window.i18n ve window.locale base.html'de tanımlanır
+  var _i18n = window.i18n || {};
+  var _locale = window.locale || 'tr';
+
+  /** i18n sözlüğünden metni çeker. */
+  function tr(key) {
+    var entry = _i18n[key];
+    if (entry && entry[_locale]) return entry[_locale];
+    if (entry && entry['tr']) return entry['tr'];
+    return key;
+  }
+
+  // Action badge Bootstrap renk sınıfları (Spec 5.1)
+  var ACTION_BADGE_CLASS = {
+    'update':       'bg-primary',
+    'delete':       'bg-danger',
+    'scale':        'bg-success',
+    'restart':      'bg-warning text-dark',
+    'cordon':       'bg-secondary',
+    'uncordon':     'bg-secondary',
+    'drain':        'bg-secondary',
+    'yaml_update':  'bg-info text-dark',
+    'install':      'bg-secondary',
+    'scan_trigger': 'bg-secondary',
+    'add':          'bg-secondary',
+    'activate':     'bg-secondary'
+  };
+
+  function actionBadgeClass(action) {
+    return ACTION_BADGE_CLASS[action] || 'bg-secondary';
+  }
+
+  /** Action adını i18n sözlüğünden alır; anahtar yoksa ham action değerini döner. */
+  function actionLabel(action) {
+    var key = 'audit.action.' + action;
+    var label = tr(key);
+    // Anahtar bulunamadıysa tr() key'in kendisini döndürür
+    return label !== key ? label : action;
+  }
+
+  /** ISO timestamp'i yerel tarih/saat biçimine çevirir. */
+  function formatTimestamp(ts) {
+    if (!ts) return '-';
+    try {
+      return new Date(ts).toLocaleString(_locale === 'tr' ? 'tr-TR' : 'en-GB');
+    } catch (e) {
+      return ts;
+    }
+  }
+
+  // Yüklenen tüm audit olayları (client-side filtreleme için)
+  var allEvents = [];
+
+  /**
+   * Tabloya verilen event listesini render eder.
+   * API'den gelen serbest metin alanları (resource_name, details vb.)
+   * escapeHtml() ile XSS'e karşı korunur (common.js'den).
+   */
+  function renderTable(events) {
+    var tbody = document.getElementById('auditTableBody');
+    document.getElementById('auditRowCount').textContent = events.length;
+
+    if (!events.length) {
+      tbody.innerHTML =
+        '<tr><td colspan="7" class="text-center py-5 text-muted">' +
+        '<i class="bi bi-inbox d-block mb-2" style="font-size:2.5rem;"></i>' +
+        escapeHtml(tr('audit.empty_state')) +
+        '</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = events.map(function (ev) {
+      var badgeCls = actionBadgeClass(ev.action);
+      var actionText = actionLabel(ev.action || '');
+      return '<tr>' +
+        '<td class="text-nowrap small font-monospace">' + escapeHtml(formatTimestamp(ev.timestamp)) + '</td>' +
+        '<td><span class="badge ' + badgeCls + '">' + escapeHtml(actionText) + '</span></td>' +
+        '<td>' + escapeHtml(ev.resource_type || '-') + '</td>' +
+        '<td>' + escapeHtml(ev.resource_name || '-') + '</td>' +
+        '<td>' + escapeHtml(ev.namespace || '-') + '</td>' +
+        '<td class="font-monospace small">' + escapeHtml(ev.session_id || '-') + '</td>' +
+        '<td class="small text-muted">' + escapeHtml(ev.details || '-') + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  /**
+   * Kaynak türü ve işlem türü dropdown'larını mevcut event verisiyle doldurur.
+   * Kullanıcının mevcut seçimi korunur.
+   */
+  function populateFilters(events) {
+    var rtSel = document.getElementById('auditResourceTypeFilter');
+    var actSel = document.getElementById('auditActionFilter');
+    var prevRt = rtSel.value;
+    var prevAct = actSel.value;
+
+    var resourceTypes = events
+      .map(function (e) { return e.resource_type; })
+      .filter(function (v) { return !!v; });
+    resourceTypes = resourceTypes.filter(function (v, i, a) { return a.indexOf(v) === i; }).sort();
+
+    var actions = events
+      .map(function (e) { return e.action; })
+      .filter(function (v) { return !!v; });
+    actions = actions.filter(function (v, i, a) { return a.indexOf(v) === i; }).sort();
+
+    rtSel.innerHTML =
+      '<option value="">' + tr('audit.filter_resource_type') + ': ' + tr('audit.filter_all') + '</option>' +
+      resourceTypes.map(function (rt) {
+        return '<option value="' + escapeHtml(rt) + '">' + escapeHtml(rt) + '</option>';
+      }).join('');
+
+    actSel.innerHTML =
+      '<option value="">' + tr('audit.filter_action') + ': ' + tr('audit.filter_all') + '</option>' +
+      actions.map(function (a) {
+        return '<option value="' + escapeHtml(a) + '">' + escapeHtml(actionLabel(a)) + '</option>';
+      }).join('');
+
+    // Önceki seçimleri koru
+    if (prevRt) rtSel.value = prevRt;
+    if (prevAct) actSel.value = prevAct;
+  }
+
+  /**
+   * Client-side filtreleme: kaynak türü, işlem türü ve metin arama.
+   * Metin araması kaynak adı ve namespace üzerinde çalışır.
+   */
+  window.applyFilters = function () {
+    var searchTerm = (document.getElementById('auditSearch').value || '').toLowerCase();
+    var rtFilter = document.getElementById('auditResourceTypeFilter').value;
+    var actFilter = document.getElementById('auditActionFilter').value;
+
+    var filtered = allEvents.filter(function (ev) {
+      if (rtFilter && ev.resource_type !== rtFilter) return false;
+      if (actFilter && ev.action !== actFilter) return false;
+      if (searchTerm) {
+        var name = (ev.resource_name || '').toLowerCase();
+        var ns = (ev.namespace || '').toLowerCase();
+        if (!name.includes(searchTerm) && !ns.includes(searchTerm)) return false;
+      }
+      return true;
+    });
+
+    renderTable(filtered);
+  };
+
+  /**
+   * /api/audit-trail endpoint'inden veri çeker, tabloyu ve filtreleri günceller.
+   * Otomatik yenileme (setInterval) ve manuel yenileme (refreshBtn) bu fonksiyonu çağırır.
+   */
+  window.loadAuditTrail = function () {
+    fetch('/api/audit-trail?limit=100')
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function (data) {
+        allEvents = data.events || [];
+        populateFilters(allEvents);
+        applyFilters();
+      })
+      .catch(function (err) {
+        var tbody = document.getElementById('auditTableBody');
+        tbody.innerHTML =
+          '<tr><td colspan="7" class="text-center py-4 text-danger">' +
+          '<i class="bi bi-exclamation-triangle me-2"></i>' +
+          escapeHtml(err.message) +
+          '</td></tr>';
+        document.getElementById('auditRowCount').textContent = '0';
+      });
+  };
+
+  document.addEventListener('DOMContentLoaded', function () {
+    // Sayfa yüklenince veriyi çek
+    loadAuditTrail();
+    // Otomatik yenileme: her 30 saniyede (Spec 5.1, AC-13)
+    setInterval(loadAuditTrail, 30000);
+  });
+}());
+</script>
+
+{% endblock %}

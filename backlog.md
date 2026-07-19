@@ -297,11 +297,11 @@
 **Sorun:** Geliştirme hızı ve bakım kolaylığı azalıyor. Paralel geliştirme yapıldığında merge conflict olasılığı çok yüksek.
 
 **Kabul kriterleri:**
-- [ ] En az aşağıdaki 5 alan için Flask Blueprint oluşturulur: (1) kubeconfig yönetimi, (2) workload route'ları, (3) güvenlik kontrol route'ları, (4) config/configuration route'ları, (5) k8s-explorer JSON API'leri.
-- [ ] I18N sözlüğü ayrı bir dosyaya (`src/web/i18n.py` veya benzeri) taşınır.
-- [ ] Cache yönetimi (background thread'ler, cache dict'leri) ayrı bir modüle taşınır.
-- [ ] Her Blueprint dosyası 1000 satırdan küçük olur.
-- [ ] Bölme sonrası uygulama hatasız başlar ve tüm mevcut route'lar çalışmaya devam eder.
+- [x] En az aşağıdaki 5 alan için Flask Blueprint oluşturulur: (1) kubeconfig yönetimi, (2) workload route'ları, (3) güvenlik kontrol route'ları, (4) config/configuration route'ları, (5) k8s-explorer JSON API'leri.
+- [x] I18N sözlüğü ayrı bir dosyaya (`src/web/i18n.py` veya benzeri) taşınır.
+- [x] Cache yönetimi (background thread'ler, cache dict'leri) ayrı bir modüle taşınır.
+- [x] Her Blueprint dosyası 1000 satırdan küçük olur.
+- [x] Bölme sonrası uygulama hatasız başlar ve tüm mevcut route'lar çalışmaya devam eder.
 
 ---
 

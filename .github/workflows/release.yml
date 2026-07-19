@@ -1,0 +1,358 @@
+name: Kube-Sec Release Pipeline
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AC-1: Yalnizca 'v*.*.*' formatindaki semver tag push'larinda tetiklenir.
+# 'main' veya diger branch push'lari bu workflow'u TETIKLEMEZ.
+# Ornek tetikleyici tag'ler: v1.0.0, v2.3.1, v1.0.0-beta
+# ─────────────────────────────────────────────────────────────────────────────
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+# Varsayilan izin salt okuma'dir.
+# GitHub Release olusturmak icin gereken contents:write yalnizca
+# create-release job'unda job seviyesinde aktif edilir (en az ayrıcalık prensibi).
+permissions:
+  contents: read
+
+jobs:
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # AC-8: Versiyon tutarlilik kontrolu (KRITIK)
+  #
+  # Push edilen tag'deki versiyon (ornek: v1.2.3 → 1.2.3) ile repo kokündeki
+  # VERSION dosyasinin icerigini karsilastirir. Eslesmeme durumunda her iki
+  # build job'u BASLAMADAN workflow erken FAIL olur. Bu, yanlis tag push'unun
+  # sessizce yanlis versiyonlu artifact uretmesini onler.
+  # ───────────────────────────────────────────────────────────────────────────
+  check-version:
+    name: Versiyon Tutarlilik Kontrolu (AC-8)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Kodu indir
+        uses: actions/checkout@v4
+
+      - name: Tag'den versiyon degerini cikar
+        id: extract
+        run: |
+          # GITHUB_REF_NAME tag push'larda tag adini iceriyor (ornek: v1.2.3)
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"   # bas 'v' karakterini strip et → 1.2.3
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "Tespit edilen tag  : ${TAG}"
+          echo "Cikarilan versiyon : ${VERSION}"
+
+      - name: VERSION dosyasiyla eslesme kontrolu
+        # Guvenlik: ${{ }} expression'i run: icinde degil, env: blogu araciligiyla
+        # shell degiskeni olarak aktarilir (command injection riskini ortadan kaldirir).
+        env:
+          TAG_VERSION: ${{ steps.extract.outputs.version }}
+        run: |
+          FILE_VERSION="$(cat VERSION | tr -d '[:space:]')"
+          echo "Tag versiyonu   : ${TAG_VERSION}"
+          echo "VERSION dosyasi : ${FILE_VERSION}"
+          if [ "${TAG_VERSION}" != "${FILE_VERSION}" ]; then
+            echo "::error::HATA: Tag versiyonu (${TAG_VERSION}) ile repo VERSION dosyasi (${FILE_VERSION}) eslesmıyor!"
+            echo "Cozum: 'make set-version VERSION=${TAG_VERSION}' calistir, commit/push yap, sonra tag'i yeniden gonder."
+            exit 1
+          fi
+          echo "Versiyon kontrolu BASARILI: ${TAG_VERSION}"
+
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # AC-2, AC-3, AC-4: macOS Build — Codesign + Notarize + DMG
+  #
+  # AC-2 : macos-latest runner'da 'make release-macos' ile .app + .dmg uretir.
+  # AC-3 : Gecici keychain olusturulur; MACOS_CERTIFICATE (base64 .p12) +
+  #         MACOS_CERTIFICATE_PASSWORD secret'larindan sertifika import edilir;
+  #         is bittikten sonra (her durumda) keychain temizlenir.
+  # AC-4 : Notarizasyon NOTARY_* secret'larindan env olarak 'make release-macos'a
+  #         gecilir; basarisizlik durumunda job FAIL olur.
+  # AC-9 : Tum build mantigi mevcut Makefile hedefleri uzerinden yurutulur;
+  #         workflow YAML icinde dogrudan PyInstaller/codesign/notarytool cagrisi yok.
+  #         Istisna: keychain islemleri CI'a ozgudur (spec AC-9 istisnasi).
+  # AC-10: Hicbir secret degeri YAML'da acik metin olarak bulunmuyor.
+  # AC-14: build-windows ile bagimsiz; paralel baslar.
+  # ───────────────────────────────────────────────────────────────────────────
+  build-macos:
+    name: macOS Build — imzala + notarize + DMG (AC-2/3/4)
+    needs: check-version
+    runs-on: macos-latest
+
+    # AC-4, AC-10: Notarizasyon ve imzalama degerleri secret'lardan env olarak okunur.
+    # 'make release-macos' bu env degiskenlerini okur; YAML'da acik metin yok.
+    env:
+      SIGN_IDENTITY: ${{ secrets.SIGN_IDENTITY }}
+      NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
+      NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}
+      NOTARY_PASSWORD: ${{ secrets.NOTARY_PASSWORD }}
+
+    steps:
+      - name: Kodu indir
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # AC-13: Python bagimliliklari kur
+      # Not: PyInstaller requirements.txt icinde degildir (sadece Flask/k8s client/vs. var).
+      # build_macos_app.sh PyInstaller yoksa exit 1 yapar; bu nedenle ayrica kuruluyor.
+      # 'make install' → requirements.txt bagimlilikları yükler (PYTHON=python3, .venv yok CI'da).
+      - name: Bagimliliklari kur (requirements.txt + PyInstaller)
+        run: |
+          make install
+          python3 -m pip install pyinstaller
+
+      # AC-3: Gecici keychain olustur ve sertifikayı import et.
+      # Bu adimlar CI'a ozgudur; build script'lerinde karsiligi yoktur (AC-9 istisnasi).
+      # Guvenlik: Secret degerleri env: blogu araciligiyla shell degiskenine aktarilir;
+      # ${{ secrets.* }} ifadeleri dogrudan run: icinde kullanilmaz (command injection onlemi).
+      - name: Gecici keychain olustur ve sertifika import et
+        id: keychain_setup
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_NAME="kube-sec-build-$(date +%s).keychain"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 16)"
+
+          # Uretilen keychain parolasini GitHub Actions log'undan gizle
+          echo "::add-mask::${KEYCHAIN_PASSWORD}"
+
+          # Sonraki adimlar icin (ozellikle always() temizlik) ortam degiskenlerine kaydet
+          echo "KEYCHAIN_NAME=${KEYCHAIN_NAME}"         >> "${GITHUB_ENV}"
+          echo "KEYCHAIN_PASSWORD=${KEYCHAIN_PASSWORD}" >> "${GITHUB_ENV}"
+
+          # AC-10: Secret'tan gelen base64 sertifikayi coz; gecici dosyaya yaz
+          echo "${MACOS_CERTIFICATE}" | base64 --decode > /tmp/cert.p12
+
+          # Gecici keychain olustur ve yapi ayarlarini yapılandır
+          security create-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_NAME}"
+          security set-keychain-settings -t 3600 -u "${KEYCHAIN_NAME}"
+          security unlock-keychain -p "${KEYCHAIN_PASSWORD}" "${KEYCHAIN_NAME}"
+
+          # Yeni keychain'i kullanici arama listesinin basina ekle (mevcut listeyi koru)
+          EXISTING=$(security list-keychains -d user | sed 's/"//g' | tr '\n' ' ')
+          # shellcheck disable=SC2086
+          security list-keychains -d user -s "${KEYCHAIN_NAME}" ${EXISTING}
+
+          # .p12 sertifikasini import et; codesign ve security uygulamalarına erisim izni ver
+          security import /tmp/cert.p12 \
+            -k "${KEYCHAIN_NAME}" \
+            -P "${MACOS_CERTIFICATE_PASSWORD}" \
+            -T /usr/bin/codesign \
+            -T /usr/bin/security
+
+          # codesign'in parola sormadan keychain'e erisebilmesi icin partition list ayarla
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s -k "${KEYCHAIN_PASSWORD}" \
+            "${KEYCHAIN_NAME}"
+
+          # Gecici .p12 dosyasini hemen sil (AC-10 — hassas veri diske kalmasin)
+          rm -f /tmp/cert.p12
+          echo "Keychain hazir: ${KEYCHAIN_NAME}"
+
+      # AC-2, AC-9: 'make release-macos' → version-sync + sign + notarize + DMG olusturur.
+      # Makefile bu hedefte SIGN_IDENTITY, NOTARIZE=1, CREATE_DMG=1 env'leriyle
+      # build_macos_app.sh'i cagirır. NOTARY_* env'leri job-level env blogundan devralınır.
+      - name: make release-macos (sign + notarize + DMG)
+        run: make release-macos
+
+      # AC-4: imzalama ve notarizasyon dogrulamasi (KRITIK)
+      #
+      # build_macos_app.sh icindeki codesign/notarize adimlarinin '|| echo "[WARN]..."'
+      # ile hatalari yutmasi nedeniyle make release-macos her kosulda exit 0 donebilir.
+      # Bu adim, DMG artifact yuklenmesinden ONCE asagidaki uc kontrolu bagimsiz olarak
+      # dogrudan araç cagrilarıyla gerceklestirir:
+      #   1. codesign --verify   : .app'in gercekten imzalandigini dogrular
+      #   2. spctl --assess      : Gatekeeper'in .app'i kabul ettigini dogrular (notarizasyon)
+      #   3. xcrun stapler validate : notarizasyon ticket'inin .app'e yapistirıldigini dogrular
+      #
+      # Guvenlik (AC-10): Env degiskenleri job-level env blogundan miras alinir;
+      # bu adimda yeni ${{ }} expression'i run: icine gomulmez.
+      - name: imzalama ve notarizasyon dogrulamasi (AC-4)
+        run: |
+          # ── 1. Codesign dogrulamasi ──────────────────────────────────────────────
+          # SIGN_IDENTITY tanimli (bos olmayan) ise imzalama talep edilmis demektir.
+          if [[ -n "${SIGN_IDENTITY}" ]]; then
+            echo "SIGN_IDENTITY tanimli — codesign dogrulamasi basliyor..."
+            if ! codesign --verify --deep --strict --verbose=2 dist/Kube-Sec.app; then
+              echo "::error::HATA: codesign --verify BASARISIZ — .app imzasiz! DMG artifact olarak yuklenmeyecek (AC-4)."
+              exit 1
+            fi
+            echo "codesign dogrulamasi BASARILI."
+          else
+            echo "SIGN_IDENTITY tanimli degil — codesign dogrulamasi atlaniyor \
+          (imzalama istenmemis)."
+          fi
+
+          # ── 2. Gatekeeper (spctl) dogrulamasi ───────────────────────────────────
+          # NOTARY_APPLE_ID tanimli ise notarizasyon talep edilmis demektir
+          # ('make release-macos' dahili olarak NOTARIZE=1 set eder).
+          if [[ -n "${NOTARY_APPLE_ID}" ]]; then
+            echo "NOTARY_APPLE_ID tanimli (NOTARIZE=1) — Gatekeeper degerlendirmesi basliyor..."
+            if ! spctl --assess --type execute --verbose dist/Kube-Sec.app; then
+              echo "::error::HATA: spctl --assess BASARISIZ — Gatekeeper .app'i reddetti. Notarizasyon tamamlanmamis veya ticket yapistirilamadi (AC-4)."
+              exit 1
+            fi
+            echo "Gatekeeper degerlendirmesi BASARILI (accepted)."
+          else
+            echo "NOTARY_APPLE_ID tanimli degil — Gatekeeper kontrolu atlaniyor (notarizasyon istenmemis)."
+          fi
+
+          # ── 3. Staple dogrulamasi ────────────────────────────────────────────────
+          # Ticket .app'e gercekten yapistirildiysa xcrun stapler validate basarili doner.
+          if [[ -n "${NOTARY_APPLE_ID}" ]]; then
+            echo "Staple dogrulamasi basliyor..."
+            if ! xcrun stapler validate dist/Kube-Sec.app; then
+              echo "::error::HATA: xcrun stapler validate BASARISIZ — notarizasyon ticket'i .app'e yapistirilamadi (AC-4)."
+              exit 1
+            fi
+            echo "Staple dogrulamasi BASARILI."
+          else
+            echo "NOTARY_APPLE_ID tanimli degil — staple dogrulamasi atlaniyor."
+          fi
+
+          echo "Tum imzalama/notarizasyon dogrulamalari BASARILI — DMG artifact yuklenebilir."
+
+      # AC-11: 'dist/Kube-Sec-{VERSION}.dmg' — build_macos_app.sh bu formatta olusturur.
+      - name: macOS DMG artifact yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: dist/Kube-Sec-*.dmg
+          if-no-files-found: error
+
+      # AC-11: Notarizasyon sirasinda olusturulan ZIP'i de yukle (opsiyonel dagitim secenegi).
+      # Dosya adi: 'dist/Kube-Sec-{VERSION}.zip' — build_macos_app.sh tarafindan uretilir.
+      - name: macOS APP ZIP artifact yukle (opsiyonel)
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-zip
+          path: dist/Kube-Sec-*.zip
+          if-no-files-found: warn
+
+      # AC-3: Is bittikten sonra (basarili veya basarisiz) gecici keychain'i temizle.
+      # 'if: always()' job basarisiz olsa bile bu adimin calismасını garantiler.
+      - name: Gecici keychain temizle
+        if: always()
+        run: |
+          security delete-keychain "${KEYCHAIN_NAME}" 2>/dev/null || true
+          echo "Keychain temizlendi: ${KEYCHAIN_NAME}"
+
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # AC-5, AC-6: Windows Build — imzalama YOK (bilingli kapsam karari)
+  #
+  # AC-5 : windows-latest runner'da 'build-windows.ps1' ile dist\Kube-Sec\ uretir.
+  # AC-6 : Hicbir signing secret tanimlanmaz; 'build-windows.ps1' signtool yoksa
+  #         uyari verip atlar — ek CI adimi YOKTUR.
+  # AC-14: build-macos ile bagimsiz; paralel baslar.
+  # ───────────────────────────────────────────────────────────────────────────
+  build-windows:
+    name: Windows Build — imzasiz (AC-5/6)
+    needs: check-version
+    runs-on: windows-latest
+
+    steps:
+      - name: Kodu indir
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # AC-13 / version-sync:
+      # Makefile'in 'version-sync' hedefi GNU make + sh gerektirir; windows-latest
+      # runner'da GNU make varsayilan olarak kurulu degildir. Ayni islev (src/version.py
+      # yazmak) PowerShell ile gerceklestiriliyor. Bu, dogrudan bir PyInstaller/codesign/
+      # notarytool cagrisi degildir; AC-9 kapsaminda CI kurulum adimidir.
+      - name: Version sync — src/version.py guncelle
+        shell: pwsh
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          $content = "__version__ = '$version'"
+          Set-Content -Path src\version.py -Value $content -Encoding UTF8
+          Write-Host "src/version.py guncellendi: $content"
+
+      # AC-5, AC-9: build-windows.ps1 → kendi venv olusturur, pip kurar, PyInstaller calistirir.
+      # AC-6: Script signtool bulamazsa uyari verip atlar; CI'da ek signing adimi YOK.
+      - name: Windows Build — build-windows.ps1
+        shell: pwsh
+        run: pwsh ./build-windows.ps1
+
+      # AC-11: 'dist\Kube-Sec\' klasorunu versiyonlu zip'e paketle.
+      # Cikti tek bir .exe degil, bir klasordur (PyInstaller --onedir modu).
+      # Zip adi: 'Kube-Sec-{VERSION}-windows.zip'
+      - name: Windows klasorunu versiyonlu ZIP'e paketle
+        id: zip_step
+        shell: pwsh
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          $zipName = "Kube-Sec-$version-windows.zip"
+          # dist\Kube-Sec klasorunu icerecek sekilde paketle (klasor yapisi korunur)
+          Compress-Archive -Path dist\Kube-Sec -DestinationPath $zipName -Force
+          Write-Host "Windows ZIP olusturuldu: $zipName"
+          "windows_zip=$zipName" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Windows ZIP artifact yukle
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-zip
+          path: ${{ steps.zip_step.outputs.windows_zip }}
+          if-no-files-found: error
+
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # AC-7: Draft GitHub Release olustur
+  #
+  # Her iki platform job'u basarIyla tamamlaninca tek bir GitHub Release olusturulur.
+  # Herhangi bir job FAILED ise bu job hic calismaz (varsayilan GitHub Actions
+  # 'needs' davranisi — ekstra 'if' kosuluna gerek yoktur).
+  # Release draft modundadir; kullanici GitHub arayuzunden elle "Publish" yapar.
+  # ───────────────────────────────────────────────────────────────────────────
+  create-release:
+    name: GitHub Draft Release Olustur (AC-7)
+    needs: [build-macos, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # GitHub Release olusturmak icin gerekli (job seviyesinde)
+
+    steps:
+      - name: macOS DMG artifact'i indir
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-dmg
+          path: release-artifacts/
+
+      # macOS ZIP opsiyoneldir; upload 'warn' modundaydi — yoksa job devam eder.
+      - name: macOS ZIP artifact'i indir (opsiyonel)
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-zip
+          path: release-artifacts/
+        continue-on-error: true
+
+      - name: Windows ZIP artifact'i indir
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-zip
+          path: release-artifacts/
+
+      # AC-7, AC-11: Draft release olustur; tum platform artifact'larini ekle.
+      # - draft:true → otomatik public yayinlanmaz (ac-7)
+      # - softprops/action-gh-release GITHUB_TOKEN kullanir; job-level 'contents:write' gerekli.
+      - name: GitHub Draft Release olustur
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: release-artifacts/**

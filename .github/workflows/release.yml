@@ -80,6 +80,11 @@ jobs:
     name: macOS Build — imzala + notarize + DMG (AC-2/3/4)
     needs: check-version
     runs-on: macos-latest
+    # Environment referansi: imzalama/notarizasyon secret'lari (MACOS_CERTIFICATE,
+    # MACOS_CERTIFICATE_PASSWORD, SIGN_IDENTITY, NOTARY_*) repository-level degil
+    # 'kube-sec-macos' GitHub Environment altinda tanimli; bu alan olmadan
+    # ${{ secrets.* }} ifadeleri sessizce bos string'e cozulur ve sertifika import basarisiz olur.
+    environment: kube-sec-macos
 
     # AC-4, AC-10: Notarizasyon ve imzalama degerleri secret'lardan env olarak okunur.
     # 'make release-macos' bu env degiskenlerini okur; YAML'da acik metin yok.

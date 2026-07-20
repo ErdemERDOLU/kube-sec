@@ -1,0 +1,61 @@
+title = "Kube-Sec Gitleaks Konfigürasyonu"
+
+# Varsayılan gitleaks kural setini koru; aşağıdaki allowlist'ler ek olarak uygulanır.
+[extend]
+useDefault = true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Genel Allowlist #1 — Dokümantasyon dosyalarındaki geçersiz/örnek token metinleri
+#
+# backlog.md, docs/specs/ ve diğer doküman dosyaları geçmişte geçersiz kılınmış
+# token adlarını (ör. kubeconfig-user-dqghn96rqm:...) yalnızca referans/açıklama
+# amacıyla kısmi (truncated) metin olarak içerebilir. Bu metinler gerçek secret
+# değeri taşımaz; yanlış pozitif (false-positive) üretmemesi için bu dosya
+# yolları allowlist'e alınır.
+# ─────────────────────────────────────────────────────────────────────────────
+[[allowlists]]
+description = "Dokümantasyon ve backlog dosyalarındaki geçersiz/örnek token referansları"
+paths = [
+  '''backlog\.md$''',
+  '''docs/specs/''',
+  '''CLAUDE\.md$''',
+  '''context\.md$''',
+  '''mimari-degerlendirme\.md$''',
+  '''BUILD\.md$''',
+]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Genel Allowlist #2 — yaml/ dizini: örnek Kubernetes manifest şablonları
+#
+# yaml/ altındaki dosyalar (Lease, HPA, PDB, ResourceQuota vb.) proje ile
+# birlikte dağıtılan referans manifest şablonlarıdır. Gerçek kimlik bilgisi
+# içermez; ancak bazı manifest alanları (ör. serviceAccountName, secretRef)
+# isim olarak "secret" veya "token" kelimesi geçirebilir.
+# ─────────────────────────────────────────────────────────────────────────────
+[[allowlists]]
+description = "yaml/ dizinindeki örnek Kubernetes manifest şablonları"
+paths = [
+  '''yaml/''',
+]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Genel Allowlist #3 — Bu konfigürasyon dosyasının kendisi
+#
+# .gitleaks.toml içindeki allowlist açıklamalarında "token", "secret", "key"
+# gibi kelimeler teknik yorum olarak geçebilir; self-referential false-positive
+# önlemek için bu dosya yolu allowlist'e alınır.
+# ─────────────────────────────────────────────────────────────────────────────
+[[allowlists]]
+description = "Gitleaks konfigürasyon dosyasının kendisi"
+paths = [
+  '''\.gitleaks\.toml$''',
+]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Genel Allowlist #4 — Gitleaks ignore dosyası
+# ─────────────────────────────────────────────────────────────────────────────
+[[allowlists]]
+description = ".gitleaksignore dosyası"
+paths = [
+  '''\.gitleaksignore$''',
+]

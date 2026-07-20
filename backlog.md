@@ -322,4 +322,10 @@
   - **Bilinçli istisna:** o sırada `v1.0.0-rc5` tag'i üzerinde canlı bir GitHub Actions release job'u çalıştığı için (`run 29734369408`), kullanıcı talebiyle bu tag rewrite/force-push kapsamı dışında bırakıldı — GitHub'da hâlâ eski (token içeren) commit'e (`7a09b0c`) işaret ediyor. Bu tag ileride ayrıca temizlenebilir (aynı `git filter-repo` + tek tag için hedefli force-push).
   - Ayrıca yerel-sadece (origin'e hiç push edilmemiş) `newfeature` dalı da eski geçmişi içeriyordu; sadece yerel bir referans olduğu ve zaten PR #1 ile `main`'e merge edilmiş olduğu için silindi.
   - **Bilinen kalıntı:** GitHub, merge edilmiş PR'ların (#1) commit/diff geçmişini kendi tarafında ayrıca önbelleğe alabiliyor; force-push sonrası bile PR #1'in sayfası eski commit içeriğini gösterebilir. Bu git seviyesinde düzeltilemez (GitHub destek talebi veya repo yeniden oluşturma gerektirir) — token zaten geçersiz olduğu için aktif risk taşımıyor.
-- [ ] Gelecekte benzer kazaların önüne geçmek için pre-commit secret scanner (gitleaks veya trufflehog) eklenir ve CI pipeline'ına entegre edilir.
+- [x] Gelecekte benzer kazaların önüne geçmek için pre-commit secret scanner (gitleaks veya trufflehog) eklenir ve CI pipeline'ına entegre edilir.
+  - Araç: `gitleaks v8.30.1` (resmi pre-commit hook + GitHub Actions action desteği).
+  - `.pre-commit-config.yaml` (`gitleaks/gitleaks` hook, `rev: v8.30.1`) repo köküne eklendi.
+  - `.gitleaks.toml` (allowlist: `backlog.md`, `docs/specs/`, `yaml/` ve konfigürasyon dosyalarının kendisi) repo köküne eklendi.
+  - `.github/workflows/security-scan.yml` (her push + PR'da tetiklenen, ubuntu-latest, `gitleaks/gitleaks-action@v2`) eklendi — `release.yml`'den tamamen bağımsız.
+  - `gitleaks detect --source . --config .gitleaks.toml -v` taraması 148 commit + tüm çalışma ağacında sıfır bulgu (exit code 0) döndürdü (2026-07-20).
+  - README.md'ye pre-commit kurulum talimatı (Türkçe) eklendi.

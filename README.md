@@ -289,6 +289,33 @@ Current version: **1.0.0**
 
 ---
 
+## Güvenlik: Pre-commit Secret Taraması
+
+Bu repo, yanlışlıkla commit edilen secret/credential'ları yakalamak için iki katmanlı bir koruma kullanır:
+
+**1. Katman — Yerel pre-commit hook (geliştirici makinasında):**
+
+Repo'yu ilk clone'ladıktan sonra aşağıdaki iki komutu bir kez çalıştır:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+Bu komutlar `.git/hooks/pre-commit` dosyasını oluşturur. Bundan sonra her `git commit` işleminde [gitleaks](https://github.com/gitleaks/gitleaks) otomatik olarak çalışır ve staged değişikliklerde bilinen secret pattern'ları (API key, token, private key, parola vb.) arar. Bulgu varsa commit reddedilir.
+
+Manuel tarama (tüm tracked dosyalar):
+
+```bash
+pre-commit run gitleaks --all-files
+```
+
+**2. Katman — CI (GitHub Actions):**
+
+Her push ve her pull request'te `.github/workflows/security-scan.yml` otomatik tetiklenir. Pre-commit hook'unu kurmadan push eden bir geliştirici olsa bile, CI bu taramayı çalıştırır ve secret bulunursa build'i kırar.
+
+---
+
 ## Contributing
 
 Contributions are welcome. To report a bug or request a feature, please open an issue on GitHub. To submit a change, fork the repository, make your changes on a branch, and open a pull request against `main`.

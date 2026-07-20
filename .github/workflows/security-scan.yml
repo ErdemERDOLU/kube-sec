@@ -1,0 +1,60 @@
+name: Secret Taramasi (Gitleaks)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Bu workflow, her branch push'unda ve her pull request'te otomatik çalışır.
+# Tag push'larında da tetiklenir (release.yml ile hiçbir 'needs' ilişkisi yoktur).
+#
+# Amaç: Bir geliştirici pre-commit hook'unu kurmadan push ederse, CI bu
+# workflow aracılığıyla secret/credential sızıntısını yakalar (ikinci savunma hattı).
+#
+# Tasarım kararı: Bu workflow release.yml'den tamamen bağımsızdır.
+# release.yml yalnızca v*.*.* tag push'larında tetiklenir ve macOS notarizasyonu
+# nedeniyle 2+ saat sürebilir. Bu workflow ubuntu-latest üzerinde ~30 saniyede
+# tamamlanır ve release pipeline'ını etkilemez.
+# ─────────────────────────────────────────────────────────────────────────────
+on:
+  push:
+  pull_request:
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Least-privilege prensibi: Secret taraması yalnızca kodu okur;
+# repoya yazma izni gerekmez.
+# ─────────────────────────────────────────────────────────────────────────────
+permissions:
+  contents: read
+
+jobs:
+  secret-scan:
+    name: Gitleaks Secret Taramasi
+    runs-on: ubuntu-latest
+
+    steps:
+      # Tam git geçmişini indir; gitleaks-action push/PR diff'ini hesaplamak
+      # için before/after SHA'lara ihtiyaç duyar.
+      - name: Kodu indir (tam gecmis)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ───────────────────────────────────────────────────────────────────────
+      # Gitleaks secret taraması
+      #
+      # gitleaks-action@v2 varsayılan davranışı:
+      # - push olayında: yalnızca push'taki commit diff'ini tarar
+      #   (--log-opts="<before>..<after>"); tüm git geçmişini TARAMAZ.
+      # - pull_request olayında: yalnızca PR diff'ini tarar
+      #   (--log-opts="<base>..<head>").
+      #
+      # Bu davranış AC-9'u karşılar: git geçmişi filter-repo ile zaten
+      # temizlendi; gereksiz tarihsel tarama yapılmaz.
+      #
+      # Secret bulunursa action non-zero exit code döndürür → job FAIL olur.
+      # continue-on-error kullanılmaz; hata yutulmaz (AC-3).
+      #
+      # GITLEAKS_CONFIG: Proje kökündeki .gitleaks.toml otomatik algılanır
+      # (gitleaks öncelik sırası: 4. (source path)/.gitleaks.toml).
+      # ───────────────────────────────────────────────────────────────────────
+      - name: Gitleaks ile secret taramasi calistir
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -105,6 +105,12 @@ PYINSTALLER_ARGS=(
   --windowed
   --name "${APP_NAME}"
   --osx-bundle-identifier "$IDENTIFIER"
+  # UPX ile sikistirma macOS notarizasyonuyla iyi calismiyor (Apple'in kotu amacli
+  # yazilim sezgiselligi paketlenmis/sikistirilmis ikili dosyalari daha supheli
+  # buluyor ve daha derin/yavas tarayabiliyor); Apple/PyInstaller macOS'ta UPX
+  # kullanilmamasini onerir. --noupx acikca devre disi birakir (CI runner'inda
+  # zaten upx kurulu degil ama yerel gelistirici makinelerinde olabilir).
+  --noupx
   --paths src
   --add-data "src/web/templates:web/templates"
   --add-data "src/web/static:web/static"
@@ -161,11 +167,24 @@ if [[ "${NOTARIZE:-0}" = "1" ]]; then
   (cd dist && ditto -c -k --keepParent "${APP_NAME}.app" "$(basename "$APP_ZIP")")
   if command -v xcrun >/dev/null 2>&1; then
     echo "[INFO] NotaryTool submit başlatılıyor..."
-    xcrun notarytool submit "$APP_ZIP" \
+    # NOT: Bu paket çok sayıda gömülü ikili dosya içerdiğinden (pywebview/PyObjC
+    # köprüsü: Foundation, AppKit, CoreFoundation, WebKit vb.) Apple'ın notarization
+    # taraması normalden çok uzun sürebilir (gözlemlenen: ~2.5 saate kadar).
+    # --timeout, notarytool'un ne kadar bekleyeceğini sınırlar; Apple tarafındaki
+    # işlem --timeout'a ulaşılsa bile ARKA PLANDA DEVAM EDER (bkz. `notarytool
+    # submit --help`). Süre aşımında script başarısız SAYILMAZ ama staple
+    # atlanır; submission ID ile daha sonra `xcrun notarytool info <id>` veya
+    # `xcrun notarytool wait <id>` ile durum kontrol edilip stapling elle yapılabilir.
+    NOTARY_TIMEOUT="${NOTARY_TIMEOUT:-3h}"
+    if xcrun notarytool submit "$APP_ZIP" \
       --apple-id "${NOTARY_APPLE_ID}" \
       --team-id "${NOTARY_TEAM_ID}" \
       --password "${NOTARY_PASSWORD}" \
-      --wait || echo "[WARN] Notarize başarısız" >&2
+      --wait --timeout "${NOTARY_TIMEOUT}"; then
+      echo "[INFO] Notarize tamamlandı."
+    else
+      echo "[WARN] Notarize başarısız veya süre aşımına uğradı (NOTARY_TIMEOUT=${NOTARY_TIMEOUT}). Apple tarafında işlem arka planda devam ediyor olabilir; submission ID'yi loglardan alıp 'xcrun notarytool info <id>' ile kontrol edin." >&2
+    fi
     echo "[INFO] Staple uygulanıyor..."
     xcrun stapler staple "dist/${APP_NAME}.app" || true
   else

@@ -80,9 +80,16 @@ jobs:
     name: macOS Build — imzala + notarize + DMG (AC-2/3/4)
     needs: check-version
     runs-on: macos-latest
-    # Apple notarizasyon servisi yavaslayinca job ~3 saat aski kalip ag hatasiyla FAIL
-    # olabilir; 30 dakikalik sinir hizli basarisizlik saglar ve runner'i serbest birakir.
-    timeout-minutes: 30
+    # Apple notarizasyon servisi paket icindeki gomulu ikili dosya sayisina
+    # (pywebview/PyObjC koprusu: Foundation/AppKit/CoreFoundation/WebKit ~69 dosya)
+    # bagli olarak COK yavas olabilir; onceki basarili calisma 2 saat 32 dakika
+    # surmustu. 30 dakikalik sinir "hizli basarisizlik" saglasa da hicbir zaman
+    # basarili bir surumle sonuclanmiyordu (Apple islemi tamamlamadan job iptal
+    # ediliyordu). 240 dakika (4 saat), gozlemlenen en uzun basarili sureye
+    # (~2.5 saat) yeterli marj birakir. build_macos_app.sh'teki NOTARY_TIMEOUT
+    # (varsayilan 3 saat) bu ust sinirdan dusuk tutularak notarytool'un temiz
+    # bir mesajla cikmasini saglar (bkz. script icindeki not).
+    timeout-minutes: 240
     # Environment referansi: imzalama/notarizasyon secret'lari (MACOS_CERTIFICATE,
     # MACOS_CERTIFICATE_PASSWORD, SIGN_IDENTITY, NOTARY_*) repository-level degil
     # 'kube-sec-macos' GitHub Environment altinda tanimli; bu alan olmadan

@@ -317,5 +317,9 @@
 **Sorun:** Geçersiz token'lar güvenlik açısından acil değil, ancak git geçmişinde credential-benzeri veri bırakmak kötü bir pratik ve gelecekte kafa karışıklığına (örn. "bu hâlâ geçerli mi?" sorusuna) yol açabilir.
 
 **Kabul kriterleri:**
-- [ ] (Opsiyonel, düşük öncelik) `git filter-repo --path kubeconfigs/mbs-dev --invert-paths` (veya BFG Repo-Cleaner) ile geçersiz token değerleri git geçmişinden temizlenir ve tüm branch/tag'ler force-push edilir.
+- [x] (Opsiyonel, düşük öncelik) `git filter-repo --path kubeconfigs/mbs-dev --invert-paths` (veya BFG Repo-Cleaner) ile geçersiz token değerleri git geçmişinden temizlenir ve tüm branch/tag'ler force-push edilir.
+  - `main` dalı `git filter-repo` ile temizlenip force-push edildi (2026-07-20): eski SHA `7a09b0c` → yeni SHA `78f5a6d`. `kubeconfigs/mbs-dev` artık `main`'in hiçbir commit'inde yok (doğrulama: `git log --all --full-history -- kubeconfigs/` main üzerinde boş sonuç döndürüyor).
+  - **Bilinçli istisna:** o sırada `v1.0.0-rc5` tag'i üzerinde canlı bir GitHub Actions release job'u çalıştığı için (`run 29734369408`), kullanıcı talebiyle bu tag rewrite/force-push kapsamı dışında bırakıldı — GitHub'da hâlâ eski (token içeren) commit'e (`7a09b0c`) işaret ediyor. Bu tag ileride ayrıca temizlenebilir (aynı `git filter-repo` + tek tag için hedefli force-push).
+  - Ayrıca yerel-sadece (origin'e hiç push edilmemiş) `newfeature` dalı da eski geçmişi içeriyordu; sadece yerel bir referans olduğu ve zaten PR #1 ile `main`'e merge edilmiş olduğu için silindi.
+  - **Bilinen kalıntı:** GitHub, merge edilmiş PR'ların (#1) commit/diff geçmişini kendi tarafında ayrıca önbelleğe alabiliyor; force-push sonrası bile PR #1'in sayfası eski commit içeriğini gösterebilir. Bu git seviyesinde düzeltilemez (GitHub destek talebi veya repo yeniden oluşturma gerektirir) — token zaten geçersiz olduğu için aktif risk taşımıyor.
 - [ ] Gelecekte benzer kazaların önüne geçmek için pre-commit secret scanner (gitleaks veya trufflehog) eklenir ve CI pipeline'ına entegre edilir.

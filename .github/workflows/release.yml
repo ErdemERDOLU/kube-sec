@@ -80,6 +80,9 @@ jobs:
     name: macOS Build — imzala + notarize + DMG (AC-2/3/4)
     needs: check-version
     runs-on: macos-latest
+    # Apple notarizasyon servisi yavaslayinca job ~3 saat aski kalip ag hatasiyla FAIL
+    # olabilir; 30 dakikalik sinir hizli basarisizlik saglar ve runner'i serbest birakir.
+    timeout-minutes: 30
     # Environment referansi: imzalama/notarizasyon secret'lari (MACOS_CERTIFICATE,
     # MACOS_CERTIFICATE_PASSWORD, SIGN_IDENTITY, NOTARY_*) repository-level degil
     # 'kube-sec-macos' GitHub Environment altinda tanimli; bu alan olmadan

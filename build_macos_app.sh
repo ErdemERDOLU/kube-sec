@@ -152,10 +152,64 @@ echo "[İPUCU] Kod imzalama (opsiyonel): codesign --force --deep --sign - dist/$
 
 # --- Opsiyonel: Kod imzalama ---
 if [[ -n "${SIGN_IDENTITY:-}" ]]; then
-  echo "[INFO] Codesign uygulanıyor: $SIGN_IDENTITY"
-  codesign --force --deep --options runtime --sign "$SIGN_IDENTITY" "dist/${APP_NAME}.app" || {
-    echo "[WARN] codesign başarısız" >&2
+  echo "[INFO] İçten dışa (inside-out) codesign uygulanıyor: $SIGN_IDENTITY"
+
+  # AC-2 + AC-3: Apple'ın önerdiği inside-out imzalama sırası.
+  # --deep İMZALAMADA KULLANILMAZ — her binary tek tek imzalanır (nested code
+  # sorunlarını önler, notary servisinin paketi hızlı inceleme yoluna sokmasını sağlar).
+  # --timestamp: RFC 3161 güvenli zaman damgası — her imza çağrısına eklenir.
+
+  # Adım 1/3: .app içindeki tüm .so ve .dylib dosyalarını en derinden yüzeye doğru imzala.
+  # '/' sayısına göre azalan sıralama → en derin yol önce işlenir (inside-out garantisi).
+  # -not -type l: sembolik bağlantılar atlanır, yalnızca gerçek dosyalar imzalanır.
+  echo "[INFO] Adım 1/3: Nested .so / .dylib dosyaları imzalanıyor..."
+  while IFS= read -r binary; do
+    codesign --force --options runtime --timestamp \
+      --sign "$SIGN_IDENTITY" "$binary" || \
+      echo "[WARN] codesign başarısız (atlanıyor): $binary" >&2
+  done < <(
+    find "dist/${APP_NAME}.app" -type f \( -name "*.so" -o -name "*.dylib" \) -not -type l | \
+    awk -F'/' '{print NF, $0}' | sort -rn | awk '{$1=""; print substr($0,2)}'
+  )
+
+  # Adım 2/3: .framework dizinlerindeki gerçek binary'leri en içten dışa doğru imzala.
+  # Framework binary konumları öncelik sırasıyla denenir:
+  #   <Name>.framework/Versions/Current/<Name>  (klasik macOS framework yapısı)
+  #   <Name>.framework/Versions/A/<Name>        (alternatif versiyon dizini)
+  #   <Name>.framework/<Name>                   (düz/gömülü framework)
+  echo "[INFO] Adım 2/3: .framework binary'leri imzalanıyor..."
+  while IFS= read -r fw; do
+    fw_name=$(basename "$fw" .framework)
+    _fw_signed=0
+    for bin_path in \
+      "$fw/Versions/Current/$fw_name" \
+      "$fw/Versions/A/$fw_name" \
+      "$fw/$fw_name"; do
+      if [[ -f "$bin_path" && ! -L "$bin_path" ]]; then
+        codesign --force --options runtime --timestamp \
+          --sign "$SIGN_IDENTITY" "$bin_path" || \
+          echo "[WARN] codesign başarısız (atlanıyor): $bin_path" >&2
+        _fw_signed=1
+        break
+      fi
+    done
+    if [[ $_fw_signed -eq 0 ]]; then
+      echo "[INFO] Framework binary bulunamadı (atlanıyor): $fw" >&2
+    fi
+  done < <(
+    find "dist/${APP_NAME}.app" -type d -name "*.framework" | \
+    awk -F'/' '{print NF, $0}' | sort -rn | awk '{$1=""; print substr($0,2)}'
+  )
+
+  # Adım 3/3: En son üst seviye .app bundle'ının kendisini imzala.
+  # (Tüm iç bileşenler imzalandıktan sonra bundle bütünlüğü doğrulanabilir hale gelir.)
+  echo "[INFO] Adım 3/3: Ana .app bundle imzalanıyor..."
+  codesign --force --options runtime --timestamp \
+    --sign "$SIGN_IDENTITY" "dist/${APP_NAME}.app" || {
+    echo "[WARN] codesign başarısız (ana bundle)" >&2
   }
+
+  # Doğrulama: --deep ile doğrulama yapmak normaldir; sadece imzalamada kullanmıyoruz.
   codesign --verify --deep --strict --verbose=2 "dist/${APP_NAME}.app" || true
 fi
 
@@ -186,15 +240,40 @@ if [[ "${NOTARIZE:-0}" = "1" ]]; then
     # "1h", "12600") — "3h30m" gibi bileşik biçimler GEÇERSİZDİR, bu yüzden
     # 3 saat 30 dakika dakika cinsinden ("210m") verildi.
     NOTARY_TIMEOUT="${NOTARY_TIMEOUT:-210m}"
+
+    # AC-1: submit çıktısını hem terminale hem geçici dosyaya aktar (tee).
+    # Geçici dosya submission ID'yi parse etmek için kullanılır; işlem sonunda silinir.
+    _NOTARY_TMP=$(mktemp)
     if xcrun notarytool submit "$APP_ZIP" \
       --apple-id "${NOTARY_APPLE_ID}" \
       --team-id "${NOTARY_TEAM_ID}" \
       --password "${NOTARY_PASSWORD}" \
-      --wait --timeout "${NOTARY_TIMEOUT}"; then
+      --wait --timeout "${NOTARY_TIMEOUT}" 2>&1 | tee "$_NOTARY_TMP"; then
       echo "[INFO] Notarize tamamlandı."
     else
       echo "[WARN] Notarize başarısız veya süre aşımına uğradı (NOTARY_TIMEOUT=${NOTARY_TIMEOUT}). Apple tarafında işlem arka planda devam ediyor olabilir; submission ID'yi loglardan alıp 'xcrun notarytool info <id>' ile kontrol edin." >&2
     fi
+
+    # AC-1.1: Submission ID'yi UUID formatına göre çıktıdan parse et.
+    # notarytool submit çıktısında "  id: <uuid>" satırı bulunur; grep -Eo ile ayıklanır.
+    _SUBMISSION_ID=$(grep -Eo \
+      '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' \
+      "$_NOTARY_TMP" 2>/dev/null | head -1 || true)
+    rm -f "$_NOTARY_TMP"
+
+    # AC-1.2 + AC-1.4: ID mevcut ise notarytool log çağrısı yap (başarı/hata/timeout fark etmez).
+    # AC-1.3: Hata durumunda script FAIL ETMEDİĞİNDEN emin olmak için || ile yakalanır.
+    if [[ -n "$_SUBMISSION_ID" ]]; then
+      echo "[INFO] Submission ID: ${_SUBMISSION_ID} — Apple teşhis logu alınıyor..."
+      xcrun notarytool log "${_SUBMISSION_ID}" \
+        --apple-id "${NOTARY_APPLE_ID}" \
+        --team-id "${NOTARY_TEAM_ID}" \
+        --password "${NOTARY_PASSWORD}" 2>&1 || \
+        echo "[WARN] notarytool log alınamadı (atlanıyor; submission ID: ${_SUBMISSION_ID})" >&2
+    else
+      echo "[WARN] Submission ID çıktıdan tespit edilemedi; notarytool log atlanıyor." >&2
+    fi
+
     echo "[INFO] Staple uygulanıyor..."
     xcrun stapler staple "dist/${APP_NAME}.app" || true
   else

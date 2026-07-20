@@ -99,6 +99,13 @@ jobs:
     # AC-4, AC-10: Notarizasyon ve imzalama degerleri secret'lardan env olarak okunur.
     # 'make release-macos' bu env degiskenlerini okur; YAML'da acik metin yok.
     env:
+      # AC-4.1: Yalnızca Apple Silicon (arm64) hedeflenir.
+      # build_macos_app.sh'teki mevcut mantık (if [[ -n "$BUILD_ARCH" ]]) bu değişkeni
+      # okuyarak PyInstaller'a --target-arch arm64 geçer; ~148 fat binary thin edilir
+      # → Apple notary tarama yükü yaklaşık yarıya iner, notarizasyon süresi kısalır.
+      # KRİTİK VARSAYIM: Bu build artık Intel (x86_64) Mac'lerde ÇALIŞMAZ.
+      # Ayrı bir Intel veya universal build pipeline'ı bu spec kapsamında değildir.
+      BUILD_ARCH: arm64
       SIGN_IDENTITY: ${{ secrets.SIGN_IDENTITY }}
       NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
       NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}

@@ -169,13 +169,23 @@ if [[ "${NOTARIZE:-0}" = "1" ]]; then
     echo "[INFO] NotaryTool submit başlatılıyor..."
     # NOT: Bu paket çok sayıda gömülü ikili dosya içerdiğinden (pywebview/PyObjC
     # köprüsü: Foundation, AppKit, CoreFoundation, WebKit vb.) Apple'ın notarization
-    # taraması normalden çok uzun sürebilir (gözlemlenen: ~2.5 saate kadar).
+    # taraması normalden çok uzun sürebilir. Gözlemlenen süreler: bir başarılı
+    # çalıştırma 2s32d sürmüştü; 1.0.0-rc5 denemesinde ise 3 saati (10800s)
+    # AŞARAK zaman aşımına uğradı (Apple tarafı o an hâlâ "In Progress"taydı) —
+    # yani süre 2.5-3+ saat arasında öngörülemez şekilde değişebiliyor.
     # --timeout, notarytool'un ne kadar bekleyeceğini sınırlar; Apple tarafındaki
     # işlem --timeout'a ulaşılsa bile ARKA PLANDA DEVAM EDER (bkz. `notarytool
     # submit --help`). Süre aşımında script başarısız SAYILMAZ ama staple
     # atlanır; submission ID ile daha sonra `xcrun notarytool info <id>` veya
     # `xcrun notarytool wait <id>` ile durum kontrol edilip stapling elle yapılabilir.
-    NOTARY_TIMEOUT="${NOTARY_TIMEOUT:-3h}"
+    # 3s30d seçildi: rc5'in aştığı 3s sınırının üzerinde, ve release.yml'deki
+    # 240 dakikalık (4s) job tavanının altında yeterli marj bırakıyor (gözlemlenen
+    # bekleme-dışı ek yük yalnızca ~1-2 dakika; bkz. rc5'te toplam 3s1d24sn'nin
+    # 3s'lik NOTARY_TIMEOUT'tan sadece 1d24sn fazla olması).
+    # NOT: notarytool --timeout yalnızca TEK birim kabul eder (örn. "210m",
+    # "1h", "12600") — "3h30m" gibi bileşik biçimler GEÇERSİZDİR, bu yüzden
+    # 3 saat 30 dakika dakika cinsinden ("210m") verildi.
+    NOTARY_TIMEOUT="${NOTARY_TIMEOUT:-210m}"
     if xcrun notarytool submit "$APP_ZIP" \
       --apple-id "${NOTARY_APPLE_ID}" \
       --team-id "${NOTARY_TEAM_ID}" \

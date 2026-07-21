@@ -232,7 +232,7 @@
     const typeMap={pvc:'pvc',pv:'pv',storageclass:'storageclass'};
     const body={ type:typeMap[kind], name:name, yaml: document.getElementById('yamlEditTextarea').value };
     if(namespace) body.namespace = namespace;
-    fetch('/k8s-explorer/yaml',{method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
+    fetch('/k8s-explorer/yaml',{method:'PATCH', headers:{'Content-Type':'application/json','X-CSRFToken':getCsrfToken()}, body: JSON.stringify(body)})
       .then(r=>{ if(!r.ok) return r.text().then(t=>{throw new Error(t)}); return r.text();})
       .then(()=>{ showToast(_st('network.toast_yaml_updated','YAML güncellendi')); reloadStorage(); bootstrap.Modal.getInstance(document.getElementById('yamlEditModal')).hide(); })
       .catch(e=>showToast(_st('network.toast_yaml_save_error','YAML kaydedilemedi:')+' '+e.message,'error'));
@@ -252,7 +252,7 @@
     const typeMap={pvc:'pvc',pv:'pv',storageclass:'storageclass'};
     const payload={ type:typeMap[kind], name:name };
     if(namespace) payload.namespace = namespace;
-    return fetch('/k8s-explorer/delete',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)})
+    return fetch('/k8s-explorer/delete',{method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCsrfToken()}, body: JSON.stringify(payload)})
       .then(r=>r.json())
       .then(j=>{
         if(j.error){ showToast(_st('network.toast_delete_error','silinemedi:')+' '+j.error,'error'); return; }

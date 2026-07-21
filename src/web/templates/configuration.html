@@ -80,14 +80,14 @@ function renderTable(items, active){
 }
 
 async function activateCfg(name){
-  const r = await fetch('/kubeconfigs/activate',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name})});
+  const r = await fetch('/kubeconfigs/activate',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrfToken()},credentials:'include',body:JSON.stringify({name})});
   const d = await r.json();
   if(d.ok){showToast(_ct('cfgmgmt.toast_activated', 'Aktifleştirildi'), 'success'); fetchConfigs();} else {showToast(d.error||_ct('base.toast_error_default', 'Bir hata oluştu.'), 'error');}
 }
 async function deleteCfg(name){
   const confirmMsg = _ct('storage.confirm_delete', 'silinsin mi?');
   if(!confirm(name + ' ' + confirmMsg)) return;
-  const r = await fetch('/kubeconfigs',{method:'DELETE',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({name})});
+  const r = await fetch('/kubeconfigs',{method:'DELETE',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrfToken()},credentials:'include',body:JSON.stringify({name})});
   const d = await r.json();
   if(d.ok){showToast(_ct('cfgmgmt.toast_deleted', 'Silindi'), 'success'); fetchConfigs();} else {showToast(d.error||_ct('base.toast_error_default', 'Bir hata oluştu.'), 'error');}
 }
@@ -96,7 +96,7 @@ document.getElementById('uploadForm').addEventListener('submit', async e=>{
   e.preventDefault();
   const fd = new FormData(e.target);
   const payload = Object.fromEntries(fd.entries());
-  const r = await fetch('/kubeconfigs',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(payload)});
+  const r = await fetch('/kubeconfigs',{method:'POST',headers:{'Content-Type':'application/json','X-CSRFToken':getCsrfToken()},credentials:'include',body:JSON.stringify(payload)});
   const d = await r.json();
   if(d.ok){showToast(_ct('cfgmgmt.toast_uploaded', 'Yüklendi'), 'success'); e.target.reset(); fetchConfigs(); } else {showToast(d.error||_ct('base.toast_error_default', 'Bir hata oluştu.'), 'error');}
 });

@@ -890,7 +890,7 @@
           const yamlText = document.getElementById('endpointYamlEditor').value;
           const pr = await fetch('/k8s-explorer/yaml', {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
             body: JSON.stringify({ type: 'endpoints', namespace, name, yaml: yamlText })
           });
           const pj = await pr.json().catch(() => ({}));
@@ -913,7 +913,7 @@
       try {
         const r = await fetch('/k8s-explorer/delete', {
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
           body: JSON.stringify({ type: 'endpoints', namespace, name })
         });
         const j = await r.json().catch(() => ({}));
@@ -1059,7 +1059,7 @@
           const yamlText = document.getElementById('serviceYamlEditor').value;
           const pr = await fetch('/k8s-explorer/yaml', {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
             body: JSON.stringify({ type: 'service', namespace, name, yaml: yamlText })
           });
           const pj = await pr.json().catch(() => ({}));
@@ -1082,7 +1082,7 @@
       try {
         const r = await fetch('/k8s-explorer/delete', {
           method: 'DELETE',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
           body: JSON.stringify({ type: 'service', namespace, name })
         });
         const j = await r.json().catch(() => ({}));

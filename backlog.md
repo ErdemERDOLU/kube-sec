@@ -128,10 +128,12 @@
 **Sorun:** Bir kullanici Kube-Sec'e giris yapmis durumdayken kotu niyetli bir web sayfasini ziyaret ederse, o sayfa kullanicinin tarayicisi uzerinden Kube-Sec'e POST istekleri gonderebilir (ornegin node drain, kaynak silme). CORS bu riski kisitlar ancak basit POST isteklerini (application/x-www-form-urlencoded) engellemez.
 
 **Kabul kriterleri:**
-- [ ] Mutasyon yapan tum POST/PATCH/DELETE endpoint'leri icin CSRF koruma mekanizmasi eklenir (Flask-WTF `CSRFProtect` veya custom `X-CSRF-Token` header kontrolu).
-- [ ] Frontend'teki tum `fetch()` POST cagrılari CSRF token'i iceren header veya body parametresi gonderir.
-- [ ] CSRF token olmadan yapilan bir POST istegi HTTP 400 veya 403 ile reddedilir.
-- [ ] Mevcut islevsellik (kaynak silme, YAML guncelleme, node drain, scale) CSRF token'li olarak calismaya devam eder.
+- [x] Mutasyon yapan tum POST/PATCH/DELETE endpoint'leri icin CSRF koruma mekanizmasi eklenir (Flask-WTF `CSRFProtect` veya custom `X-CSRF-Token` header kontrolu).
+- [x] Frontend'teki tum `fetch()` POST cagrılari CSRF token'i iceren header veya body parametresi gonderir.
+- [x] CSRF token olmadan yapilan bir POST istegi HTTP 400 veya 403 ile reddedilir.
+- [x] Mevcut islevsellik (kaynak silme, YAML guncelleme, node drain, scale) CSRF token'li olarak calismaya devam eder.
+
+**Uygulama notu (2026-07-21):** product-manager -> backend-developer + web-frontend-developer (paralel) -> qa-engineer zinciriyle tamamlandi. Mekanizma: Flask-WTF `CSRFProtect` (global, route bazinda decorator gerekmiyor), `X-CSRFToken` header, `base.html`'de `csrf_token()` meta tag, `common.js`'de `getCsrfToken()`. 9 sablondaki toplam 35 POST/PATCH/DELETE fetch cagrisinin tamamina header eklendi (cift-grep ile 0 atlama dogrulandi). Spec: `docs/specs/20260721-csrf-korumasi-eklenmesi.md` (11 AC). Ilk QA turunde tek eksik olan AC-8 (kalici test dosyasi) icin `tests/test_csrf.py` eklendi ve 4/4 test gecti; QA sonrasinda genel karar APPROVE'a donustu. Not: repo o sirada paylasimliydi (paralel bir session #9/#12 uzerinde calisiyordu) — `app.py` ve `base.html`'deki CSRF disi hunk'lar bilerek unstaged birakilip yalniz kendi degisikliklerim commit edildi.
 
 ---
 

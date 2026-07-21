@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Kubernetes Security Checker{% endblock %}</title>
-    
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <!-- Bootstrap 5.3 CSS -->
     <link href="{{ url_for('static', filename='vendor/bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
     <!-- Bootstrap Icons -->

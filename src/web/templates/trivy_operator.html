@@ -697,11 +697,11 @@ function installOperator(){
   out.style.display = 'block';
   out.innerText = 'Starting installation (helm)...';
   
-  fetch('/trivy-operator/install',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({use_helm:true})})
+  fetch('/trivy-operator/install',{method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCsrfToken()}, body: JSON.stringify({use_helm:true})})
   .then(r=>r.json()).then(d=>{
     if(d.error){
       out.innerText = 'Helm installation failed: '+d.error+'\nRetrying with kubectl...';
-      return fetch('/trivy-operator/install',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({use_helm:false})})
+      return fetch('/trivy-operator/install',{method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCsrfToken()}, body: JSON.stringify({use_helm:false})})
         .then(r2=>r2.json()).then(d2=>{
           if(d2.error){ out.innerText += '\nKubectl error: '+d2.error; }
           else { out.innerText += '\nKubectl installation completed.\n'+(d2.output||''); }
@@ -747,7 +747,7 @@ document.getElementById('btn-scan').onclick = function(){
   const body = ns? {namespace: ns, target: 'all'} : {target: 'all'};
   setStatus('Triggering scan...');
   
-  fetch('/trivy-operator/scan',{method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)})
+  fetch('/trivy-operator/scan',{method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCsrfToken()}, body: JSON.stringify(body)})
     .then(r=>r.json()).then(d=>{
       if(d.error){ setStatus('Error: '+d.error); return; }
       setStatus(`Scan triggered. Success: ${d.patched?.length||0}, Errors: ${d.errors?.length||0}`);

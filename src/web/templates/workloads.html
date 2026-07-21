@@ -2192,7 +2192,7 @@ function restartDaemonSet(name, namespace) {
   openConfirmModal({ message: namespace + '/' + name + ' {{ t("workloads.confirm_restart_daemonset") }}', onConfirm: async () => {
     try {
       const r = await fetch('/k8s-explorer/restart-daemonset', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
         body: JSON.stringify({ name, namespace })
       });
       if (r.ok) {
@@ -2327,7 +2327,7 @@ function restartStatefulSet(name, namespace) {
   openConfirmModal({ message: namespace + '/' + name + ' {{ t("workloads.confirm_restart_statefulset") }}', onConfirm: async () => {
     try {
       const r = await fetch('/k8s-explorer/restart-statefulset', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
         body: JSON.stringify({ name, namespace })
       });
       if (r.ok) {
@@ -2369,7 +2369,7 @@ function showScaleDeploymentModal(name, namespace, replicas) {
       saveBtn.disabled = true;
       const r = await fetch('/k8s-explorer/scale-deployment', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
         body: JSON.stringify({ name, namespace, replicas: val })
       });
       if (r.ok) {
@@ -2400,7 +2400,7 @@ function restartDeployment(name, namespace) {
   openConfirmModal({ message: namespace + '/' + name + ' {{ t("workloads.confirm_restart_deployment") }}', onConfirm: async () => {
     try {
       const r = await fetch('/k8s-explorer/restart-deployment', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
         body: JSON.stringify({ name, namespace })
       });
       if (r.ok) {
@@ -2660,7 +2660,7 @@ function restartPod(name, namespace) {
   openConfirmModal({ message: namespace + '/' + name + ' {{ t("workloads.confirm_restart_pod") }}', onConfirm: async () => {
     try {
       const r = await fetch('/k8s-explorer/restart-pod', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
         body: JSON.stringify({ name, namespace })
       });
       if (r.ok) {
@@ -2696,7 +2696,7 @@ function showScaleStatefulSetModal(name, namespace, replicas) {
     try {
       saveBtn.disabled = true;
       const r = await fetch('/k8s-explorer/scale-statefulset', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
         body: JSON.stringify({ name, namespace, replicas: val })
       });
       if (r.ok) {
@@ -2724,7 +2724,7 @@ function deleteReplicaSet(name, namespace) {
   openConfirmModal({ message: namespace + '/' + name + ' {{ t("workloads.confirm_delete_replicaset") }}', onConfirm: async () => {
     try {
       const r = await fetch('/k8s-explorer/delete-replicasets', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
         body: JSON.stringify({ items: [{ namespace, name }] })
       });
       let txt = '';

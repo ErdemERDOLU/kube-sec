@@ -245,6 +245,19 @@ function downloadCsvString(filename, csvString) {
 }
 
 /**
+ * CSRF meta tag'inden token string'ini okur.
+ * Tum fetch() POST/PATCH/DELETE cagrilarinda headers'a eklenmelidir:
+ *   headers: { 'X-CSRFToken': getCsrfToken(), ... }
+ * Meta tag backend agent tarafindan base.html'e eklenir:
+ *   <meta name="csrf-token" content="{{ csrf_token() }}">
+ * @returns {string} CSRF token degeri veya bos string (meta tag bulunamazsa hata firlatmaz)
+ */
+function getCsrfToken() {
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.content : '';
+}
+
+/**
  * CSV dosyasi olusturur ve indirir (tarayici veya pywebview native modu).
  * UTF-8 BOM icerir -- Excel'de Turkce karakterlerin dogru goruntulenmesi icin zorunludur.
  * Tum hucreler cift tirnak ile sarmalanir; hucre icindeki cift tirnaklar "" ile escape edilir.

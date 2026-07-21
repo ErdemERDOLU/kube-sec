@@ -1,5 +1,6 @@
 from flask import Flask, render_template, jsonify, request, redirect, send_from_directory
 from flask_cors import CORS
+from flask_wtf.csrf import CSRFProtect, CSRFError
 from flasgger import Swagger
 import sys, traceback, os, secrets
 from pathlib import Path
@@ -46,6 +47,23 @@ elif getattr(sys, 'frozen', False):
 else:
     app.secret_key = 'dev-secret-do-not-use-in-production'
 CORS(app, origins=CORS_ORIGINS, supports_credentials=True)
+
+# ---------------------------------------------------------------------------
+# CSRF Koruması — Flask-WTF CSRFProtect (Backlog #6)
+# ---------------------------------------------------------------------------
+# CSRFProtect(app) çağrısı, @app.before_request hook'u aracılığıyla
+# POST/PUT/PATCH/DELETE metodlarını uygulama genelinde (global) otomatik olarak
+# korur. Route bazında tek tek decorator eklemek gerekmez.
+#
+# Kabul edilen header'lar (varsayılan): ['X-CSRFToken', 'X-CSRF-Token']
+# Frontend'in göndereceği header: X-CSRFToken (spec sözleşmesi)
+#
+# WTF_CSRF_TIME_LIMIT = None: Masaüstü uygulama saatlerce açık kalabileceğinden
+# token'ı session ömrü boyunca geçerli yapıyoruz (varsayılan 3600s yerine).
+app.config['WTF_CSRF_TIME_LIMIT'] = None
+app.config['WTF_CSRF_HEADERS'] = ['X-CSRFToken', 'X-CSRF-Token']
+csrf = CSRFProtect(app)
+
 swagger = Swagger(app, config={
     "headers": [],
     "specs": [
@@ -196,6 +214,19 @@ def set_locale():
     # 180 days
     resp.set_cookie('lang', lang, max_age=60*60*24*180, httponly=False, samesite='Lax')
     return resp
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    """CSRF doğrulama hatası için JSON yanıt döndürür.
+
+    Flask-WTF CSRFProtect, token eksik veya geçersiz olduğunda CSRFError
+    fırlatır. Bu handler JSON formatında yanıt döndürür (HTML değil) çünkü
+    tüm mutasyon istekleri fetch() üzerinden AJAX olarak yapılır.
+
+    HTTP 400 döndürür.
+    """
+    return jsonify({'error': 'CSRF token eksik veya geçersiz. Sayfayı yenileyip tekrar deneyin.'}), 400
+
 
 @app.errorhandler(Exception)
 def handle_exception(e):

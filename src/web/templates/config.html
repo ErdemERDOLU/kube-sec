@@ -1121,6 +1121,7 @@ window.editConfigMap = function(name, namespace) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken(),
           },
           body: JSON.stringify({
             name: configmap.name,
@@ -1860,7 +1861,7 @@ async function fetchAndRenderHPATable() {
         confirmBtnClass: 'btn-danger',
         onConfirm: async () => {
           try {
-            const resp = await fetch('/k8s-explorer/delete-hpa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, namespace }) });
+            const resp = await fetch('/k8s-explorer/delete-hpa', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, body: JSON.stringify({ name, namespace }) });
             const j = await resp.json();
             if (j.error) { showToast('{{ t("config.toast_delete_error") }} ' + j.error, 'error'); return; }
             showToast('{{ t("config.toast_hpa_deleted") }}', 'success');
@@ -1947,7 +1948,7 @@ async function fetchAndRenderPDBTable() {
         confirmBtnClass: 'btn-danger',
         onConfirm: async () => {
           try {
-      const resp = await fetch('/k8s-explorer/delete-pdb', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, namespace }) });
+      const resp = await fetch('/k8s-explorer/delete-pdb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, body: JSON.stringify({ name, namespace }) });
             const j = await resp.json();
             if (j.error) { showToast('{{ t("config.toast_delete_error") }} ' + j.error, 'error'); return; }
       showToast('{{ t("config.toast_pdb_deleted") }}', 'success');
@@ -2013,7 +2014,7 @@ function openPdbEditModal(name, namespace) {
         const maxVal = (maxRaw === '' ? null : maxRaw);
         if (minVal !== null && maxVal !== null) { showToast('{{ t("config.error_pdb_conflicting") }}', 'error'); return; }
         try {
-          const resp = await fetch('/k8s-explorer/update-pdb', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: p.name, namespace: p.namespace, min_available: minVal, max_unavailable: maxVal }) });
+          const resp = await fetch('/k8s-explorer/update-pdb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, body: JSON.stringify({ name: p.name, namespace: p.namespace, min_available: minVal, max_unavailable: maxVal }) });
           const j = await resp.json();
           if (j.error) { showToast('{{ t("config.toast_update_error") }} ' + j.error, 'error'); return; }
           modal.hide();
@@ -2080,7 +2081,7 @@ function openHpaEditModal(name, namespace) {
         const minVal = el.querySelector('#hpaMinInput').value;
         const maxVal = el.querySelector('#hpaMaxInput').value;
         try {
-          const resp = await fetch('/k8s-explorer/update-hpa', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: h.name, namespace: h.namespace, min_replicas: minVal === '' ? null : Number(minVal), max_replicas: maxVal === '' ? null : Number(maxVal) }) });
+          const resp = await fetch('/k8s-explorer/update-hpa', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, body: JSON.stringify({ name: h.name, namespace: h.namespace, min_replicas: minVal === '' ? null : Number(minVal), max_replicas: maxVal === '' ? null : Number(maxVal) }) });
           const j = await resp.json();
           if (j.error) { showToast('{{ t("config.toast_update_error") }} ' + j.error, 'error'); return; }
           modal.hide();
@@ -2161,7 +2162,7 @@ async function fetchAndRenderPriorityClassesTable() {
         confirmBtnClass: 'btn-danger',
         onConfirm: async () => {
           try {
-            const resp = await fetch('/k8s-explorer/delete-priority-class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+            const resp = await fetch('/k8s-explorer/delete-priority-class', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, body: JSON.stringify({ name }) });
             const j = await resp.json();
             if (j.error) { showToast('{{ t("config.toast_delete_error") }} ' + j.error, 'error'); return; }
             showToast('{{ t("config.toast_priority_class_deleted") }}', 'success');
@@ -2509,7 +2510,7 @@ function openRcEditModal(name) {
         payload.tolerations = tolVal; // empty string clears; backend parses JSON if not empty
         payload.overhead = overheadVal; // empty string clears; backend parses JSON if not empty
         try {
-          const resp = await fetch('/k8s-explorer/update-runtime-class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          const resp = await fetch('/k8s-explorer/update-runtime-class', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, body: JSON.stringify(payload) });
           const j = await resp.json();
           if (j.error) { showToast('{{ t("config.toast_update_error") }} ' + j.error, 'error'); return; }
           modal.hide();
@@ -2530,7 +2531,7 @@ function deleteRuntimeClass(name) {
     confirmBtnClass: 'btn-danger',
     onConfirm: async () => {
       try {
-        const resp = await fetch('/k8s-explorer/delete-runtime-class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+        const resp = await fetch('/k8s-explorer/delete-runtime-class', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, body: JSON.stringify({ name }) });
         const j = await resp.json();
         if (j.error) { showToast('{{ t("config.toast_delete_error") }} ' + j.error, 'error'); return; }
         showToast('{{ t("config.toast_runtime_class_deleted") }}', 'success');
@@ -2608,7 +2609,7 @@ function openPcEditModal(name) {
         if (descRaw !== undefined) payload.description = descRaw; // empty clears
 
         try {
-          const resp = await fetch('/k8s-explorer/update-priority-class', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+          const resp = await fetch('/k8s-explorer/update-priority-class', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, body: JSON.stringify(payload) });
           const j = await resp.json();
           if (j.error) { showToast('{{ t("config.toast_update_error") }} ' + j.error, 'error'); return; }
           modal.hide();
@@ -3003,6 +3004,7 @@ window.editSecret = function(name, namespace) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken(),
           },
           body: JSON.stringify({
             name: secret.name,
@@ -3067,6 +3069,7 @@ window.deleteSecret = function(name, namespace) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'X-CSRFToken': getCsrfToken(),
     },
     body: JSON.stringify({
       name: name,

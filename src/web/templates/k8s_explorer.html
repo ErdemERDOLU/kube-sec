@@ -159,7 +159,7 @@ function showYamlModal(type, namespace, name, editable = false) {
             const newYaml = document.getElementById('k8s-yaml-textarea').value;
             const resp = await fetch(`/k8s-explorer/yaml`, {
               method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
               body: JSON.stringify({ type, namespace, name, yaml: newYaml })
             });
             if (resp.ok) {
@@ -198,7 +198,7 @@ async function deleteK8sObj(type, namespace, name) {
   if (!confirm(`${type} '${name}' ${confirmMsg}`)) return false;
   const resp = await fetch(`/k8s-explorer/delete`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
     body: JSON.stringify({ type, namespace, name })
   });
   if (resp.ok) {

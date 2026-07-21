@@ -315,9 +315,17 @@ fi
 # --- Opsiyonel: DMG oluştur ---
 # Kullanıcı raporu: DMG penceresinde yalnızca Kube-Sec.app ikonu görünüyordu,
 # standart "sürükle-bırak" kurulum akışındaki /Applications kısayolu yoktu.
-# Bu, kullanıcıların uygulamayı nereye sürükleyeceğini bilememesine yol açtı.
-# Çözüm: .app'i ve /Applications'a bir sembolik link'i aynı geçici klasöre koyup
-# DMG'yi o klasörden üretiyoruz — diğer macOS uygulamalarındaki standart davranış.
+# Çözüm (1. aşama): .app'i ve /Applications'a bir sembolik link'i aynı geçici
+# klasöre koyup DMG'yi o klasörden üretmek — diğer macOS uygulamalarındaki
+# standart davranış.
+# Çözüm (2. aşama, kullanıcı isteği): Yalnızca kısayol yeterli görülmedi —
+# görsel olarak "simgeyi Applications'a sürükle" oku ve arka plan istendi
+# (bkz. packaging/dmg_background.png). Bunun için DMG önce yazılabilir (UDRW)
+# formatta oluşturulup mount ediliyor, Finder'a AppleScript ile pencere
+# boyutu/ikon konumları/arka plan resmi ayarlatılıyor, sonra sıkıştırılmış
+# dağıtım formatına (UDZO) dönüştürülüyor. AppleScript adımı KOZMETİKTİR —
+# başarısız olursa DMG yine de üretilir (yalnızca arka plan/ikon yerleşimi
+# olmadan, sade haliyle).
 if [[ "${CREATE_DMG:-0}" = "1" ]]; then
   DMG_PATH="dist/${APP_NAME}-${APP_VERSION}${BUILD_ARCH:+-$BUILD_ARCH}.dmg"
   echo "[INFO] DMG oluşturuluyor: $DMG_PATH"
@@ -326,7 +334,63 @@ if [[ "${CREATE_DMG:-0}" = "1" ]]; then
   mkdir -p "$DMG_STAGING"
   cp -R "dist/${APP_NAME}.app" "$DMG_STAGING/"
   ln -s /Applications "$DMG_STAGING/Applications"
-  hdiutil create -volname "${APP_NAME}" -srcfolder "$DMG_STAGING" -ov -format UDZO "$DMG_PATH" || \
-    echo "[WARN] DMG oluşturulamadı" >&2
+
+  DMG_BG_SRC="packaging/dmg_background.png"
+  DMG_HAS_BG=0
+  if [[ -f "$DMG_BG_SRC" ]]; then
+    mkdir -p "$DMG_STAGING/.background"
+    cp "$DMG_BG_SRC" "$DMG_STAGING/.background/background.png"
+    DMG_HAS_BG=1
+  else
+    echo "[WARN] $DMG_BG_SRC bulunamadı; DMG arka planı/ok grafiği olmadan üretilecek." >&2
+  fi
+
+  DMG_TMP="dist/.tmp-${APP_NAME}.dmg"
+  rm -f "$DMG_TMP"
+  # Yazılabilir DMG'ye içerik + Finder'ın .DS_Store yazması için pay bırak.
+  STAGING_KB=$(du -sk "$DMG_STAGING" | awk '{print $1}')
+  DMG_SIZE_MB=$(( (STAGING_KB / 1024) + 50 ))
+  if hdiutil create -volname "${APP_NAME}" -srcfolder "$DMG_STAGING" -fs HFS+ \
+      -format UDRW -size "${DMG_SIZE_MB}m" "$DMG_TMP"; then
+
+    if [[ "$DMG_HAS_BG" = "1" ]] && command -v osascript >/dev/null 2>&1; then
+      MOUNT_OUT=$(hdiutil attach "$DMG_TMP" -readwrite -noverify -noautoopen 2>&1) || MOUNT_OUT=""
+      MOUNT_POINT=$(echo "$MOUNT_OUT" | grep -Eo "/Volumes/.*" | tail -1)
+      if [[ -n "$MOUNT_POINT" ]]; then
+        VOLNAME=$(basename "$MOUNT_POINT")
+        echo "[INFO] DMG penceresi düzenleniyor (arka plan + ikon yerleşimi, volume: $VOLNAME)..."
+        osascript <<APPLESCRIPT || echo "[WARN] DMG pencere düzenlemesi başarısız (kozmetik, DMG yine de kullanılabilir)" >&2
+tell application "Finder"
+  tell disk "${VOLNAME}"
+    open
+    set current view of container window to icon view
+    set toolbar visible of container window to false
+    set statusbar visible of container window to false
+    set the bounds of container window to {100, 100, 760, 545}
+    set theViewOptions to the icon view options of container window
+    set arrangement of theViewOptions to not arranged
+    set icon size of theViewOptions to 128
+    set background picture of theViewOptions to file ".background:background.png"
+    set position of item "${APP_NAME}.app" of container window to {165, 200}
+    set position of item "Applications" of container window to {495, 200}
+    update without registering applications
+    delay 2
+    close
+  end tell
+end tell
+APPLESCRIPT
+        sync || true
+        hdiutil detach "$MOUNT_POINT" 2>/dev/null || hdiutil detach "$MOUNT_POINT" -force 2>/dev/null || true
+      else
+        echo "[WARN] Geçici DMG mount edilemedi; kozmetik düzenleme atlanıyor." >&2
+      fi
+    fi
+
+    hdiutil convert "$DMG_TMP" -format UDZO -ov -o "$DMG_PATH" || \
+      echo "[WARN] DMG sıkıştırılamadı" >&2
+  else
+    echo "[WARN] Geçici yazılabilir DMG oluşturulamadı" >&2
+  fi
+  rm -f "$DMG_TMP"
   rm -rf "$DMG_STAGING"
 fi

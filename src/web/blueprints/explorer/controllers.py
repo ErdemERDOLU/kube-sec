@@ -17,19 +17,43 @@ from web.kubeconfig_manager import load_kube_config_active
 from web.audit_log import record_audit_event, _short_session_id
 
 from web.blueprints.explorer import bp_explorer
+from web.blueprints.explorer._pagination import paginate_list
 
 
 # Deployments summary for Overview tab
 @bp_explorer.route('/k8s-explorer/deployments-summary')
 def deployments_summary():
+    """Deployment listesini döndürür.
+
+    Query parametreleri:
+        namespace (str, opsiyonel): Belirtilirse yalnızca o namespace filtrelenir.
+        page      (int, opsiyonel): Sayfa numarası (1-tabanlı). Gönderilmezse
+                                    tüm liste eski formatta döner (geriye dönük uyumluluk).
+        per_page  (int, opsiyonel): Sayfa başına kayıt (varsayılan: 50, max: 500).
+
+    Yanıt (sayfalama KAPALI — page parametresi yok):
+        {"deployments": [...]}
+
+    Yanıt (sayfalama AÇIK — page parametresi var):
+        {"items": [...], "page": N, "per_page": M, "total": T, "total_pages": P}
+
+    Hatalar:
+        400: Geçersiz sayfalama parametresi.
+    """
     try:
+        # Opsiyonel namespace filtresi — AC-9: backend namespace filtresi
+        namespace = request.args.get('namespace')
         load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
         client.Configuration.set_default(c)
         apps_v1 = client.AppsV1Api()
-        deployments = apps_v1.list_deployment_for_all_namespaces().items
+        # Namespace filtresi varsa yalnızca o namespace'ten çek
+        if namespace and namespace != 'all':
+            deployments = apps_v1.list_namespaced_deployment(namespace).items
+        else:
+            deployments = apps_v1.list_deployment_for_all_namespaces().items
         result = []
         for dep in deployments:
             replicas = getattr(dep.status, 'replicas', 0)
@@ -49,6 +73,14 @@ def deployments_summary():
                 'available_replicas': available_replicas,
                 'creation_timestamp': creation_timestamp.isoformat() if creation_timestamp else None
             })
+        # Sayfalama desteği — AC-1 (sayfalama), AC-2 (geriye dönük uyumluluk), AC-7 (doğrulama)
+        try:
+            paginated, is_paginated = paginate_list(result, request.args)
+        except ValueError as ve:
+            return jsonify({'error': str(ve)}), 400
+        if is_paginated:
+            return jsonify(paginated)
+        # page parametresi yoksa eski format (geriye dönük uyumluluk — loadOverviewData() etkilenmez)
         return jsonify({'deployments': result})
     except Exception as e:
         return jsonify({'deployments': [], 'error': str(e)})

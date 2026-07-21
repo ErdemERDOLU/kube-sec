@@ -754,7 +754,7 @@
                 <select id="podsNamespaceFilter" class="form-select form-select-sm" style="width:200px;">
                   <option value="">{{ t('workloads.all_namespaces') }}</option>
                 </select>
-                <button class="btn btn-outline-light btn-sm" onclick="fetchAndRenderPodsTable(true)">
+                <button class="btn btn-outline-light btn-sm" onclick="fetchAndRenderPodsTable(1)">
                   <i class="bi bi-arrow-clockwise me-1"></i>{{ t('workloads.btn_refresh') }}
                 </button>
                 <button class="btn btn-outline-light btn-sm" onclick="exportWorkloadsPods()">
@@ -770,6 +770,26 @@
               <div class="d-flex align-items-center justify-content-center py-5">
                 <div class="loading-spinner me-2"></div>
                 <span class="text-muted">{{ t('workloads.loading_pods') }}</span>
+              </div>
+            </div>
+            <!-- Pods sayfalama kontrolleri (AC-4) — görünürlük JS ile yönetilir -->
+            <div id="pods-pagination"
+                 class="justify-content-between align-items-center px-3 py-2 border-top"
+                 style="display:none;"
+                 role="navigation"
+                 aria-label="{{ t('pagination.page_indicator') }}">
+              <span class="text-muted small" id="pods-pagination-info"></span>
+              <div class="btn-group" role="group">
+                <button class="btn btn-outline-primary btn-sm" id="pods-prev-page" disabled
+                        aria-label="{{ t('pagination.previous') }}">
+                  <i class="bi bi-chevron-left me-1"></i>{{ t('pagination.previous') }}
+                </button>
+                <span class="btn btn-outline-secondary btn-sm disabled" id="pods-page-indicator"
+                      aria-live="polite"></span>
+                <button class="btn btn-outline-primary btn-sm" id="pods-next-page"
+                        aria-label="{{ t('pagination.next') }}">
+                  {{ t('pagination.next') }}<i class="bi bi-chevron-right ms-1"></i>
+                </button>
               </div>
             </div>
           </div>
@@ -806,7 +826,7 @@
                 <select id="deploymentsNamespaceFilter" class="form-select form-select-sm" style="width:200px;">
                   <option value="">{{ t('workloads.all_namespaces') }}</option>
                 </select>
-                <button class="btn btn-outline-light btn-sm" onclick="fetchAndRenderDeploymentsTable(true)">
+                <button class="btn btn-outline-light btn-sm" onclick="fetchAndRenderDeploymentsTable(1)">
                   <i class="bi bi-arrow-clockwise me-1"></i>{{ t('workloads.btn_refresh') }}
                 </button>
                 <button class="btn btn-outline-light btn-sm" onclick="exportWorkloadsDeployments()">
@@ -820,6 +840,26 @@
               <div class="d-flex align-items-center justify-content-center py-5">
                 <div class="loading-spinner me-2"></div>
                 <span class="text-muted">{{ t('workloads.loading_deployments') }}</span>
+              </div>
+            </div>
+            <!-- Deployments sayfalama kontrolleri (AC-5) — görünürlük JS ile yönetilir -->
+            <div id="deployments-pagination"
+                 class="justify-content-between align-items-center px-3 py-2 border-top"
+                 style="display:none;"
+                 role="navigation"
+                 aria-label="{{ t('pagination.page_indicator') }}">
+              <span class="text-muted small" id="deployments-pagination-info"></span>
+              <div class="btn-group" role="group">
+                <button class="btn btn-outline-primary btn-sm" id="deployments-prev-page" disabled
+                        aria-label="{{ t('pagination.previous') }}">
+                  <i class="bi bi-chevron-left me-1"></i>{{ t('pagination.previous') }}
+                </button>
+                <span class="btn btn-outline-secondary btn-sm disabled" id="deployments-page-indicator"
+                      aria-live="polite"></span>
+                <button class="btn btn-outline-primary btn-sm" id="deployments-next-page"
+                        aria-label="{{ t('pagination.next') }}">
+                  {{ t('pagination.next') }}<i class="bi bi-chevron-right ms-1"></i>
+                </button>
               </div>
             </div>
           </div>
@@ -1108,15 +1148,25 @@ let lastReplicaSetsData = [];
 let lastJobsData = [];
 let lastCronJobsData = [];
 
+// Sayfalama durum degiskenleri — Pods sekmesi (AC-4)
+let podsCurrentPage = 1;
+let podsTotalPages = 1;
+const PODS_PER_PAGE = 50;
+
+// Sayfalama durum degiskenleri — Deployments sekmesi (AC-5)
+let deploymentsCurrentPage = 1;
+let deploymentsTotalPages = 1;
+const DEPLOYMENTS_PER_PAGE = 50;
+
 // Initialize page
 document.addEventListener('DOMContentLoaded', function() {
   loadOverviewData();
-  
+
   document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
     tab.addEventListener('shown.bs.tab', function(e) {
       const targetId = e.target.getAttribute('data-bs-target').replace('#', '');
       handleTabChange(targetId);
-      
+
       setTimeout(() => {
         document.getElementById('workload-navigation').scrollIntoView({
           behavior: 'smooth',
@@ -1124,6 +1174,26 @@ document.addEventListener('DOMContentLoaded', function() {
         });
       }, 100);
     });
+  });
+
+  // Pods sayfa gezinme butonlari (AC-4)
+  const podsPrevBtn = document.getElementById('pods-prev-page');
+  const podsNextBtn = document.getElementById('pods-next-page');
+  if (podsPrevBtn) podsPrevBtn.addEventListener('click', function() {
+    if (podsCurrentPage > 1) fetchAndRenderPodsTable(podsCurrentPage - 1);
+  });
+  if (podsNextBtn) podsNextBtn.addEventListener('click', function() {
+    if (podsCurrentPage < podsTotalPages) fetchAndRenderPodsTable(podsCurrentPage + 1);
+  });
+
+  // Deployments sayfa gezinme butonlari (AC-5)
+  const deploymentsPrevBtn = document.getElementById('deployments-prev-page');
+  const deploymentsNextBtn = document.getElementById('deployments-next-page');
+  if (deploymentsPrevBtn) deploymentsPrevBtn.addEventListener('click', function() {
+    if (deploymentsCurrentPage > 1) fetchAndRenderDeploymentsTable(deploymentsCurrentPage - 1);
+  });
+  if (deploymentsNextBtn) deploymentsNextBtn.addEventListener('click', function() {
+    if (deploymentsCurrentPage < deploymentsTotalPages) fetchAndRenderDeploymentsTable(deploymentsCurrentPage + 1);
   });
 });
 
@@ -1290,56 +1360,78 @@ function handleTabChange(tabId) {
   }
 }
 
-async function fetchAndRenderPodsTable(forceRefresh = false) {
+// fetchAndRenderPodsTable — Pods sekmesi icin sayfalamali veri cekme ve render (AC-4)
+// page: hangi sayfanin yuklenmesi isteniyor (1-tabanli). Sayi degilse mevcuttan devam eder.
+async function fetchAndRenderPodsTable(page) {
+  // Arguman gecerli bir sayfa numarasi degilse mevcut sayfayi kullan
+  if (typeof page !== 'number' || isNaN(page) || page < 1) page = podsCurrentPage;
+  podsCurrentPage = page;
+
   const container = document.getElementById('pods-table-container');
   container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">{{ t("workloads.loading_pods") }}</span></div>';
 
   try {
-    // Always fetch fresh server data when explicitly refreshed or first load
-    const data = await fetchJsonWithTimeout('/k8s-explorer/pods-summary', {}, 10000);
-    let pods = data.pods || [];
+    const nsFilter = document.getElementById('podsNamespaceFilter');
+    const selectedNs = (nsFilter && nsFilter.value) ? nsFilter.value : '';
+
+    // Sayfalama URL'si; namespace varsa backend'e de gonder (AC-9)
+    let url = `/k8s-explorer/pods-summary?page=${page}&per_page=${PODS_PER_PAGE}`;
+    if (selectedNs) url += `&namespace=${encodeURIComponent(selectedNs)}`;
+
+    const data = await fetchJsonWithTimeout(url, {}, 10000);
+
     // Cache tazelik gostergesi: pods-summary cache'inden meta al (#11)
     if (data._cache_meta) {
       renderCacheMeta(data._cache_meta, 'pods-summary-cache-bar');
     }
-    // Populate namespace filter once
-    const nsFilter = document.getElementById('podsNamespaceFilter');
+
+    // Sayfalama yanitiyla gelen items dizisi ve meta bilgileri
+    const pods      = data.items || [];
+    const total     = (data.total      !== undefined) ? data.total      : pods.length;
+    const totalPages = (data.total_pages !== undefined) ? data.total_pages : 1;
+
+    // Namespace dropdown'i ilk yüklemede doldur (AC-11)
+    // allWorkloadsData.pods Overview sekmesinden zaten yuklendi; yoksa mevcut items'tan al
     if (nsFilter && !nsFilter.dataset.filled) {
-      const namespaces = [...new Set(pods.map(p => p.namespace))].sort();
-      nsFilter.innerHTML = '<option value="">{{ t("workloads.all_namespaces") }}</option>' + namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
+      const allPods = allWorkloadsData.pods.length > 0 ? allWorkloadsData.pods : pods;
+      const namespaces = [...new Set(allPods.map(p => p.namespace))].sort();
+      nsFilter.innerHTML = '<option value="">{{ t("workloads.all_namespaces") }}</option>'
+        + namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
       nsFilter.dataset.filled = '1';
-      nsFilter.addEventListener('change', () => fetchAndRenderPodsTable());
+      // Namespace degisince sayfa 1'e sifirla ve yeniden yukle (AC-11)
+      nsFilter.addEventListener('change', function() {
+        podsCurrentPage = 1;
+        fetchAndRenderPodsTable(1);
+      });
     }
-    // Apply client-side filter if any
-    if (nsFilter && nsFilter.value) {
-      pods = pods.filter(p => p.namespace === nsFilter.value);
-    }
-    lastPodsData = pods;  // export icin sakla
+
+    lastPodsData = pods;  // export icin sakla (mevcut sayfa — tam export ayri backlog)
 
     if (pods.length === 0) {
       container.innerHTML = '<div class="empty-state"><i class="bi bi-box"></i><h5>{{ t("workloads.empty_pods") }}</h5></div>';
+      updatePodsPagination(page, totalPages, total, PODS_PER_PAGE);
       updatePodsPieChart([], 'pie-pods-tab');
       return;
     }
-    
-  let html = '<div class="table-responsive"><table class="table table-modern table-hover" id="pods-table"><thead><tr>'+
-         '<th class="sortable" data-sort-key="namespace">Namespace</th>'+
-         '<th class="sortable" data-sort-key="name">Name</th>'+
-         '<th>Status</th>'+
-         '<th class="sortable" data-sort-key="ready">Ready</th>'+
-         '<th class="sortable" data-sort-key="restarts">Restarts</th>'+
-         '<th class="sortable" data-sort-key="age">Age</th>'+
-         '<th class="sortable" data-sort-key="cpu">CPU</th>'+
-         '<th class="sortable" data-sort-key="mem">Memory</th>'+
-         '<th>{{ t("workloads.col_actions") }}</th>'+
-         '</tr></thead><tbody>';
-    
+
+    let html = '<div class="table-responsive"><table class="table table-modern table-hover" id="pods-table"><thead><tr>'
+      + '<th class="sortable" data-sort-key="namespace">Namespace</th>'
+      + '<th class="sortable" data-sort-key="name">Name</th>'
+      + '<th>Status</th>'
+      + '<th class="sortable" data-sort-key="ready">Ready</th>'
+      + '<th class="sortable" data-sort-key="restarts">Restarts</th>'
+      + '<th class="sortable" data-sort-key="age">Age</th>'
+      + '<th class="sortable" data-sort-key="cpu">CPU</th>'
+      + '<th class="sortable" data-sort-key="mem">Memory</th>'
+      + '<th>{{ t("workloads.col_actions") }}</th>'
+      + '</tr></thead><tbody>';
+
     pods.forEach(pod => {
       const age = calculateAge(pod.creation_timestamp);
-      const statusClass = pod.status === 'Running' ? 'status-running' : 
-                         pod.status === 'Pending' ? 'status-pending' : 
+      const statusClass = pod.status === 'Running' ? 'status-running' :
+                         pod.status === 'Pending' ? 'status-pending' :
                          pod.status === 'Failed' ? 'status-failed' : 'status-succeeded';
-      
+
       html += `
         <tr data-namespace="${pod.namespace}" data-name="${pod.name}" data-cpu="" data-mem="" data-ready="${(pod.ready||'').split('/')[0]||0}" data-restarts="${pod.restarts||0}" data-age-seconds="${pod.creation_timestamp ? Math.floor((Date.now() - new Date(pod.creation_timestamp).getTime())/1000) : 0}">
           <td class="ns-cell"><span class="badge bg-secondary">${pod.namespace}</span></td>
@@ -1364,12 +1456,14 @@ async function fetchAndRenderPodsTable(forceRefresh = false) {
         </tr>
       `;
     });
-    
+
     html += '</tbody></table></div>';
     container.innerHTML = html;
-  // Attach sorting handlers
+
+    // Sayfalama UI'ini guncelle (AC-4)
+    updatePodsPagination(page, totalPages, total, PODS_PER_PAGE);
+    // Siralama kurulumu ve metrik cekme
     setupPodsTableSorting();
-    // Fetch metrics for rows (limited concurrency)
     fetchMetricsForPods(pods);
     updatePodsPieChart(pods, 'pie-pods-tab');
   } catch (error) {
@@ -1426,6 +1520,75 @@ function sortPodsTableRows() {
   rows.forEach(r => tbody.appendChild(r));
 }
 
+// Pods sayfalama UI'ini guncelle — AC-4
+// page/totalPages/total/perPage degerlerini alir; total_pages<=1 ise kontrolleri gizler.
+function updatePodsPagination(page, totalPages, total, perPage) {
+  podsCurrentPage = page;
+  podsTotalPages = totalPages;
+  const paginationDiv = document.getElementById('pods-pagination');
+  const prevBtn       = document.getElementById('pods-prev-page');
+  const nextBtn       = document.getElementById('pods-next-page');
+  const pageIndicator = document.getElementById('pods-page-indicator');
+  const infoSpan      = document.getElementById('pods-pagination-info');
+  if (!paginationDiv) return;
+  // Tek sayfa veya sayfalama bilgisi yoksa gizle (AC-4)
+  if (!totalPages || totalPages <= 1) {
+    paginationDiv.style.display = 'none';
+    return;
+  }
+  paginationDiv.style.display = 'flex';
+  // Sayfa gostergesi: "Sayfa 2 / 7"
+  const pageText = '{{ t("pagination.page_indicator") }}'
+    .replace('{page}', page)
+    .replace('{total_pages}', totalPages);
+  if (pageIndicator) pageIndicator.textContent = pageText;
+  // Kayit aralik bilgisi: "347 kayittan 51-100 arasi"
+  const start = (page - 1) * perPage + 1;
+  const end   = Math.min(page * perPage, total);
+  const infoText = '{{ t("pagination.showing_info") }}'
+    .replace('{total}', total)
+    .replace('{start}', start)
+    .replace('{end}', end);
+  if (infoSpan) infoSpan.textContent = infoText;
+  // Buton disabled durumlari (AC-4)
+  if (prevBtn) prevBtn.disabled = (page <= 1);
+  if (nextBtn) nextBtn.disabled = (page >= totalPages);
+}
+
+// Deployments sayfalama UI'ini guncelle — AC-5
+function updateDeploymentsPagination(page, totalPages, total, perPage) {
+  deploymentsCurrentPage = page;
+  deploymentsTotalPages  = totalPages;
+  const paginationDiv = document.getElementById('deployments-pagination');
+  const prevBtn       = document.getElementById('deployments-prev-page');
+  const nextBtn       = document.getElementById('deployments-next-page');
+  const pageIndicator = document.getElementById('deployments-page-indicator');
+  const infoSpan      = document.getElementById('deployments-pagination-info');
+  if (!paginationDiv) return;
+  // Tek sayfa veya sayfalama bilgisi yoksa gizle (AC-5)
+  if (!totalPages || totalPages <= 1) {
+    paginationDiv.style.display = 'none';
+    return;
+  }
+  paginationDiv.style.display = 'flex';
+  // Sayfa gostergesi
+  const pageText = '{{ t("pagination.page_indicator") }}'
+    .replace('{page}', page)
+    .replace('{total_pages}', totalPages);
+  if (pageIndicator) pageIndicator.textContent = pageText;
+  // Kayit aralik bilgisi
+  const start = (page - 1) * perPage + 1;
+  const end   = Math.min(page * perPage, total);
+  const infoText = '{{ t("pagination.showing_info") }}'
+    .replace('{total}', total)
+    .replace('{start}', start)
+    .replace('{end}', end);
+  if (infoSpan) infoSpan.textContent = infoText;
+  // Buton disabled durumlari (AC-5)
+  if (prevBtn) prevBtn.disabled = (page <= 1);
+  if (nextBtn) nextBtn.disabled = (page >= totalPages);
+}
+
 async function fetchMetricsForPods(pods) {
   const table = document.getElementById('pods-table');
   if (!table) return;
@@ -1467,40 +1630,67 @@ async function fetchMetricsForPods(pods) {
   await Promise.all(workers);
 }
 
-async function fetchAndRenderDeploymentsTable(forceRefresh = false) {
+// fetchAndRenderDeploymentsTable — Deployments sekmesi icin sayfalamali veri cekme ve render (AC-5)
+// page: hangi sayfanin yuklenmesi isteniyor (1-tabanli). Sayi degilse mevcuttan devam eder.
+async function fetchAndRenderDeploymentsTable(page) {
+  // Arguman gecerli bir sayfa numarasi degilse mevcut sayfayi kullan
+  if (typeof page !== 'number' || isNaN(page) || page < 1) page = deploymentsCurrentPage;
+  deploymentsCurrentPage = page;
+
   const container = document.getElementById('deployments-table-container');
   container.innerHTML = '<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">{{ t("workloads.loading_deployments") }}</span></div>';
 
   try {
-    const data = await fetchJsonWithTimeout('/k8s-explorer/deployments-summary', {}, 10000);
-    let deployments = data.deployments || [];
-    // Populate namespace filter once
     const nsFilter = document.getElementById('deploymentsNamespaceFilter');
+    const selectedNs = (nsFilter && nsFilter.value) ? nsFilter.value : '';
+
+    // Sayfalama URL'si; namespace varsa backend'e de gonder (AC-9)
+    let url = `/k8s-explorer/deployments-summary?page=${page}&per_page=${DEPLOYMENTS_PER_PAGE}`;
+    if (selectedNs) url += `&namespace=${encodeURIComponent(selectedNs)}`;
+
+    const data = await fetchJsonWithTimeout(url, {}, 10000);
+
+    // Sayfalama yanitiyla gelen items dizisi ve meta bilgileri
+    const deployments = data.items || [];
+    const total       = (data.total       !== undefined) ? data.total       : deployments.length;
+    const totalPages  = (data.total_pages  !== undefined) ? data.total_pages  : 1;
+
+    // Namespace dropdown'i ilk yüklemede doldur (AC-11)
+    // allWorkloadsData.deployments Overview sekmesinden zaten yuklendi; yoksa mevcut items'tan al
     if (nsFilter && !nsFilter.dataset.filled) {
-      const namespaces = [...new Set(deployments.map(d => d.namespace))].sort();
-      nsFilter.innerHTML = '<option value="">{{ t("workloads.all_namespaces") }}</option>' + namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
+      const allDeps = allWorkloadsData.deployments.length > 0 ? allWorkloadsData.deployments : deployments;
+      const namespaces = [...new Set(allDeps.map(d => d.namespace))].sort();
+      nsFilter.innerHTML = '<option value="">{{ t("workloads.all_namespaces") }}</option>'
+        + namespaces.map(ns => `<option value="${ns}">${ns}</option>`).join('');
       nsFilter.dataset.filled = '1';
-      nsFilter.addEventListener('change', () => fetchAndRenderDeploymentsTable());
+      // Namespace degisince sayfa 1'e sifirla ve yeniden yukle (AC-11)
+      nsFilter.addEventListener('change', function() {
+        deploymentsCurrentPage = 1;
+        fetchAndRenderDeploymentsTable(1);
+      });
     }
-    if (nsFilter && nsFilter.value) {
-      deployments = deployments.filter(d => d.namespace === nsFilter.value);
-    }
-    lastDeploymentsData = deployments;  // export icin sakla
+
+    lastDeploymentsData = deployments;  // export icin sakla (mevcut sayfa)
 
     if (deployments.length === 0) {
       container.innerHTML = '<div class="empty-state"><i class="bi bi-arrow-repeat"></i><h5>{{ t("workloads.empty_deployments") }}</h5></div>';
+      updateDeploymentsPagination(page, totalPages, total, DEPLOYMENTS_PER_PAGE);
       updateDeploymentsPieChart([], 'pie-deployments-tab');
       return;
     }
 
-  let html = '<div class="table-responsive"><table class="table table-modern table-hover" id="deployments-table"><thead><tr><th>Namespace</th><th>Name</th><th>Ready</th><th>Up-to-date</th><th>Available</th><th>Age</th><th>{{ t("workloads.col_actions") }}</th></tr></thead><tbody>';
-    
+    let html = '<div class="table-responsive"><table class="table table-modern table-hover" id="deployments-table"><thead><tr>'
+      + '<th>Namespace</th><th>Name</th><th>Ready</th><th>Up-to-date</th>'
+      + '<th>Available</th><th>Age</th>'
+      + '<th>{{ t("workloads.col_actions") }}</th>'
+      + '</tr></thead><tbody>';
+
     deployments.forEach(dep => {
       const age = calculateAge(dep.creation_timestamp);
       const ready_replicas = (dep.ready_replicas !== undefined && dep.ready_replicas !== null) ? dep.ready_replicas : (dep.ready ? (dep.ready.split('/')[0]||0) : 0);
-      const replicas = (dep.replicas !== undefined && dep.replicas !== null) ? dep.replicas : (dep.ready ? (dep.ready.split('/')[1]||0) : 0);
-      const readyStatus = (parseInt(ready_replicas) === parseInt(replicas) && parseInt(replicas) > 0) ? 'status-running' : 'status-pending';
-      
+      const replicas       = (dep.replicas       !== undefined && dep.replicas       !== null) ? dep.replicas       : (dep.ready ? (dep.ready.split('/')[1]||0) : 0);
+      const readyStatus    = (parseInt(ready_replicas) === parseInt(replicas) && parseInt(replicas) > 0) ? 'status-running' : 'status-pending';
+
       html += `
         <tr>
           <td class="ns-cell"><span class="badge bg-secondary">${dep.namespace}</span></td>
@@ -1520,9 +1710,12 @@ async function fetchAndRenderDeploymentsTable(forceRefresh = false) {
         </tr>
       `;
     });
-    
+
     html += '</tbody></table></div>';
     container.innerHTML = html;
+
+    // Sayfalama UI'ini guncelle (AC-5)
+    updateDeploymentsPagination(page, totalPages, total, DEPLOYMENTS_PER_PAGE);
     updateDeploymentsPieChart(deployments, 'pie-deployments-tab');
   } catch (error) {
     container.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>{{ t("workloads.error_deployments") }} ' + error.message + '</div>';

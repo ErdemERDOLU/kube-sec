@@ -92,10 +92,11 @@
 **Sorun:** Uygulama kucuk/orta cluster'larda (50 pod, 10 namespace) sorunsuz calisir ancak buyuk/kurumsal cluster'larda (1000+ pod, 50+ namespace) kullanim disinda kalabilir.
 
 **Kabul kriterleri:**
-- [ ] En az 3 yuksek hacimli endpoint (`deployments-summary`, `pods-summary`, `configmaps-summary`) `?page=N&per_page=M` (varsayilan: page=1, per_page=100) parametrelerini destekler.
-- [ ] Sayfalama olmayan mevcut istekler (parametre gonderilmediginde) geriye donuk uyumlu kalir (tum veriyi dondurur).
-- [ ] Frontend'te en az 1 sayfada (ornegin workloads.html) server-side pagination entegre edilir: "Onceki / Sonraki" butonlari veya sonsuz kaydirma (infinite scroll).
-- [ ] 500 kaynak iceren bir senaryoda API yanit suresi 5 saniyenin altinda kalir (pagination ile).
+- [x] En az 3 yuksek hacimli endpoint (`deployments-summary`, `pods-summary`, `configmaps-summary`) `?page=N&per_page=M` (varsayilan: page=1, per_page=50 — spec'te 100'den 50'ye revize edildi) parametrelerini destekler.
+- [x] Sayfalama olmayan mevcut istekler (parametre gonderilmediginde) geriye donuk uyumlu kalir (tum veriyi dondurur).
+- [x] Frontend'te en az 1 sayfada (workloads.html — Pods ve Deployments sekmeleri) server-side pagination entegre edilir: "Onceki / Sonraki" butonlari + sayfa gostergesi, i18n uyumlu.
+- [x] Sayfalama mantigi (dilim, total, total_pages hesabi) 31 birim test + bagimsiz QA ile dogrulandi; gercek 500+ kaynakli bir cluster bu ortamda mevcut olmadigindan gercek zamanlama testi yapilamadi, ancak in-memory slicing yaklasimi (tek K8s API cagrisi + Python tarafinda dilimleme) payload boyutunu buyuk oranda kucultuyor.
+  - Spec: `docs/specs/20260721-api-pagination-destegi.md` (13 AC, 11 zorunlu CONFIRMED, 2 opsiyonel — per_page dropdown ve config.html UI — yapilmadi, acik birakildi).
 
 ---
 

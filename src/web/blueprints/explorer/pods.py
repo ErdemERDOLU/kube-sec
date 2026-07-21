@@ -23,6 +23,7 @@ from web.kubeconfig_manager import load_kube_config_active
 from web.audit_log import record_audit_event, _short_session_id
 
 from web.blueprints.explorer import bp_explorer
+from web.blueprints.explorer._pagination import paginate_list
 
 
 # Prometheus endpoint bilgisi (frontend rehberlik eder; gerçek çağrılar backend proxy üzerinden yapılır)
@@ -159,18 +160,61 @@ def prometheus_proxy():
 
 @bp_explorer.route('/k8s-explorer/pods-summary')
 def pods_summary():
+    """Pod listesini döndürür (background cache'den okunur).
+
+    Query parametreleri:
+        namespace (str, opsiyonel): Belirtilirse yalnızca o namespace filtrelenir.
+        page      (int, opsiyonel): Sayfa numarası (1-tabanlı). Gönderilmezse
+                                    tüm liste eski formatta döner (geriye dönük uyumluluk).
+        per_page  (int, opsiyonel): Sayfa başına kayıt (varsayılan: 50, max: 500).
+
+    Yanıt (sayfalama KAPALI — page parametresi yok):
+        {"pods": [...], "_cache_meta": {...}}
+
+    Yanıt (sayfalama AÇIK — page parametresi var):
+        {"items": [...], "page": N, "per_page": M, "total": T, "total_pages": P, "_cache_meta": {...}}
+
+    Not: _cache_meta her iki modda da yanıta dahil edilir (spec gereksinimi).
+
+    Hatalar:
+        400: Geçersiz sayfalama parametresi.
+    """
     try:
         now = time.time()
         if not _bg.pods_summary_cache or (now - _bg.pods_summary_cache_time > _bg.PODS_SUMMARY_CACHE_TTL):
             update_pods_summary_cache()
+
         result = dict(_bg.pods_summary_cache) if _bg.pods_summary_cache else {'pods': []}
         age = int(now - _bg.pods_summary_cache_time) if _bg.pods_summary_cache_time else int(now)
-        result['_cache_meta'] = {
+
+        # _cache_meta her modda eklenecek; önce ayrı bir değişkende tut
+        cache_meta = {
             'updated_at': _bg.pods_summary_cache_time,
             'age_seconds': age,
             'stale': age > 300,
             'last_error': _bg._psc_last_error,
         }
+
+        # Tam pod listesini çıkar; opsiyonel namespace filtresi uygula (AC-9)
+        pods_list = list(result.get('pods', []))
+        namespace = request.args.get('namespace')
+        if namespace and namespace != 'all':
+            pods_list = [p for p in pods_list if p.get('namespace') == namespace]
+
+        # Sayfalama desteği — AC-1 (sayfalama), AC-2 (geriye dönük uyumluluk), AC-7 (doğrulama)
+        try:
+            paginated, is_paginated = paginate_list(pods_list, request.args)
+        except ValueError as ve:
+            return jsonify({'error': str(ve)}), 400
+
+        if is_paginated:
+            # _cache_meta zarf içinde de yer alır (spec gereksinimi)
+            paginated['_cache_meta'] = cache_meta
+            return jsonify(paginated)
+
+        # page parametresi yoksa eski format (geriye dönük uyumluluk — loadOverviewData() etkilenmez)
+        result['pods'] = pods_list   # namespace filtresi uygulanmışsa filtrelenmiş liste kullanılır
+        result['_cache_meta'] = cache_meta
         return jsonify(result)
     except Exception as e:
         return jsonify({'pods': [], 'error': str(e)})

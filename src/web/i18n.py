@@ -588,6 +588,12 @@ I18N = {
     'workloads.btn_export_log': {'tr': 'Export', 'en': 'Export'},
     'workloads.cache_loading': {'tr': 'Veriler yükleniyor, lütfen birkaç saniye bekleyin...', 'en': 'Loading data, please wait a few seconds...'},
 
+    # ── Sayfalama (pagination.* — workloads.html ve config.html ortak) ────────
+    'pagination.previous': {'tr': 'Önceki', 'en': 'Previous'},
+    'pagination.next': {'tr': 'Sonraki', 'en': 'Next'},
+    'pagination.page_indicator': {'tr': 'Sayfa {page} / {total_pages}', 'en': 'Page {page} / {total_pages}'},
+    'pagination.showing_info': {'tr': '{total} kayıttan {start}-{end} arası', 'en': 'Showing {start}-{end} of {total}'},
+
     # ── Config (config.html) ─────────────────────────────────────────────────
     'config.title': {'tr': 'Kubernetes Configuration', 'en': 'Kubernetes Configuration'},
     'config.subtitle': {'tr': 'Modern cluster konfigürasyon yönetimi ve izleme paneli', 'en': 'Modern cluster configuration management and monitoring dashboard'},

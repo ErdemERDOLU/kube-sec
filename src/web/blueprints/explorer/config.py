@@ -17,10 +17,32 @@ from web.kubeconfig_manager import load_kube_config_active
 from web.audit_log import record_audit_event, _short_session_id
 
 from web.blueprints.explorer import bp_explorer
+from web.blueprints.explorer._pagination import paginate_list
 
 
 @bp_explorer.route('/k8s-explorer/configmaps-summary')
 def configmaps_summary():
+    """ConfigMap listesini döndürür.
+
+    Query parametreleri:
+        namespace (str, opsiyonel): Belirtilirse yalnızca o namespace filtrelenir
+                                    ('all' veya parametre yoksa tüm namespace'ler).
+                                    Mevcut filtre korunur — AC-8.
+        page      (int, opsiyonel): Sayfa numarası (1-tabanlı). Gönderilmezse
+                                    tüm liste eski formatta döner (geriye dönük uyumluluk).
+        per_page  (int, opsiyonel): Sayfa başına kayıt (varsayılan: 50, max: 500).
+
+    Not: Namespace filtresi önce uygulanır, sayfalama sonra gelir (AC-8).
+
+    Yanıt (sayfalama KAPALI — page parametresi yok):
+        {"configmaps": [...]}
+
+    Yanıt (sayfalama AÇIK — page parametresi var):
+        {"items": [...], "page": N, "per_page": M, "total": T, "total_pages": P}
+
+    Hatalar:
+        400: Geçersiz sayfalama parametresi.
+    """
     try:
         load_kube_config_active()
         c = client.Configuration.get_default_copy()
@@ -28,7 +50,7 @@ def configmaps_summary():
         c.assert_hostname = False
         client.Configuration.set_default(c)
         v1 = client.CoreV1Api()
-        # support optional namespace filtering via ?namespace=<name> (use 'all' for all namespaces)
+        # Mevcut namespace filtresi korunur — AC-8 (önce filtrele, sonra dilimle)
         namespace = request.args.get('namespace')
         if namespace and namespace != 'all':
             configmaps = v1.list_namespaced_config_map(namespace).items
@@ -44,6 +66,14 @@ def configmaps_summary():
                 'data_count': data_count,
                 'creation_timestamp': creation_timestamp.isoformat() if creation_timestamp else None
             })
+        # Sayfalama desteği — AC-1 (sayfalama), AC-2 (geriye dönük uyumluluk), AC-7 (doğrulama)
+        try:
+            paginated, is_paginated = paginate_list(result, request.args)
+        except ValueError as ve:
+            return jsonify({'error': str(ve)}), 400
+        if is_paginated:
+            return jsonify(paginated)
+        # page parametresi yoksa eski format (geriye dönük uyumluluk — loadOverviewData() etkilenmez)
         return jsonify({'configmaps': result})
     except Exception as e:
         return jsonify({'configmaps': [], 'error': str(e)})

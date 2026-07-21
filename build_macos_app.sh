@@ -313,9 +313,20 @@ if [[ "${NOTARIZE:-0}" = "1" ]]; then
 fi
 
 # --- Opsiyonel: DMG oluştur ---
+# Kullanıcı raporu: DMG penceresinde yalnızca Kube-Sec.app ikonu görünüyordu,
+# standart "sürükle-bırak" kurulum akışındaki /Applications kısayolu yoktu.
+# Bu, kullanıcıların uygulamayı nereye sürükleyeceğini bilememesine yol açtı.
+# Çözüm: .app'i ve /Applications'a bir sembolik link'i aynı geçici klasöre koyup
+# DMG'yi o klasörden üretiyoruz — diğer macOS uygulamalarındaki standart davranış.
 if [[ "${CREATE_DMG:-0}" = "1" ]]; then
   DMG_PATH="dist/${APP_NAME}-${APP_VERSION}${BUILD_ARCH:+-$BUILD_ARCH}.dmg"
   echo "[INFO] DMG oluşturuluyor: $DMG_PATH"
-  hdiutil create -volname "${APP_NAME}" -srcfolder "dist/${APP_NAME}.app" -ov -format UDZO "$DMG_PATH" || \
+  DMG_STAGING="dist/.dmg-staging"
+  rm -rf "$DMG_STAGING"
+  mkdir -p "$DMG_STAGING"
+  cp -R "dist/${APP_NAME}.app" "$DMG_STAGING/"
+  ln -s /Applications "$DMG_STAGING/Applications"
+  hdiutil create -volname "${APP_NAME}" -srcfolder "$DMG_STAGING" -ov -format UDZO "$DMG_PATH" || \
     echo "[WARN] DMG oluşturulamadı" >&2
+  rm -rf "$DMG_STAGING"
 fi

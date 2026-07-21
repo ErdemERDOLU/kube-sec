@@ -613,7 +613,7 @@ def pod_metrics_range():
                 'end': f"{end_s}",
                 'step': step_expr,
             }
-            r = requests.get(f'{base_url.rstrip('/')}/api/v1/query_range', params=params, timeout=timeout_s, verify=False)
+            r = requests.get(f"{base_url.rstrip('/')}/api/v1/query_range", params=params, timeout=timeout_s, verify=False)
             if r.status_code != 200:
                 return None
             return r.json()

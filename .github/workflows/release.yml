@@ -106,6 +106,13 @@ jobs:
       # KRİTİK VARSAYIM: Bu build artık Intel (x86_64) Mac'lerde ÇALIŞMAZ.
       # Ayrı bir Intel veya universal build pipeline'ı bu spec kapsamında değildir.
       BUILD_ARCH: arm64
+      # pywebview/PyObjC köprüsü 148 gömülü ikili dosyanın kaynağıydı; Apple notary
+      # servisi dosya sayısına göre tarama yaptığından notarizasyon 3+ saatte zaman
+      # aşımına uğruyordu. Bu notarize edilen CI build'inde pywebview/PyObjC dışlanıyor
+      # → native pencere yerine tarayıcı-açma moduna dönülüyor (bilinçli özellik geri alımı).
+      # Yerel geliştirici buildleri (make build-macos-arm vb.) bu değişkeni SET ETMİYOR;
+      # dolayısıyla yerel buildlerde pywebview/native pencere aynen korunuyor.
+      EXCLUDE_PYWEBVIEW: "1"
       SIGN_IDENTITY: ${{ secrets.SIGN_IDENTITY }}
       NOTARY_APPLE_ID: ${{ secrets.NOTARY_APPLE_ID }}
       NOTARY_TEAM_ID: ${{ secrets.NOTARY_TEAM_ID }}

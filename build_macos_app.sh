@@ -119,6 +119,33 @@ PYINSTALLER_ARGS=(
   --add-data "yaml:yaml"
 )
 
+# --- pywebview / PyObjC dışlama (opsiyonel — yalnızca CI release build için) ---
+# EXCLUDE_PYWEBVIEW=1 olduğunda webview ve PyObjC köprüsü bundle'dan çıkarılır;
+# bu, Apple notary servisindeki gömülü ikili dosya sayısını (~148) azaltarak
+# notarizasyon süresini önemli ölçüde kısaltır. Dışlama sonucunda uygulama
+# native pencere yerine varsayılan tarayıcıyı açar — bilinçli özellik geri alımı.
+# Varsayılan: boş — set edilmezse mevcut davranış BİREBİR AYNI kalır (regresyon yok).
+EXCLUDE_PYWEBVIEW="${EXCLUDE_PYWEBVIEW:-}"
+if [[ "${EXCLUDE_PYWEBVIEW}" = "1" ]]; then
+  echo "[INFO] EXCLUDE_PYWEBVIEW=1: pywebview ve PyObjC köprüsü bundle'dan dışlanıyor..."
+  PYINSTALLER_ARGS+=(
+    # pywebview ana modülü
+    --exclude-module webview
+    # pyobjc-core: Objective-C köprüsü ve araçları
+    --exclude-module objc
+    --exclude-module PyObjCTools
+    # pyobjc-framework-Cocoa: AppKit / Foundation / CoreFoundation
+    --exclude-module AppKit
+    --exclude-module Foundation
+    --exclude-module CoreFoundation
+    # pyobjc-framework-WebKit: WKWebView köprüsü
+    --exclude-module WebKit
+    # pyobjc-framework-Quartz: Quartz + CoreGraphics alt namespace'i
+    --exclude-module Quartz
+    --exclude-module CoreGraphics
+  )
+fi
+
 # Mimarî seçimi (destekliyse)
 if [[ -n "$BUILD_ARCH" ]]; then
   PYINSTALLER_ARGS+=( --target-arch "$BUILD_ARCH" )
@@ -221,12 +248,16 @@ if [[ "${NOTARIZE:-0}" = "1" ]]; then
   (cd dist && ditto -c -k --keepParent "${APP_NAME}.app" "$(basename "$APP_ZIP")")
   if command -v xcrun >/dev/null 2>&1; then
     echo "[INFO] NotaryTool submit başlatılıyor..."
-    # NOT: Bu paket çok sayıda gömülü ikili dosya içerdiğinden (pywebview/PyObjC
-    # köprüsü: Foundation, AppKit, CoreFoundation, WebKit vb.) Apple'ın notarization
-    # taraması normalden çok uzun sürebilir. Gözlemlenen süreler: bir başarılı
-    # çalıştırma 2s32d sürmüştü; 1.0.0-rc5 denemesinde ise 3 saati (10800s)
-    # AŞARAK zaman aşımına uğradı (Apple tarafı o an hâlâ "In Progress"taydı) —
-    # yani süre 2.5-3+ saat arasında öngörülemez şekilde değişebiliyor.
+    # NOT: EXCLUDE_PYWEBVIEW boş/0 iken bu paket çok sayıda gömülü ikili dosya
+    # içerdiğinden (pywebview/PyObjC köprüsü: Foundation, AppKit, CoreFoundation,
+    # WebKit vb.) Apple'ın notarization taraması normalden çok uzun sürebilir.
+    # Gözlemlenen süreler: bir başarılı çalıştırma 2s32d sürmüştü; 1.0.0-rc5 ve
+    # rc7 denemelerinde ise 3-3.5 saati (10800-12600s) AŞARAK zaman aşımına
+    # uğradı (Apple tarafı o an hâlâ "In Progress"taydı) — yani süre 2.5-3.5+
+    # saat arasında öngörülemez şekilde değişebiliyor. EXCLUDE_PYWEBVIEW=1 ile
+    # (bkz. yukarıdaki blok) bu ~148 gömülü ikili dosyanın büyük kısmı bundle'dan
+    # çıkarılır; bu paket çok daha az gömülü ikili dosya içerir ve notarizasyon
+    # süresinin kısalması beklenir (henüz gözlemsel doğrulama bekleniyor).
     # --timeout, notarytool'un ne kadar bekleyeceğini sınırlar; Apple tarafındaki
     # işlem --timeout'a ulaşılsa bile ARKA PLANDA DEVAM EDER (bkz. `notarytool
     # submit --help`). Süre aşımında script başarısız SAYILMAZ ama staple

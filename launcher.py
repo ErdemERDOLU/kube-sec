@@ -153,7 +153,16 @@ def main():
     use_pywebview = os.environ.get('USE_PYWEBVIEW', '1' if getattr(sys, 'frozen', False) else '0').strip() == '1'
 
     if use_pywebview:
-        _start_with_pywebview(url, host, port, debug)
+        try:
+            _start_with_pywebview(url, host, port, debug)
+        except ImportError:
+            # pywebview bundle'a dahil edilmemiş (ör. EXCLUDE_PYWEBVIEW=1 ile derlendi)
+            # ya da USE_PYWEBVIEW=1 set edilmiş ama webview kurulu değil.
+            # Uygulama çökmemeli; eski tarayıcı-açma moduna otomatik olarak dönülüyor.
+            print("[UYARI] pywebview modülü bulunamadı; tarayıcı moduna dönülüyor.")
+            if getattr(sys, 'frozen', False):
+                threading.Thread(target=_open_browser, args=(url,), daemon=True).start()
+            app.run(host=host, port=port, debug=debug)
     else:
         # Eski davranış -- AYNEN KORUNUYOR
         if getattr(sys, 'frozen', False):

@@ -70,7 +70,7 @@
                             <div class="d-flex align-items-center justify-content-center">
                                 <i class="bi bi-hdd-stack text-primary me-2"></i>
                                 <div>
-                                    <small class="text-muted d-block">{{ t('vulns.stat_scanned_deployments') }}</small>
+                                    <small class="text-muted d-block">{{ t('vulns.stat_scanned_workloads') }}</small>
                                     <span class="fw-bold">{{ vulnerabilities|length }}</span>
                                 </div>
                             </div>
@@ -140,7 +140,7 @@
                                     <i class="bi bi-hdd-stack text-primary me-2 fs-4"></i>
                                     <div>
                                         <h4 class="mb-0 fw-bold text-primary">{{ vulnerabilities|length }}</h4>
-                                        <small class="text-muted">{{ t('vulns.stat_scanned_deployments') }}</small>
+                                        <small class="text-muted">{{ t('vulns.stat_scanned_workloads') }}</small>
                                     </div>
                                 </div>
                             </div>
@@ -245,12 +245,32 @@
                                     <div class="row">
                                         {% for v in vulns %}
                                         <div class="col-md-6 mb-3">
-                                            <div class="card border-start border-danger border-4 h-100">
+                                            <div class="card border-start border-4 h-100
+                                                {% if v.severity == 'critical' %}border-danger
+                                                {% elif v.severity == 'high' %}border-warning
+                                                {% elif v.severity == 'medium' %}border-info
+                                                {% else %}border-secondary{% endif %}">
                                                 <div class="card-body">
                                                     <div class="d-flex align-items-start">
-                                                        <i class="bi bi-exclamation-triangle text-danger me-2 mt-1"></i>
+                                                        <i class="bi bi-exclamation-triangle me-2 mt-1
+                                                            {% if v.severity == 'critical' %}text-danger
+                                                            {% elif v.severity == 'high' %}text-warning
+                                                            {% elif v.severity == 'medium' %}text-info
+                                                            {% else %}text-secondary{% endif %}"></i>
                                                         <div class="flex-grow-1">
-                                                            <p class="mb-0 small">{{ v }}</p>
+                                                            <div class="d-flex align-items-center mb-1 flex-wrap gap-1">
+                                                                <span class="badge
+                                                                    {% if v.severity == 'critical' %}bg-danger
+                                                                    {% elif v.severity == 'high' %}bg-warning text-dark
+                                                                    {% elif v.severity == 'medium' %}bg-info text-dark
+                                                                    {% else %}bg-secondary{% endif %}">
+                                                                    {{ v.severity }}
+                                                                </span>
+                                                                {% if v.container %}
+                                                                    <small class="text-muted"><i class="bi bi-box me-1"></i>{{ v.container }}</small>
+                                                                {% endif %}
+                                                            </div>
+                                                            <p class="mb-0 small">{{ v.message }}</p>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -301,16 +321,16 @@
                                     <div class="row text-start">
                                         <div class="col-md-6">
                                             <ul class="list-unstyled">
-                                                <li><i class="bi bi-check-circle text-success me-2"></i>Security Context</li>
-                                                <li><i class="bi bi-check-circle text-success me-2"></i>Image Tags</li>
-                                                <li><i class="bi bi-check-circle text-success me-2"></i>Resource Limits</li>
+                                                <li><i class="bi bi-check-circle text-success me-2"></i>{{ t('vulns.checked_area.security_context') }}</li>
+                                                <li><i class="bi bi-check-circle text-success me-2"></i>{{ t('vulns.checked_area.image_tags') }}</li>
+                                                <li><i class="bi bi-check-circle text-success me-2"></i>{{ t('vulns.checked_area.resource_limits') }}</li>
                                             </ul>
                                         </div>
                                         <div class="col-md-6">
                                             <ul class="list-unstyled">
-                                                <li><i class="bi bi-check-circle text-success me-2"></i>Network Policies</li>
-                                                <li><i class="bi bi-check-circle text-success me-2"></i>RBAC Ayarları</li>
-                                                <li><i class="bi bi-check-circle text-success me-2"></i>Pod Güvenliği</li>
+                                                <li><i class="bi bi-check-circle text-success me-2"></i>{{ t('vulns.checked_area.network_policies') }}</li>
+                                                <li><i class="bi bi-check-circle text-success me-2"></i>{{ t('vulns.checked_area.rbac') }}</li>
+                                                <li><i class="bi bi-check-circle text-success me-2"></i>{{ t('vulns.checked_area.pod_security') }}</li>
                                             </ul>
                                         </div>
                                     </div>
@@ -340,22 +360,24 @@
     const POD_IMAGES = {{ pod_images | default({}) | tojson }};
 
     function exportVulnerabilities() {
-        const headers = ['Deployment', 'Image', (window.i18n?.['vulns.col_vulnerability']||{})[window.locale||'tr']||'Zafiyet'];
+        const _severityLabel = (window.i18n?.['vulns.severity_label']||{})[window.locale||'tr'] || 'Ciddiyet';
+        const _vulnLabel = (window.i18n?.['vulns.col_vulnerability']||{})[window.locale||'tr'] || 'Zafiyet';
+        const headers = ['Workload', 'Image', _severityLabel, 'Container', _vulnLabel];
         const rows = [];
-        const deployments = Object.keys(VULN_DATA);
-        if (deployments.length === 0) {
+        const workloads = Object.keys(VULN_DATA);
+        if (workloads.length === 0) {
             const _noExportMsg = (window.i18n?.['vulns.no_export_data']||{})[window.locale||'tr'] || 'Dışa aktarılacak veri yok';
             showToast(_noExportMsg, 'warning');
             return;
         }
-        deployments.forEach(function(dep) {
-            const vulns = VULN_DATA[dep] || [];
-            const image = POD_IMAGES[dep] || '';
+        workloads.forEach(function(key) {
+            const vulns = VULN_DATA[key] || [];
+            const image = POD_IMAGES[key] || '';
             if (vulns.length === 0) {
-                rows.push([dep, image, '']);
+                rows.push([key, image, '', '', '']);
             } else {
                 vulns.forEach(function(v) {
-                    rows.push([dep, image, v]);
+                    rows.push([key, image, v.severity || '', v.container || '', v.message || '']);
                 });
             }
         });

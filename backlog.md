@@ -196,9 +196,11 @@
 **Sorun:** K8sScanner sinifi, uygulamanin geri kalaniyla tutarsiz ve bakimsiz kalmis bir bilesenidir. i18n uyumsuzlugu nedeniyle dil EN olarak secildiginde bile mesajlar Ingilizce kalir (bu beklenen), ancak dil TR secildiginde de mesajlar Ingilizce kalir (bu beklenmez). Ayrica PSS analizi ile olasilikla cakisanlar var.
 
 **Kabul kriterleri:**
-- [ ] K8sScanner sinifinin ciktilarindaki hardcoded mesajlar i18n anahtarlarina cevrilir VEYA sinif tamamen kaldirilip `vulnerabilities` route'u mevcut PSS analiz/YAML linter mekanizmalariyla yeniden yazilir.
-- [ ] `vulnerabilities` route'u Deployment disinda en az StatefulSet ve DaemonSet tiplerini de tarar.
-- [ ] Degisiklik sonrasi `/vulnerabilities` sayfasi hatasiz yuklenip zafiyet sonuclarini gosterir.
+- [x] K8sScanner sinifinin ciktilarindaki hardcoded mesajlar i18n anahtarlarina cevrilir VEYA sinif tamamen kaldirilip `vulnerabilities` route'u mevcut PSS analiz/YAML linter mekanizmalariyla yeniden yazilir. (Secenek B uygulandi: `src/scanner/k8s_scanner.py` silindi, `src/web/blueprints/security/_vuln_checks.py` ile yeniden yazildi.)
+- [x] `vulnerabilities` route'u Deployment disinda en az StatefulSet ve DaemonSet tiplerini de tarar.
+- [x] Degisiklik sonrasi `/vulnerabilities` sayfasi hatasiz yuklenip zafiyet sonuclarini gosterir.
+
+**Uygulama notu (2026-07-21):** product-manager -> backend-developer + localization-engineer (paralel) -> qa-engineer zinciriyle tamamlandi. Spec: `docs/specs/20260721-k8sscanner-modernizasyonu.md`. QA dogrulamasinda 12 kabul kriterinin (AC-1..AC-12) tamami CONFIRMED (AC-12, ilk QA turunde bos-durum ekranindaki kalan hardcoded metin nedeniyle FAILED cikti, hemen ardindan 6 yeni i18n anahtariyla kapatildi).
 
 ---
 

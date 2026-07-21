@@ -32,7 +32,8 @@ from web.background import (
 )
 from web.kubeconfig_manager import load_kube_config_active, get_active_kubeconfig_path
 from web.audit_log import record_audit_event, _short_session_id
-from scanner.k8s_scanner import K8sScanner
+from web.i18n import translate
+from web.blueprints.security._vuln_checks import scan_pod_template
 
 from web.blueprints.security import bp_security
 
@@ -69,48 +70,133 @@ def _kubectl_base_args():
 
 @bp_security.route('/vulnerabilities')
 def vulnerabilities():
+    """Canli cluster uzerinde Deployment, StatefulSet ve DaemonSet'leri tayan zafiyet sayfasini render eder.
+
+    Her workload icin scan_pod_template() cagirilir; i18n anahtarlari route seviyesinde
+    cevrilerek template'e list[dict] olarak iletilir.
+
+    NetworkPolicy kontrolu namespace basina bir kez yapilir (spec risk #4: tekrar API cagrisi yok).
+
+    Template degiskenleri:
+        vulnerabilities: dict[str, list[dict]]  — key: "ns/Kind/name", value: finding listesi
+        pod_images:      dict[str, str]         — key: ayni format, value: imaj isimleri
+        all_namespaces:  list[str]
+        selected_namespace: str
+    """
     try:
         load_kube_config_active()
         c = client.Configuration.get_default_copy()
         c.verify_ssl = False
         c.assert_hostname = False
         client.Configuration.set_default(c)
-        kube_client = type('KubeClient', (), {})()
-        kube_client.core_v1 = client.CoreV1Api()
-        kube_client.apps_v1 = client.AppsV1Api()
-        kube_client.networking_v1 = client.NetworkingV1Api()
+        apps_v1 = client.AppsV1Api()
+        core_v1 = client.CoreV1Api()
+        networking_v1 = client.NetworkingV1Api()
     except Exception as e:
         return render_template('vulnerabilities.html', error=str(e))
 
-    scanner = K8sScanner(kube_client)
+    lang = request.cookies.get('lang') or 'tr'
     all_vulnerabilities = {}
     pod_images = {}
 
     selected_namespace = request.args.get('namespace', 'all')
-
-    namespaces = [ns.metadata.name for ns in kube_client.core_v1.list_namespace().items]
+    namespaces = [ns.metadata.name for ns in core_v1.list_namespace().items]
 
     if selected_namespace != 'all' and selected_namespace in namespaces:
         target_namespaces = [selected_namespace]
     else:
         target_namespaces = namespaces
 
-    for ns in target_namespaces:
-        deployments = kube_client.apps_v1.list_namespaced_deployment(ns).items
-        for dep in deployments:
-            vulns = scanner.list_vulnerabilities(dep)
-            dep_key = f"{ns}/{dep.metadata.name}"
-            if vulns:
-                all_vulnerabilities[dep_key] = vulns
-            # Pod image bilgisini ekle
-            if dep.spec.template.spec.containers:
-                pod_images[dep_key] = ', '.join([c.image for c in dep.spec.template.spec.containers])
+    # Namespace basina NetworkPolicy varligini once kontrol et (bir kez API cagrisi, cache'le).
+    # scan_pod_template'e networking_v1=None iletilir; netpol findingini route burada ekler.
+    netpol_cache = {}  # ns -> bool (True: NetworkPolicy var, False: yok)
 
-    return render_template('vulnerabilities.html',
-                           vulnerabilities=all_vulnerabilities,
-                           pod_images=pod_images,
-                           all_namespaces=namespaces,
-                           selected_namespace=selected_namespace)
+    def _ns_has_netpol(ns):
+        if ns not in netpol_cache:
+            try:
+                policies = networking_v1.list_namespaced_network_policy(ns)
+                netpol_cache[ns] = bool(policies.items)
+            except Exception:
+                # API hatasi varsa false-positive olusmasini onlemek icin True kabul et
+                netpol_cache[ns] = True
+        return netpol_cache[ns]
+
+    def _resolve_findings(raw_findings, ns):
+        """i18n_key + i18n_params'i cevirilmis mesaja donusturur ve netpol finding'i ekler."""
+        result = []
+        for f in raw_findings:
+            msg = translate(f['i18n_key'], lang)
+            if f['i18n_params']:
+                msg = msg.format(**f['i18n_params'])
+            result.append({
+                'check_id': f['check_id'],
+                'severity': f['severity'],
+                'message': msg,
+                'container': f['container'],
+            })
+
+        # Check 13: NetworkPolicy (namespace basina bir kez; cached)
+        if not _ns_has_netpol(ns):
+            netpol_msg = translate('vuln.check.no_network_policy', lang).format(namespace=ns)
+            result.append({
+                'check_id': 'no-network-policy',
+                'severity': 'medium',
+                'message': netpol_msg,
+                'container': None,
+            })
+
+        return result
+
+    for ns in target_namespaces:
+        # --- Deployment'lar ---
+        try:
+            deployments = apps_v1.list_namespaced_deployment(ns).items
+        except Exception:
+            deployments = []
+        for dep in deployments:
+            key = f"{ns}/Deployment/{dep.metadata.name}"
+            raw = scan_pod_template(dep.spec.template, ns, 'Deployment', dep.metadata.name)
+            findings = _resolve_findings(raw, ns)
+            if findings:
+                all_vulnerabilities[key] = findings
+            if dep.spec.template.spec.containers:
+                pod_images[key] = ', '.join([ct.image for ct in dep.spec.template.spec.containers])
+
+        # --- StatefulSet'ler ---
+        try:
+            statefulsets = apps_v1.list_namespaced_stateful_set(ns).items
+        except Exception:
+            statefulsets = []
+        for sts in statefulsets:
+            key = f"{ns}/StatefulSet/{sts.metadata.name}"
+            raw = scan_pod_template(sts.spec.template, ns, 'StatefulSet', sts.metadata.name)
+            findings = _resolve_findings(raw, ns)
+            if findings:
+                all_vulnerabilities[key] = findings
+            if sts.spec.template.spec.containers:
+                pod_images[key] = ', '.join([ct.image for ct in sts.spec.template.spec.containers])
+
+        # --- DaemonSet'ler ---
+        try:
+            daemonsets = apps_v1.list_namespaced_daemon_set(ns).items
+        except Exception:
+            daemonsets = []
+        for ds in daemonsets:
+            key = f"{ns}/DaemonSet/{ds.metadata.name}"
+            raw = scan_pod_template(ds.spec.template, ns, 'DaemonSet', ds.metadata.name)
+            findings = _resolve_findings(raw, ns)
+            if findings:
+                all_vulnerabilities[key] = findings
+            if ds.spec.template.spec.containers:
+                pod_images[key] = ', '.join([ct.image for ct in ds.spec.template.spec.containers])
+
+    return render_template(
+        'vulnerabilities.html',
+        vulnerabilities=all_vulnerabilities,
+        pod_images=pod_images,
+        all_namespaces=namespaces,
+        selected_namespace=selected_namespace,
+    )
 
 
 # ---- Trivy Operator: Install, Status, Reports ----

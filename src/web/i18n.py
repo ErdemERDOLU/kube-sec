@@ -963,6 +963,172 @@ I18N = {
     'audit.action.scan_trigger': {'tr': 'Tarama Tetikleme', 'en': 'Scan Trigger'},
     'audit.action.add': {'tr': 'Ekleme', 'en': 'Add'},
     'audit.action.activate': {'tr': 'Aktif Etme', 'en': 'Activate'},
+
+    # ── Vulnerabilities — vuln.check.* kontrol mesajları (backlog #9) ────────
+    'vuln.check.no_pod_security_context': {
+        'tr': 'Pod seviyesinde security context tanımlı değil.',
+        'en': 'Pod-level security context is not defined.',
+    },
+    'vuln.check.no_container_security_context': {
+        'tr': "Container '{container}' için security context tanımlı değil.",
+        'en': "Container '{container}' does not have a security context.",
+    },
+    'vuln.check.image_latest_tag': {
+        'tr': "Container '{container}' latest etiketli imaj kullanıyor: {image}",
+        'en': "Container '{container}' uses latest image tag: {image}",
+    },
+    'vuln.check.no_resource_limits': {
+        'tr': "Container '{container}' için resource limits/requests tanımlı değil.",
+        'en': "Container '{container}' does not have resource limits/requests defined.",
+    },
+    'vuln.check.sensitive_env_var': {
+        'tr': "Container '{container}' ortam değişkeninde hassas bilgi: {env_name}",
+        'en': "Container '{container}' has sensitive info in env var: {env_name}",
+    },
+    'vuln.check.hostpath_volume': {
+        'tr': 'hostPath volume kullanılıyor: {volume_name}',
+        'en': 'Uses hostPath volume: {volume_name}',
+    },
+    'vuln.check.no_readonly_rootfs': {
+        'tr': "Container '{container}' için readOnlyRootFilesystem aktif değil.",
+        'en': "Container '{container}' does not have readOnlyRootFilesystem enabled.",
+    },
+    'vuln.check.dangerous_capability': {
+        'tr': "Container '{container}' tehlikeli capability ekliyor: {capability}",
+        'en': "Container '{container}' adds dangerous capability: {capability}",
+    },
+    'vuln.check.allow_privilege_escalation': {
+        'tr': "Container '{container}' privilege escalation'a izin veriyor.",
+        'en': "Container '{container}' allows privilege escalation.",
+    },
+    'vuln.check.no_liveness_probe': {
+        'tr': "Container '{container}' için livenessProbe tanımlı değil.",
+        'en': "Container '{container}' does not have livenessProbe defined.",
+    },
+    'vuln.check.no_readiness_probe': {
+        'tr': "Container '{container}' için readinessProbe tanımlı değil.",
+        'en': "Container '{container}' does not have readinessProbe defined.",
+    },
+    'vuln.check.default_service_account': {
+        'tr': 'Varsayılan (default) service account kullanılıyor.',
+        'en': 'Uses default service account.',
+    },
+    'vuln.check.no_network_policy': {
+        'tr': "{namespace} namespace'inde NetworkPolicy bulunamadı.",
+        'en': 'No NetworkPolicy found in namespace {namespace}.',
+    },
+
+    # ── Vulnerabilities — UI anahtarları (backlog #9) ────────────────────────
+    'vulns.stat_scanned_workloads': {'tr': 'Taranan Workload', 'en': 'Scanned Workloads'},
+    'vulns.severity_label': {'tr': 'Ciddiyet', 'en': 'Severity'},
+    'vulns.checked_area.security_context': {'tr': 'Security Context', 'en': 'Security Context'},
+    'vulns.checked_area.image_tags': {'tr': 'İmaj Etiketleri', 'en': 'Image Tags'},
+    'vulns.checked_area.resource_limits': {'tr': 'Kaynak Limitleri', 'en': 'Resource Limits'},
+    'vulns.checked_area.network_policies': {'tr': 'Network Policy', 'en': 'Network Policies'},
+    'vulns.checked_area.rbac': {'tr': 'RBAC Ayarları', 'en': 'RBAC Settings'},
+    'vulns.checked_area.pod_security': {'tr': 'Pod Güvenliği', 'en': 'Pod Security'},
+
+    # ── CIS Benchmark Uyumluluk Raporu — i18n anahtarları (backlog #12) ─────
+    'nav.compliance': {'tr': 'CIS Uyumluluk Raporu', 'en': 'CIS Compliance Report'},
+    'compliance.title': {
+        'tr': 'CIS Kubernetes Benchmark Uyumluluk Raporu',
+        'en': 'CIS Kubernetes Benchmark Compliance Report',
+    },
+    'compliance.score_label':  {'tr': 'Uyumluluk Skoru',  'en': 'Compliance Score'},
+    'compliance.passed':       {'tr': 'Geçen',            'en': 'Passed'},
+    'compliance.failed':       {'tr': 'Başarısız',        'en': 'Failed'},
+    'compliance.error':        {'tr': 'Hata',             'en': 'Error'},
+    'compliance.refresh':      {'tr': 'Yenile',           'en': 'Refresh'},
+    'compliance.export_csv':   {'tr': 'CSV İndir',        'en': 'Download CSV'},
+    'compliance.col_id':       {'tr': '#',                'en': '#'},
+    'compliance.col_cis_id':   {'tr': 'CIS ID',           'en': 'CIS ID'},
+    'compliance.col_cis_title':{'tr': 'CIS Başlığı',      'en': 'CIS Title'},
+    'compliance.col_category': {'tr': 'Kategori',         'en': 'Category'},
+    'compliance.col_status':   {'tr': 'Durum',            'en': 'Status'},
+    'compliance.col_summary':  {'tr': 'Özet',             'en': 'Summary'},
+    'compliance.col_details':  {'tr': 'Detay',            'en': 'Details'},
+    'compliance.generated_at': {'tr': 'Oluşturma Zamanı', 'en': 'Generated At'},
+    'compliance.cluster':      {'tr': 'Cluster',          'en': 'Cluster'},
+    'compliance.loading': {
+        'tr': 'Kontroller çalıştırılıyor...',
+        'en': 'Running checks...',
+    },
+    'compliance.error_fetch': {
+        'tr': 'Uyumluluk verileri alınamadı',
+        'en': 'Failed to fetch compliance data',
+    },
+    'compliance.no_data': {
+        'tr': 'Henüz veri yok. Yenile butonuna basın.',
+        'en': 'No data yet. Click Refresh.',
+    },
+    # C1 — Privileged Container
+    'compliance.check_c1_summary_pass': {
+        'tr': 'Privileged container bulunmadı',
+        'en': 'No privileged containers found',
+    },
+    'compliance.check_c1_summary_fail': {
+        'tr': '{count} privileged container bulundu',
+        'en': '{count} privileged containers found',
+    },
+    # C2 — Root Container
+    'compliance.check_c2_summary_pass': {
+        'tr': 'Root container bulunmadı',
+        'en': 'No root containers found',
+    },
+    'compliance.check_c2_summary_fail': {
+        'tr': '{count} root container bulundu',
+        'en': '{count} root containers found',
+    },
+    # C3 — PSA/PSS Namespace Uyumluluğu
+    'compliance.check_c3_summary_pass': {
+        'tr': "Tüm namespace'ler PSA enforce uyumlu",
+        'en': 'All namespaces PSA enforce compliant',
+    },
+    'compliance.check_c3_summary_fail': {
+        'tr': "{count} namespace'de uyumsuz pod var",
+        'en': '{count} namespaces have noncompliant pods',
+    },
+    # C4 — NetworkPolicy Kapsam Analizi
+    'compliance.check_c4_summary_pass': {
+        'tr': "Tüm namespace'lerde NetworkPolicy var",
+        'en': 'All namespaces have NetworkPolicy',
+    },
+    'compliance.check_c4_summary_fail': {
+        'tr': "{count} namespace'de NetworkPolicy yok",
+        'en': '{count} namespaces have no NetworkPolicy',
+    },
+    # C5 — ConfigMap Gizli Bilgi
+    'compliance.check_c5_summary_pass': {
+        'tr': "ConfigMap'lerde hassas veri bulunmadı",
+        'en': 'No sensitive data found in ConfigMaps',
+    },
+    'compliance.check_c5_summary_fail': {
+        'tr': '{count} şüpheli ConfigMap kaydı bulundu',
+        'en': '{count} suspicious ConfigMap entries found',
+    },
+    # C6 — Riskli RBAC Rolleri
+    'compliance.check_c6_summary_pass': {
+        'tr': 'Wildcard izinli rol bulunmadı',
+        'en': 'No wildcard permission roles found',
+    },
+    'compliance.check_c6_summary_fail': {
+        'tr': '{count} riskli rol bulundu',
+        'en': '{count} risky roles found',
+    },
+    # C7 — Resource Limits
+    'compliance.check_c7_summary_pass': {
+        'tr': "Tüm container'larda resource limits tanımlı",
+        'en': 'All containers have resource limits',
+    },
+    'compliance.check_c7_summary_fail': {
+        'tr': "{count} container'da resource limits eksik",
+        'en': '{count} containers missing resource limits',
+    },
+    # ERROR durumu için genel özet (tüm kontroller)
+    'compliance.check_error_summary': {
+        'tr': 'Kontrol çalıştırılamadı',
+        'en': 'Check could not run',
+    },
 }
 
 

@@ -120,30 +120,34 @@ def inject_i18n():
     }
 
 
-# Lightweight debug helper to inspect where Flask is resolving templates/static when frozen.
-@app.route('/_debug/list-templates')
-def _debug_list_templates():
-    try:
-        tpl = app.template_folder
-        static = app.static_folder
-        tpl_exists = os.path.isdir(tpl)
-        static_exists = os.path.isdir(static)
-        tpl_files = []
-        static_files = []
-        if tpl_exists:
-            for root, dirs, files in os.walk(tpl):
-                for f in files[:50]:
-                    tpl_files.append(os.path.relpath(os.path.join(root, f), tpl))
-                break
-        if static_exists:
-            for root, dirs, files in os.walk(static):
-                for f in files[:50]:
-                    static_files.append(os.path.relpath(os.path.join(root, f), static))
-                break
-        return jsonify({'template_folder': tpl, 'template_exists': tpl_exists, 'template_sample': tpl_files,
-                        'static_folder': static, 'static_exists': static_exists, 'static_sample': static_files})
-    except Exception as e:
-        return jsonify({'error': str(e)})
+# Guvenlik: Frozen (uretim) build'de debug endpoint'ini devre disi birak — dosya sistemi
+# yollarini ve template/static listesini herkese ifsa etmemek icin route yalnizca
+# gelistirme ortaminda (sys.frozen == False) kayit edilir; frozen build'de 404 doner.
+# Not: Ileride eklenecek tum /_debug/* route'lari ayni if blogu icinde tanimlanmalidir.
+if not getattr(sys, 'frozen', False):
+    @app.route('/_debug/list-templates')
+    def _debug_list_templates():
+        try:
+            tpl = app.template_folder
+            static = app.static_folder
+            tpl_exists = os.path.isdir(tpl)
+            static_exists = os.path.isdir(static)
+            tpl_files = []
+            static_files = []
+            if tpl_exists:
+                for root, dirs, files in os.walk(tpl):
+                    for f in files[:50]:
+                        tpl_files.append(os.path.relpath(os.path.join(root, f), tpl))
+                    break
+            if static_exists:
+                for root, dirs, files in os.walk(static):
+                    for f in files[:50]:
+                        static_files.append(os.path.relpath(os.path.join(root, f), static))
+                    break
+            return jsonify({'template_folder': tpl, 'template_exists': tpl_exists, 'template_sample': tpl_files,
+                            'static_folder': static, 'static_exists': static_exists, 'static_sample': static_files})
+        except Exception as e:
+            return jsonify({'error': str(e)})
 
 # ---- Arka Plan Cache Sistemi — background.py'den import edildi (sadece thread başlatıcılar; ----
 # ---- route'ların ihtiyaç duyduğu cache erişimi kendi blueprint modüllerinde yapılır) ----

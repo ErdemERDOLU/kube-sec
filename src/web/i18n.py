@@ -1129,6 +1129,9 @@ I18N = {
         'tr': 'Kontrol çalıştırılamadı',
         'en': 'Check could not run',
     },
+    'compliance.status_pass':  {'tr': 'Geçti',      'en': 'Pass'},
+    'compliance.status_fail':  {'tr': 'Başarısız',  'en': 'Fail'},
+    'compliance.status_error': {'tr': 'Hata',       'en': 'Error'},
 }
 
 

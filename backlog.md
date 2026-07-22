@@ -263,10 +263,11 @@
 **Sorun:** Kurumsal kullanicilar genellikle CIS Kubernetes Benchmark veya NSA/CISA rehberine uyumluluk raporu talep eder. Mevcut kontroller bu ihtiyaci kismen karsilasa da, esleme ve toplu raporlama eksik.
 
 **Kabul kriterleri:**
-- [ ] Yeni bir ekran (`/compliance` veya `/security-overview`) eklenir; mevcut tum guvenlik kontrollerinin sonuclarini toplu olarak gosterir.
-- [ ] Her kontrol, en az 1 CIS Benchmark maddesiyle eslenir (ornegin "5.2.1 — Ensure that the cluster has at least one active policy control mechanism in place" <-> PSA analizi).
-- [ ] Ekranda genel uyumluluk skoru (yuzde) hesaplanir: (gecen kontrol sayisi / toplam kontrol sayisi * 100).
-- [ ] Sonuclar CSV veya PDF olarak disari aktarilabilir.
+- [x] Yeni bir ekran (`/compliance`) eklenir; mevcut tum guvenlik kontrollerinin sonuclarini toplu olarak gosterir.
+- [x] Her kontrol, en az 1 CIS Benchmark maddesiyle eslenir (7 kontrol -> 5.2.1, 5.2.6, 5.2.2, 5.3.2, 5.4.1, 5.1.1, 5.2.7 — best-effort esleme, resmi CIS dogrulamasi kapsam disi).
+- [x] Ekranda genel uyumluluk skoru (yuzde) hesaplanir: (gecen kontrol sayisi / (toplam - hata) * 100).
+- [x] Sonuclar CSV olarak disari aktarilabilir (PDF kapsam disi birakildi — tarayicinin native "Print to PDF" ozelligi ile karsilaniyor, bkz. spec).
+  - Spec: `docs/specs/20260721-cis-benchmark-uyumluluk-raporu.md` (13 AC, 11 zorunlu CONFIRMED — iki bagimsiz dogrulama turu; 1. turda code-reviewer'in buldugu kritik bir hata (C6 RBAC kontrolu, API erisim hatasinda sessizce PASS donuyordu) ve 4 orta duzey sorun 2. turda duzeltildi ve tekrar dogrulandi. AC-12/AC-13 opsiyonel, yapilmadi, acik birakildi).
 
 ---
 

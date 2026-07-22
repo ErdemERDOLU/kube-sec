@@ -1,0 +1,549 @@
+{% extends "base.html" %}
+{% block title %}{{ t('compliance.title') }}{% endblock %}
+{% block page_title %}{{ t('compliance.title') }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <!-- Sayfa başlığı ve butonlar -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                <div>
+                    <h1 class="h3 mb-1 text-gray-800">
+                        <i class="bi bi-clipboard-check text-primary me-2"></i>
+                        {{ t('compliance.title') }}
+                    </h1>
+                    <div id="compliance-meta" class="text-muted small"></div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary btn-sm"
+                            id="exportCsvBtn"
+                            onclick="exportComplianceCsv()"
+                            aria-label="{{ t('compliance.export_csv') }}">
+                        <i class="bi bi-download me-1"></i>{{ t('compliance.export_csv') }}
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm"
+                            id="refreshBtn"
+                            onclick="loadComplianceData()"
+                            aria-label="{{ t('compliance.refresh') }}">
+                        <i class="bi bi-arrow-clockwise me-1"></i>{{ t('compliance.refresh') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Skor göstergesi + özet kartlar satırı -->
+    <div class="row mb-4">
+
+        <!-- Dairesel skor göstergesi -->
+        <div class="col-md-3 mb-3">
+            <div class="card shadow text-center h-100 py-2">
+                <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-2">
+                        {{ t('compliance.score_label') }}
+                    </div>
+                    <svg id="score-gauge"
+                         viewBox="0 0 100 100"
+                         style="width:110px;height:110px;"
+                         role="img"
+                         aria-label="{{ t('compliance.score_label') }}">
+                        <!-- Arka plan halkası -->
+                        <circle cx="50" cy="50" r="40"
+                                fill="none" stroke="#e2e8f0" stroke-width="10"/>
+                        <!-- Dolu ark (JS tarafından güncellenir) -->
+                        <circle id="score-arc"
+                                cx="50" cy="50" r="40"
+                                fill="none"
+                                stroke="#e2e8f0"
+                                stroke-width="10"
+                                stroke-linecap="round"
+                                stroke-dasharray="251.33"
+                                stroke-dashoffset="251.33"
+                                transform="rotate(-90 50 50)"/>
+                        <!-- Yüzde metni -->
+                        <text id="score-pct-text"
+                              x="50" y="57"
+                              text-anchor="middle"
+                              font-size="20"
+                              font-weight="bold"
+                              fill="#1e293b">—</text>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Geçen kartı (yeşil) -->
+        <div class="col-md-3 mb-3">
+            <div class="card shadow h-100 py-2" style="border-left:0.25rem solid #4CAF50;">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-uppercase mb-1"
+                                 style="color:#4CAF50;">
+                                {{ t('compliance.passed') }}
+                            </div>
+                            <div class="h4 mb-0 font-weight-bold text-gray-800"
+                                 id="card-passed">—</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-check-circle text-gray-300" style="font-size:2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Başarısız kartı (kırmızı) -->
+        <div class="col-md-3 mb-3">
+            <div class="card shadow h-100 py-2" style="border-left:0.25rem solid #F44336;">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-uppercase mb-1"
+                                 style="color:#F44336;">
+                                {{ t('compliance.failed') }}
+                            </div>
+                            <div class="h4 mb-0 font-weight-bold text-gray-800"
+                                 id="card-failed">—</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-x-circle text-gray-300" style="font-size:2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hata kartı (gri) -->
+        <div class="col-md-3 mb-3">
+            <div class="card shadow h-100 py-2" style="border-left:0.25rem solid #9E9E9E;">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-uppercase mb-1"
+                                 style="color:#9E9E9E;">
+                                {{ t('compliance.error') }}
+                            </div>
+                            <div class="h4 mb-0 font-weight-bold text-gray-800"
+                                 id="card-error">—</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="bi bi-exclamation-circle text-gray-300"
+                               style="font-size:2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Yükleme durumu -->
+    <div id="compliance-loading" class="text-center py-5" role="status" aria-live="polite">
+        <span class="loading-spinner me-2"></span>
+        <span class="text-muted">{{ t('compliance.loading') }}</span>
+    </div>
+
+    <!-- Hata durumu -->
+    <div id="compliance-error"
+         class="alert alert-danger d-none"
+         role="alert"
+         aria-live="assertive">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <span>{{ t('compliance.error_fetch') }}</span>
+    </div>
+
+    <!-- Kontrol tablosu kartı -->
+    <div id="compliance-table-wrap" class="card shadow mb-4 d-none">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="bi bi-table me-2"></i>{{ t('compliance.title') }}
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive" style="max-height:none;overflow-y:visible;">
+                <table class="table table-hover mb-0"
+                       id="compliance-table"
+                       aria-label="{{ t('compliance.title') }}">
+                    <thead class="table-dark">
+                        <tr>
+                            <th scope="col" class="text-center" style="width:5%;">
+                                {{ t('compliance.col_id') }}
+                            </th>
+                            <th scope="col" style="width:8%;">
+                                {{ t('compliance.col_cis_id') }}
+                            </th>
+                            <th scope="col" style="width:28%;">
+                                {{ t('compliance.col_cis_title') }}
+                            </th>
+                            <th scope="col" style="width:16%;">
+                                {{ t('compliance.col_category') }}
+                            </th>
+                            <th scope="col" class="text-center" style="width:8%;">
+                                {{ t('compliance.col_status') }}
+                            </th>
+                            <th scope="col" style="width:27%;">
+                                {{ t('compliance.col_summary') }}
+                            </th>
+                            <th scope="col" class="text-center" style="width:8%;">
+                                {{ t('compliance.col_details') }}
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="compliance-tbody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+/* pod_security_standards.html'den alınan yardımcı sınıflar */
+.text-xs          { font-size: 0.7rem; }
+.font-weight-bold { font-weight: 700 !important; }
+.text-gray-800    { color: #5a5c69 !important; }
+.text-gray-300    { color: #dddfeb !important; }
+
+/* Durum badge'leri — CIS spec renk kodlaması */
+.badge-cis-pass  { background-color: #4CAF50 !important; color: #fff !important; }
+.badge-cis-fail  { background-color: #F44336 !important; color: #fff !important; }
+.badge-cis-error { background-color: #9E9E9E !important; color: #fff !important; }
+
+/* Detay satırı arka planı */
+#compliance-table tbody tr.detail-row td {
+    background-color: #f8fafc;
+    border-top: none;
+}
+#compliance-table tbody tr.detail-row .table {
+    margin-bottom: 0;
+}
+
+/* Skor halkası animasyonu */
+#score-arc {
+    transition: stroke-dashoffset 0.8s cubic-bezier(.4,0,.2,1),
+                stroke 0.8s ease;
+}
+
+/* Satır hover */
+#compliance-table tbody tr.main-row:hover {
+    background-color: rgba(37, 99, 235, 0.04);
+}
+</style>
+
+<script>
+(function () {
+    'use strict';
+
+    /* -------------------------------------------------------------------
+       i18n yardımcısı
+       window.i18n ve window.locale base.html tarafından sayfa başında
+       server-side olarak set edilir:
+         window.locale = "{{ current_locale or 'tr' }}"
+         window.i18n   = { ... tüm anahtarlar ... }
+    ------------------------------------------------------------------- */
+    function t(key) {
+        var locale = window.locale || 'tr';
+        var i18n   = window.i18n   || {};
+        return (i18n[key] && i18n[key][locale]) || key;
+    }
+
+    /* -------------------------------------------------------------------
+       Durum
+    ------------------------------------------------------------------- */
+    var currentData = null;
+
+    /* -------------------------------------------------------------------
+       Durum badge'i HTML'i
+    ------------------------------------------------------------------- */
+    function statusBadge(status) {
+        if (status === 'PASS')  return '<span class="badge badge-cis-pass">'  + t('compliance.status_pass')  + '</span>';
+        if (status === 'FAIL')  return '<span class="badge badge-cis-fail">'  + t('compliance.status_fail')  + '</span>';
+        return '<span class="badge badge-cis-error">' + t('compliance.status_error') + '</span>';
+    }
+
+    /* -------------------------------------------------------------------
+       Özet metin — HTML versiyonu (tablo hücresi için)
+       - ERROR: t('compliance.check_error_summary'), opsiyonel teknik detay
+       - Diğer: t('compliance.' + summary_key) ile {count} yerine details_count
+    ------------------------------------------------------------------- */
+    function buildSummaryHtml(check) {
+        if (check.status === 'ERROR') {
+            var base = escapeHtml(t('compliance.check_error_summary'));
+            if (check.error_message) {
+                base += '<br><small class="text-muted fst-italic">'
+                    + escapeHtml(check.error_message)
+                    + '</small>';
+            }
+            return base;
+        }
+        if (!check.summary_key) return '<span class="text-muted">—</span>';
+        var raw   = t('compliance.' + check.summary_key);
+        var count = check.details_count != null ? check.details_count : 0;
+        return escapeHtml(String(raw).replace('{count}', count));
+    }
+
+    /* -------------------------------------------------------------------
+       Özet metin — düz metin versiyonu (CSV için, HTML içermez)
+    ------------------------------------------------------------------- */
+    function buildSummaryPlain(check) {
+        if (check.status === 'ERROR') {
+            var base = t('compliance.check_error_summary');
+            if (check.error_message) return base + ': ' + check.error_message;
+            return base;
+        }
+        if (!check.summary_key) return '';
+        var raw   = t('compliance.' + check.summary_key);
+        var count = check.details_count != null ? check.details_count : 0;
+        return String(raw).replace('{count}', count);
+    }
+
+    /* -------------------------------------------------------------------
+       Detay içeriği — generic key-value tablo
+       Her kontrol tipi farklı alan kümesi döndürebilir; tüm anahtarlar
+       dinamik olarak çekilir.
+    ------------------------------------------------------------------- */
+    function buildDetailContent(details) {
+        if (!details || details.length === 0) {
+            return '<span class="text-muted small">—</span>';
+        }
+
+        // Tüm nesnelerdeki birleşik anahtar listesi (sıralı, uniq)
+        var keys = [];
+        details.forEach(function (d) {
+            Object.keys(d).forEach(function (k) {
+                if (keys.indexOf(k) === -1) keys.push(k);
+            });
+        });
+
+        var html = '<table class="table table-sm table-bordered mb-0 small">'
+            + '<thead class="table-secondary"><tr>'
+            + keys.map(function (k) {
+                return '<th scope="col">' + escapeHtml(k) + '</th>';
+            }).join('')
+            + '</tr></thead><tbody>'
+            + details.map(function (d) {
+                return '<tr>' + keys.map(function (k) {
+                    var val = d[k] != null ? String(d[k]) : '—';
+                    return '<td>' + escapeHtml(val) + '</td>';
+                }).join('') + '</tr>';
+            }).join('')
+            + '</tbody></table>';
+
+        return html;
+    }
+
+    /* -------------------------------------------------------------------
+       Detay satırını aç/kapat (AC-11)
+    ------------------------------------------------------------------- */
+    window.toggleDetail = function (id) {
+        var row = document.getElementById('detail-row-' + id);
+        var btn = document.getElementById('toggle-btn-' + id);
+        if (!row) return;
+        var isHidden = row.classList.contains('d-none');
+        row.classList.toggle('d-none', !isHidden);
+        if (btn) btn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+    };
+
+    /* -------------------------------------------------------------------
+       Tek kontrol satırı (ana satır + isteğe bağlı detay satırı)
+    ------------------------------------------------------------------- */
+    function buildTableRow(check) {
+        var id         = check.id || '';
+        var safeId     = escapeHtml(id);
+        var hasDetails = Array.isArray(check.details) && check.details.length > 0;
+
+        // Detay aç/kapat butonu
+        var detailCell;
+        if (hasDetails) {
+            detailCell = '<button id="toggle-btn-' + safeId + '"'
+                + ' class="btn btn-sm btn-outline-secondary"'
+                + ' onclick="toggleDetail(\'' + safeId + '\')"'
+                + ' aria-expanded="false"'
+                + ' aria-controls="detail-row-' + safeId + '">'
+                + '<i class="bi bi-list-ul me-1"></i>'
+                + '<span class="badge bg-secondary rounded-pill">'
+                + escapeHtml(check.details.length)
+                + '</span>'
+                + '</button>';
+        } else {
+            detailCell = '<span class="text-muted small">—</span>';
+        }
+
+        var mainRow = '<tr class="main-row">'
+            + '<td class="text-center fw-bold text-primary">' + safeId + '</td>'
+            + '<td class="text-nowrap"><code class="small">'
+            + escapeHtml(check.cis_id || '')
+            + '</code></td>'
+            + '<td class="small">' + escapeHtml(check.cis_title || '') + '</td>'
+            + '<td class="small text-muted">' + escapeHtml(check.category || '') + '</td>'
+            + '<td class="text-center">' + statusBadge(check.status) + '</td>'
+            + '<td class="small">' + buildSummaryHtml(check) + '</td>'
+            + '<td class="text-center">' + detailCell + '</td>'
+            + '</tr>';
+
+        var detailRow = '';
+        if (hasDetails) {
+            detailRow = '<tr id="detail-row-' + safeId + '" class="detail-row d-none">'
+                + '<td colspan="7">'
+                + '<div class="table-responsive p-2">'
+                + buildDetailContent(check.details)
+                + '</div>'
+                + '</td>'
+                + '</tr>';
+        }
+
+        return mainRow + detailRow;
+    }
+
+    /* -------------------------------------------------------------------
+       Skor halkasını güncelle
+       SVG daire: r=40, çevre = 2*π*40 ≈ 251.33
+       stroke-dashoffset = çevre * (1 - yüzde/100)
+    ------------------------------------------------------------------- */
+    function updateScore(score) {
+        if (!score) return;
+        var pct  = score.percentage != null ? Number(score.percentage) : 0;
+        var arc  = document.getElementById('score-arc');
+        var txt  = document.getElementById('score-pct-text');
+        var CIRC = 251.33;
+
+        if (arc) {
+            var offset = CIRC * (1 - pct / 100);
+            arc.setAttribute('stroke-dashoffset', String(offset.toFixed(2)));
+            var color = pct >= 80 ? '#4CAF50' : pct >= 50 ? '#FF9800' : '#F44336';
+            arc.setAttribute('stroke', color);
+        }
+        if (txt) txt.textContent = pct + '%';
+    }
+
+    /* -------------------------------------------------------------------
+       Özet kartları güncelle
+    ------------------------------------------------------------------- */
+    function updateCards(score) {
+        if (!score) return;
+        var el;
+        el = document.getElementById('card-passed');
+        if (el) el.textContent = score.passed != null ? score.passed : '—';
+        el = document.getElementById('card-failed');
+        if (el) el.textContent = score.failed != null ? score.failed : '—';
+        el = document.getElementById('card-error');
+        if (el) el.textContent = score.error  != null ? score.error  : '—';
+    }
+
+    /* -------------------------------------------------------------------
+       Tabloyu oluştur
+    ------------------------------------------------------------------- */
+    function renderTable(checks) {
+        var tbody = document.getElementById('compliance-tbody');
+        if (!tbody) return;
+        if (!checks || checks.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">'
+                + escapeHtml(t('compliance.no_data'))
+                + '</td></tr>';
+            return;
+        }
+        tbody.innerHTML = checks.map(buildTableRow).join('');
+    }
+
+    /* -------------------------------------------------------------------
+       CSV export (AC-6)
+       exportToCsv() common.js'den gelir; UTF-8 BOM ekler, Excel uyumlu.
+       Dosya adı: cis-compliance-report-YYYY-MM-DD.csv
+    ------------------------------------------------------------------- */
+    window.exportComplianceCsv = function () {
+        if (!currentData || !Array.isArray(currentData.checks) || currentData.checks.length === 0) {
+            return;
+        }
+        var today    = new Date().toISOString().slice(0, 10);
+        var filename = 'cis-compliance-report-' + today + '.csv';
+        var headers  = [
+            t('compliance.col_cis_id'),
+            t('compliance.col_cis_title'),
+            t('compliance.col_category'),
+            t('compliance.col_status'),
+            t('compliance.col_summary')
+        ];
+        var rows = currentData.checks.map(function (check) {
+            return [
+                check.cis_id    || '',
+                check.cis_title || '',
+                check.category  || '',
+                check.status    || '',
+                buildSummaryPlain(check)
+            ];
+        });
+        exportToCsv(filename, headers, rows);
+    };
+
+    /* -------------------------------------------------------------------
+       /compliance-data fetch — sayfa yüklendiğinde ve "Yenile" tıklandığında
+    ------------------------------------------------------------------- */
+    window.loadComplianceData = function () {
+        var loadingEl  = document.getElementById('compliance-loading');
+        var errorEl    = document.getElementById('compliance-error');
+        var tableEl    = document.getElementById('compliance-table-wrap');
+        var refreshBtn = document.getElementById('refreshBtn');
+
+        // Yükleme başlıyor
+        if (loadingEl)  loadingEl.classList.remove('d-none');
+        if (errorEl)    errorEl.classList.add('d-none');
+        if (tableEl)    tableEl.classList.add('d-none');
+
+        if (refreshBtn) {
+            refreshBtn.disabled = true;
+            refreshBtn.innerHTML = '<span class="loading-spinner me-1"'
+                + ' style="width:.8rem;height:.8rem;border-width:2px;"></span>'
+                + escapeHtml(t('compliance.loading'));
+        }
+
+        fetch('/compliance-data', { credentials: 'include' })
+            .then(function (r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(function (data) {
+                currentData = data;
+
+                // Meta bilgisi (generated_at + cluster_context)
+                var meta = document.getElementById('compliance-meta');
+                if (meta) {
+                    var parts = [];
+                    if (data.generated_at)    parts.push(t('compliance.generated_at') + ': ' + data.generated_at);
+                    if (data.cluster_context) parts.push(t('compliance.cluster') + ': ' + data.cluster_context);
+                    meta.textContent = parts.join('  |  ');
+                }
+
+                updateScore(data.score);
+                updateCards(data.score);
+                renderTable(data.checks || []);
+
+                if (loadingEl) loadingEl.classList.add('d-none');
+                if (tableEl)   tableEl.classList.remove('d-none');
+            })
+            .catch(function () {
+                if (loadingEl) loadingEl.classList.add('d-none');
+                if (errorEl)   errorEl.classList.remove('d-none');
+            })
+            .finally(function () {
+                if (refreshBtn) {
+                    refreshBtn.disabled = false;
+                    refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>'
+                        + escapeHtml(t('compliance.refresh'));
+                }
+            });
+    };
+
+    /* -------------------------------------------------------------------
+       Sayfa yüklenince otomatik fetch (spec gereksinimi)
+    ------------------------------------------------------------------- */
+    document.addEventListener('DOMContentLoaded', function () {
+        window.loadComplianceData();
+    });
+
+}());
+</script>
+{% endblock %}

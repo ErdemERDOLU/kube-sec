@@ -242,14 +242,26 @@ def handle_csrf_error(e):
 
 @app.errorhandler(Exception)
 def handle_exception(e):
+    from werkzeug.exceptions import HTTPException
     import sys
+
+    # HTTPException ise (404 NotFound, 405 MethodNotAllowed, 400 BadRequest vb.)
+    # Flask/Werkzeug'un kendi status kodunu ve aciklamasini koru — 500'e cevirme.
+    if isinstance(e, HTTPException):
+        response = {'error': e.description}
+        if _debug_enabled:
+            response['traceback'] = traceback.format_exc()
+        return jsonify(response), e.code
+
+    # Gercek beklenmeyen sunucu hatasi (HTTPException OLMAYAN) — 500 don.
     tb = traceback.format_exc()
     print('GLOBAL ERROR HANDLER:', e, file=sys.stderr)
     print(tb, file=sys.stderr)
-    response = {
-        'error': str(e),
-        'traceback': tb
-    }
+    response = {'error': str(e)}
+    # Traceback yalnizca gelistirme modunda yanita eklenir (production'da bilgi sizintisi onlenir).
+    # _debug_enabled: app.py satir 130-134'te tanimli (FLASK_ENV=development veya FLASK_DEBUG=1).
+    if _debug_enabled:
+        response['traceback'] = tb
     return jsonify(response), 500
 
 @app.route('/')

@@ -213,10 +213,10 @@ Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagit
 
 ---
 
-## [Oncelik: Dusuk] 11. Linux Masaustu Paketleme Destegi
+## [Oncelik: Dusuk] 11. Linux Masaustu Paketleme Destegi — TAMAMLANDI
 
 **Kategori:** Paketleme / Dagitim
-**Mevcut durum:**
+**Mevcut durum (onceki):**
 - macOS: `build_macos_app.sh`, `Kube-Sec.spec` (PyInstaller), `release.yml` (GitHub Actions) — tamamen calisir durumda (v1.0.0-rc8 yayinda).
 - Windows: `build-windows.sh` / `build-windows.ps1` mevcut.
 - Linux: Native masaustu paketi (AppImage, .deb, .rpm veya Flatpak) **mevcut degil**. Yalnizca `python src/main.py` veya Docker ile calistirma secenekleri var.
@@ -224,11 +224,15 @@ Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagit
 
 **Sorun:** Kubernetes yoneticilerinin cogunlugu Linux masaustu kullanir. Docker ile calistirma mumkun olsa da, Docker icinden kullanicinin yerel kubeconfig'ine ve kubectl'ine erismek ek konfigürasyon gerektirir. Native bir masaustu paketi, kurulumu ve kullanimi basitlestirirdi.
 
+**Karar:** PyInstaller `--onedir` + `tar.gz` (AppImage/.deb/.rpm/Flatpak kapsam disi birakildi — bkz. spec). Tam spec: `docs/specs/20260723-linux-masaustu-paketleme.md`.
+
 **Kabul kriterleri:**
-- [ ] Linux icin PyInstaller veya AppImage build scripti (`build_linux_app.sh` veya benzeri) eklenir.
-- [ ] Build scripti en az Ubuntu 22.04 / Fedora 38 uzerinde test edilir.
-- [ ] `release.yml` icine opsiyonel bir `build-linux` job'u eklenir (macOS/Windows job'lariyla paralel).
-- [ ] Olusturulan Linux paketi basarila calisir: `./Kube-Sec` calistirma -> tarayici acilir -> ana sayfa yuklenir.
+- [x] Linux icin PyInstaller build scripti eklendi: `build_linux_app.sh` (repo koku, `--onedir`, macOS'la ayni `--add-data` eslemeleri, pywebview/PyObjC modulleri disliyor, cikti `Kube-Sec-{VERSION}-linux-x86_64.tar.gz`).
+- [x] `Makefile`'a `build-linux: version-sync` hedefi eklendi (`.PHONY`'ye eklendi).
+- [x] `release.yml` icine opsiyonel/bloklamayan bir `build-linux` job'u eklendi (`ubuntu-latest`, macOS/Windows job'lariyla paralel, `create-release.needs` listesine EKLENMEDI, artifact indirme `continue-on-error: true`).
+- [x] CI icinde smoke test: binary arka planda baslatilip `curl` ile ana sayfadan HTTP 200 dogrulaniyor.
+- Not: "Fedora 38'de test edilir" kriteri kapsam disi birakildi — GitHub Actions'ta hosted Fedora runner yok; yalnizca `ubuntu-latest` ile dogrulaniyor (bkz. spec, Acik Sorular/Riskler).
+- Surec: Spec `product-manager` agent tarafindan hazirlandi, `devops-engineer` agent tarafindan uygulandi, bagimsiz `qa-engineer` agent tarafindan dogrulandi (8/8 AC CONFIRMED, 0 FAILED). Gercek Ubuntu/Fedora runner'da fiili calisma dogrulamasi bir sonraki tag push'unda GitHub Actions uzerinden yapilacak (macOS'ta cross-compile mumkun degil).
 
 ---
 

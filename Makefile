@@ -16,7 +16,7 @@ APP_NAME ?= Kube-Sec
 
 .PHONY: venv install install-dev upgrade run run-dev clean version-show set-version bump-patch bump-minor bump-major version-sync build-macos tag push-tag \
     build-macos-arm build-macos-intel build-macos-universal sign notarize dmg release-macos \
-    build-windows
+    build-windows build-linux
 
 venv:
 	python3 -m venv $(VENV)
@@ -128,3 +128,10 @@ push-tag:
 build-windows: version-sync
 	pwsh ./build-windows.ps1
 	@echo "Windows build tamamlandı (version $$(cat $(VERSION_FILE)))"
+
+# Linux build — ubuntu-latest runner'da veya yerel Linux ortamında çalıştırılmalı.
+# PyInstaller cross-compile desteklemez; macOS/Windows'ta çalıştırılırsa Linux binary üretilmez.
+build-linux: version-sync
+	@v=$$(cat $(VERSION_FILE)); \
+	APP_VERSION="$$v" bash build_linux_app.sh
+	@echo "Linux app build tamamlandı (version $$(cat $(VERSION_FILE)))"

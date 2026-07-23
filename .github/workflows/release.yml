@@ -340,12 +340,79 @@ jobs:
 
 
   # ───────────────────────────────────────────────────────────────────────────
+  # backlog #11 AC-3/5: Linux Build — PyInstaller --onedir + tar.gz
+  #
+  # OPSIYONEL / BLOKLAMAZ: Bu job basarisiz olursa macOS+Windows release'i
+  # ENGELLENMEZ. create-release job'unun needs listesine EKLENMEMISTIR.
+  # Linux artifact create-release'de continue-on-error:true ile indirilir.
+  #
+  # AC-5: ubuntu-latest runner, timeout-minutes:15, smoke test (HTTP 200).
+  # AC-6: --exclude-module webview → launcher.py ImportError fallback → tarayici modu.
+  # AC-8: Artifact adi: linux-tar-gz, dosya adi: Kube-Sec-{VERSION}-linux-x86_64.tar.gz.
+  # ───────────────────────────────────────────────────────────────────────────
+  build-linux:
+    name: Linux Build — tar.gz (backlog#11 AC-1/2/3/5/6)
+    needs: check-version
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Kodu indir
+        uses: actions/checkout@v4
+
+      - name: Python 3.11 kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # requirements.txt bagimlilikları + PyInstaller kur.
+      # Not: PyInstaller requirements.txt icinde degildir; ayrica kuruluyor.
+      - name: Bagimliliklari kur (requirements.txt + PyInstaller)
+        run: |
+          make install
+          python3 -m pip install pyinstaller
+
+      # make build-linux: version-sync (src/version.py guncelle) + bash build_linux_app.sh
+      # APP_VERSION Makefile tarafindan VERSION dosyasindan okunarak script'e gecilir.
+      - name: Linux build — version-sync + PyInstaller + tar.gz (make build-linux)
+        run: make build-linux
+
+      # AC-2, AC-5: Uretilen binary'yi arka planda baslatip HTTP 200 dogrula.
+      # USE_PYWEBVIEW=0  -> webview import denemesi atlaniyor (zaten --exclude-module ile dislanmis).
+      # NO_AUTO_BROWSER=1 -> CI ortaminda tarayici acilmasini engelle.
+      # APP_PORT=8765    -> Sabit port; curl hedefini onceden bilinir kilar.
+      - name: Smoke test — binary baslatip HTTP 200 dogrula (AC-2)
+        run: |
+          APP_PORT=8765 USE_PYWEBVIEW=0 NO_AUTO_BROWSER=1 ./dist/Kube-Sec/Kube-Sec &
+          BINARY_PID=$!
+          sleep 5
+          HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8765/)
+          kill "$BINARY_PID" || true
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Smoke test basarisiz! HTTP ${HTTP_CODE} dondu (200 bekleniyor)."
+            exit 1
+          fi
+          echo "Smoke test BASARILI: HTTP 200"
+
+      # AC-8: Artifact adi 'linux-tar-gz', dosya adi versiyonlu ve platform belirtir.
+      - name: Linux tar.gz artifact yukle (AC-8)
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-tar-gz
+          path: dist/Kube-Sec-*.tar.gz
+          if-no-files-found: error
+
+
+  # ───────────────────────────────────────────────────────────────────────────
   # AC-7: Draft GitHub Release olustur
   #
   # Her iki platform job'u basarIyla tamamlaninca tek bir GitHub Release olusturulur.
   # Herhangi bir job FAILED ise bu job hic calismaz (varsayilan GitHub Actions
   # 'needs' davranisi — ekstra 'if' kosuluna gerek yoktur).
   # Release draft modundadir; kullanici GitHub arayuzunden elle "Publish" yapar.
+  #
+  # NOT (backlog #11 AC-3): build-linux bu listeye EKLENMEMISTIR — Linux build
+  # basarisiz olursa macOS+Windows release'i engellenmez (opsiyonel/bloklamayan).
   # ───────────────────────────────────────────────────────────────────────────
   create-release:
     name: GitHub Draft Release Olustur (AC-7)
@@ -374,6 +441,17 @@ jobs:
         with:
           name: windows-zip
           path: release-artifacts/
+
+      # backlog #11 AC-3/AC-8: Linux tar.gz opsiyonel olarak indirilir.
+      # build-linux job'u create-release'in needs listesinde olmadigi icin
+      # artifact mevcut olmayabilir (Linux build basarisizsa veya atlandiysa).
+      # continue-on-error:true → Linux artifact eksikse release ENGELLENMEZ.
+      - name: Linux tar.gz artifact'i indir (opsiyonel, AC-3)
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-tar-gz
+          path: release-artifacts/
+        continue-on-error: true
 
       # AC-7, AC-11: Draft release olustur; tum platform artifact'larini ekle.
       # - draft:true → otomatik public yayinlanmaz (ac-7)

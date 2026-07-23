@@ -266,24 +266,6 @@ Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagit
 
 ---
 
-## [Oncelik: Dusuk] 13. macOS App Store Dagitimi (Ertelenmis — Mimari Karar Gerektirir)
-
-**Kategori:** Paketleme / Dagitim
-**Mevcut durum:**
-- macOS masaustu uygulamasi PyInstaller ile paketleniyor, Developer ID ile imzalaniyor ve notarize ediliyor (release pipeline'i tamamen calisir).
-- App Store dagitimi icin Apple **sandbox** zorunlulugu var. Kube-Sec'in `subprocess.Popen` ile `kubectl` ve `helm` calistirmasi, ag baglantilari yapmasi ve dosya sistemi erisimleri (kubeconfig okuma/yazma) sandbox kisitlamalariyla uyumsuz.
-- Alternatif yaklasim: `kubectl`/`helm` yerine tamamen Kubernetes Python client kullanimi; ancak Trivy Operator kurulumu (`helm`) ve `kubectl describe` gibi islemler su an subprocess'e bagimli.
-
-**Sorun:** Bu konu kullaniciyla gorusulmus ve **ertelenmistir**. Dogrudan developer distribution (notarize + DMG) halihazirda calisir durumda ve yeterlidir. App Store dagitimi olmasi-iyi-olur ancak onemli bir mimari degisiklik gerektirir.
-
-**Kabul kriterleri:**
-- [ ] (Gelecek donem) Sandbox uyumluluk analizi dokumante edilir: hangi subprocess cagrilari sandbox'ta calismaz, hangileri Kubernetes Python client ile degistirilebilir.
-- [ ] (Gelecek donem) En az `kubectl describe` islevselliginin Python client'a tasinmasi ile subprocess bagimliligi azaltilir.
-
-**Not:** Bu madde bilinçli olarak ertelenmis bir karar noktasidir; aktif gelistirme onceligi degildir.
-
----
-
 ## [Oncelik: Orta] 14. Guvenlik: Global Error Handler Stack Trace Sizintisi ve Yanlis HTTP Status Kodlari
 
 **Kategori:** Guvenlik / Teknik Borc

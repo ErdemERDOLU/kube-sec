@@ -329,6 +329,25 @@ repoyu fork'la, branch üzerinde değişikliklerini yap ve `main`'e pull request
 
 ---
 
+## Branch Protection Onerisi
+
+Asagidaki GitHub branch protection kurallari, `main` branch'e uygulanmasi **onerilir**.
+Bu kurallar repo ayarlarindan (Settings > Branches > Branch protection rules) yapilandirilir:
+
+1. **Require status checks to pass before merging** — Etkinlestirilmeli
+2. **Status checks that are required:**
+   - `Python Kalite Kontrolleri` (ci.yml job'u — syntax, import zinciri ve test suite)
+   - `Gitleaks Secret Taramasi` (security-scan.yml job'u — credential/secret taramasi)
+3. **Require branches to be up to date before merging** — Etkinlestirilmeli
+
+Bu kurallar uygulandiginda, CI kalite kontrolleri (syntax, import, test) veya secret
+taramasi basarisiz olan hicbir PR main branch'e merge edilemez.
+
+**Not:** Bu kurallar GitHub repo ayarlarindan manuel olarak yapilandirilmalidir;
+bir workflow dosyasi ile otomatik aktif hale gelmez.
+
+---
+
 ## License
 
 License: TBD — a license file has not yet been added to this repository. Until a license is published, the source code is not explicitly available for reuse, modification, or distribution. If you intend to use or contribute to this project, please contact the project owner first.

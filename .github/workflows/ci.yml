@@ -1,0 +1,98 @@
+name: Kalite Kontrol (Lint + Test)
+
+# -----------------------------------------------------------------------
+# Bu workflow, her push (main branch) ve her pull_request olayinda
+# otomatik tetiklenir.
+#
+# Amac: Python syntax/fatal hatalari, import zinciri butunlugu ve mevcut
+# test suite'inin basarili gectigini her PR'da otomatik dogrulamak.
+#
+# Adim sirasi (hata tespiti hiyerarsisi):
+#   1. ruff    — syntax + fatal hatalar (~1-2 saniye); hata varsa geri kalanlar calismaz
+#   2. import  — web.app giris noktasinin import edilebilir oldugunu dogrular
+#   3. pytest  — tam test suite (59 test, backlog #1 tarafindan olusturuldu)
+#
+# security-scan.yml (gitleaks) ve release.yml (build+release) ile
+# bagimsiz calisir; aralarinda 'needs' iliskisi yoktur.
+# security-scan.yml her branch push'unda calismaya devam eder;
+# bu workflow yalnizca main push ve PR olaylarinda tetiklenir.
+#
+# Tahmini sure: ~60-90 saniye (pip install ~30-40s, ruff ~2s, import ~3s, pytest ~20s)
+# -----------------------------------------------------------------------
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# -----------------------------------------------------------------------
+# Least-privilege prensibi: Bu workflow yalnizca kodu okur;
+# repoya yazma izni gerekmez. Mevcut workflow'larla (security-scan.yml,
+# release.yml) tutarli sekilde contents:read ile sinirlandirilmistir.
+# -----------------------------------------------------------------------
+permissions:
+  contents: read
+
+jobs:
+  quality-check:
+    name: Python Kalite Kontrolleri
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Kodu indir
+        uses: actions/checkout@v4
+
+      - name: Python 3.9 kur
+        uses: actions/setup-python@v5
+        with:
+          # Python 3.9: Dockerfile'daki python:3.9-slim ve README'deki "Python 3.9+"
+          # ile tutarli — desteklenen en dusuk surum olarak CI'da test edilir.
+          # release.yml Python 3.11 kullaniyor (PyInstaller build icin); bu workflow
+          # kalite kontrol amacli en dusuk desteklenen surumu hedefler (celismez).
+          python-version: '3.9'
+
+      - name: Bagimliliklari kur (requirements.txt + ruff)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          # ruff yalnizca CI'da kurulur; requirements.txt'e EKLENMEZ.
+          # Gerekce: runtime bagimliligina karismamali; gelistirici ortamini
+          # zorunlu olarak degistirmemeli. ruff surumu sabitlenmemistir —
+          # --select=E9,F63,F7,F82 kural seti kararli, davranis degisikligi riski dusuk.
+          python -m pip install ruff
+
+      # ── Adim 1: Python syntax ve fatal hata kontrolu ──────────────────────
+      # ruff check --select=E9,F63,F7,F82 yalnizca "fatal" hatalari kontrol eder:
+      #   E9   — SyntaxError (gecersiz Python syntax'i)
+      #   F63  — assert literal karsilastirmasi (ornk. assert(x == 1) yerine assert x == 1)
+      #   F7   — break/continue/return tanimsiz kapsamda kullanim, __all__ format hatasi
+      #   F82  — undefined name (tanimlanmamis degisken, fonksiyon veya import)
+      #
+      # Kod stili (bosluk sayisi, satir uzunlugu, import sirasi vb.) bu kapsamda
+      # DENETLENMEZ — bu bir "fatal error only" taramasidir.
+      - name: Python syntax ve fatal hata kontrolu (ruff)
+        run: ruff check --select=E9,F63,F7,F82 src/
+
+      # ── Adim 2: Import zinciri butunluk kontrolu ──────────────────────────
+      # Uygulamanin ana giris noktasi (web.app:app) import edilebilir mi?
+      # Bu adim, eksik modulleri veya dairesel import'lari erken yakalar ve
+      # pytest'ten ONCE calistirarak daha net bir hata mesaji verir.
+      #
+      # PYTHONPATH=src gereklidir; src/main.py ve tests/conftest.py ayni
+      # yolu kullaniyor (sys.path.insert(0, 'src') veya PYTHONPATH=src).
+      #
+      # Not: web.app import edildiginde arka plan cache thread'leri baslatilabilir;
+      # ancak daemon thread'ler oldugu icin main thread bitince otomatik temizlenir
+      # ve CI'da K8s cluster baglantisi olmasa bile test sonucunu etkilemez
+      # (mevcut 59 test ayni import'u conftest.py'de yaparak bunu kanitlamistir).
+      - name: Uygulama import zinciri kontrolu
+        run: PYTHONPATH=src python -c "from web.app import app; print('import OK')"
+
+      # ── Adim 3: Test suite'i calistir ────────────────────────────────────
+      # 59 test (backlog #1 kapsaminda olusturuldu) calistirilir.
+      # CI ortaminda .venv yoktur; dogrudan 'python -m pytest' kullanilir
+      # (Makefile'daki 'make test' → '$(PYTHON) -m pytest tests/ -v' ile esdeger).
+      # PYTHONPATH env: blogu araciligiyla aktarilir (conftest.py sys.path ayariyla tutarli).
+      - name: Test suite calistir (pytest)
+        run: python -m pytest tests/ -v
+        env:
+          PYTHONPATH: src

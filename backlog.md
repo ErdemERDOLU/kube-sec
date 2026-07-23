@@ -31,10 +31,10 @@
 
 ---
 
-## [Oncelik: Yuksek] 2. CI Pipeline: Her PR'da Calisacak Temel Kalite Kontrolleri
+## [Oncelik: Yuksek] 2. CI Pipeline: Her PR'da Calisacak Temel Kalite Kontrolleri — TAMAMLANDI
 
 **Kategori:** CI/CD
-**Mevcut durum:**
+**Mevcut durum (onceki):**
 - `.github/workflows/security-scan.yml`: Yalnizca gitleaks secret taramasi yapiyor (her push/PR).
 - `.github/workflows/release.yml`: Yalnizca `v*.*.*` tag push'larinda macOS/Windows build + GitHub Release olusturuyor.
 - Her PR'da veya her push'ta calisacak bir lint, typecheck veya test job'u **mevcut degil**.
@@ -43,13 +43,15 @@
 **Sorun:** Gecersiz Python syntax'i, import hatalari veya temel mantik hatalari ancak calistirma sirasinda ortaya cikiyor. Bir PR merge edildikten sonra `main` branch'te runtime hatasi olusursa, bunu yakalamak icin mekanizma yok.
 
 **Kabul kriterleri:**
-- [ ] `.github/workflows/ci.yml` dosyasi olusturulur; `push` (main) ve `pull_request` olaylarinda tetiklenir.
-- [ ] Job adimlari en az su 3 kontrolu icerir:
+- [x] `.github/workflows/ci.yml` dosyasi olusturulur; `push` (main) ve `pull_request` olaylarinda tetiklenir.
+- [x] Job adimlari en az su 3 kontrolu icerir:
   1. Python syntax kontrolu (`python -m py_compile` veya `ruff check` veya `flake8 --select=E9,F63,F7,F82`).
   2. `pytest tests/ -v` (backlog #1 tamamlandiktan sonra).
   3. `python -c "from web.app import app; print('import OK')"` — uygulamanin import zincirinin kirilmamis oldugunu dogrular.
-- [ ] CI job'u ubuntu-latest uzerinde calisan `python:3.9` (veya requirements.txt ile uyumlu surumu) kullanir.
-- [ ] Herhangi bir adim basarisiz olursa PR merge edilemez (`branch protection` onerisi README'ye eklenir).
+- [x] CI job'u ubuntu-latest uzerinde calisan `python:3.9` (veya requirements.txt ile uyumlu surumu) kullanir.
+- [x] Herhangi bir adim basarisiz olursa PR merge edilemez (`branch protection` onerisi README'ye eklenir).
+
+**Uygulama notu (2026-07-24):** product-manager -> devops-engineer -> bagimsiz code-reviewer (statik dogrulama) + ben (bizzat YAML/import/pytest calistirarak teyit) zinciriyle tamamlandi. Spec: `docs/specs/20260723-ci-pipeline-temel-kalite-kontrolleri.md` (14 AC, tumu CONFIRMED). Mekanizma: `.github/workflows/ci.yml` — `ubuntu-latest` + Python 3.9, 3 adim (ruff `E9,F63,F7,F82` -> import zinciri kontrolu -> `pytest tests/ -v`), `permissions: contents: read`, `continue-on-error` yok (herhangi bir adim basarisiz olursa job FAIL olur). `ruff` yalnizca CI'da kuruluyor, `requirements.txt`'e kalici bagimlilik eklenmedi. `README.md`'ye "Branch Protection Onerisi" bolumu eklendi (repo ayarlarindan manuel etkinlestirme gerektigi belirtildi — bu bir kod degisikligi degil). Yerel dogrulama: YAML gecerli, `PYTHONPATH=src python -c "from web.app import app"` OK, `pytest tests/ -v` PASSED (calisma anindaki toplam test sayisi, backlog #1'deki 59'dan fazla oldu cunku es zamanli baska bir oturum `tests/test_error_handler.py` ekliyordu — bu maddenin kapsami disinda, path olarak ayrisiyor).
 
 ---
 

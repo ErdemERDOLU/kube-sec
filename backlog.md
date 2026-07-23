@@ -284,3 +284,273 @@ Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagit
 - [x] `traceback` alani production modda response'dan kaldirildi; yalnizca `FLASK_ENV=development`/`FLASK_DEBUG=1` iken (backlog #5'teki `_debug_enabled` degiskeni yeniden kullanilarak) eklenir.
 - [x] Degisiklik sonrasi var olmayan bir route `make run` modunda dogru HTTP 404 doner (500 degil); yanlis HTTP metodu 405 doner. CSRF (backlog #6) ve validators (backlog #7) regresyon testleri (`tests/test_csrf.py`, `tests/test_validators.py`) etkilenmeden gecmeye devam ediyor — bu iki mekanizma zaten kendi `jsonify(...), 4xx` donuslerini exception firlatmadan yaptigi icin bu handler'a hic ugramiyor.
   - Spec: `docs/specs/20260723-error-handler-duzeltme.md` (10 AC, tumu CONFIRMED — iki bagimsiz dogrulama, ikisi de APPROVE; yuksek regresyon riski tasiyan bir degisiklik oldugu icin CSRF/validators/normal route'lar ozellikle test edildi, regresyon YOK. Yeni `tests/test_error_handler.py` (8 test) eklendi, toplam test paketi 67/67 PASSED. Code-reviewer'in bulgulari (500 yolu icin dogrudan unit test eksikligi, kucuk kod temizligi onerileri) dusuk/orta oncelikli, merge'i bloklamiyor, sonraki ise birakildi).
+
+---
+
+## [Oncelik: Yuksek] 15. UI/UX: Kritik Gorsel Hatalar ve Kirik Islevsellik
+
+**Kategori:** UI/UX
+**Bulunma kaynagi:** `web-frontend-developer` agent tarafindan yapilan kapsamli masaustu UI/UX denetimi (2026-07-24). Denetim, `chromium-cli` ortamda kurulu olmadigi icin sistemdeki Chrome'un headless modu + ozel bir CDP (WebSocket) istemcisiyle 20 route, 3 viewport'ta (1440x900 / 768x1024 / 390x844) taranarak yapildi; uygulama gercek bir cluster'a (`mbs-dev` context) bagliydi, bu yuzden dolu-durum UX'i degerlendirildi.
+
+**Mevcut durum:**
+- **Gorunmez sayfa basliklari (hero):** `access_control.html` ve `storage.html`, `class="hero-section bg-gradient-primary text-white"` kullaniyor ama `.hero-section` yalnizca `network.html`'in kendi gomulu `<style>` blogunda tanimli, `.bg-gradient-primary` hicbir yerde tanimli degil. Sonuc: beyaz yazi saydam/varsayilan zeminde — baslik neredeyse gorunmez.
+- **`/kubeconfigs` route'u tarayicida ham JSON donduruyor:** Bu bir JSON API'si (`kubeconfigs.py:33`), `kubeconfigs.html` sablonu yok. Dogrudan ziyaret edildiginde dosya sistemi yollarini da iceren ham JSON goruyor kullanici (gercek kubeconfig yonetim arayuzu `/configuration`'da).
+- **Workloads "Genel Bakis" grafikleri kirik:** `Highcharts is not defined` — kutuphane hic yuklenmiyor, pasta grafikler sessizce bos kaliyor.
+- **Audit-trail sayfasinda cevrilmemis ham i18n anahtarlari gorunuyor:** `audit.empty_state`, `audit.filter_resource_type`, `audit.filter_action`, `audit.filter_all` `I18N` dict'inde tanimli degil; kullanici harfiyen anahtar isimlerini goruyor.
+- **Ek JS hatalari:** `config.html`'de `Uncaught TypeError: Cannot read properties of null (reading 'replace')`; `privileged_containers.html:1516`'da prod'da kalmis bir debug `console.log`.
+
+**Sorun:** Bu maddeler kullaniciya uygulamanin "bozuk" oldugu izlenimini veriyor — gorunmez basliklar ve kirik grafikler ozellikle yeni kullanicilar icin guven kaybi yaratir; `/kubeconfigs`'in ham JSON donmesi ayrica kucuk bir bilgi sizintisi riskidir (dosya sistemi yollari).
+
+**Kabul kriterleri:**
+- [ ] `.hero-section` ve `.bg-gradient-primary` stilleri `base.html`'e (global CSS) tasinir; access-control ve storage sayfalarinda baslik okunabilir hale gelir.
+- [ ] `GET /kubeconfigs` route'u ya `/api/kubeconfigs` altina tasinir ya da `/configuration`'a redirect eder; tarayicida dogrudan ziyaret edildiginde ham JSON gorunmez.
+- [ ] Highcharts (veya esdeger bir chart kutuphanesi) uygulama bundle'ina eklenir, workloads "Genel Bakis" pasta grafikleri calisir hale gelir; kutuphane bulunamazsa en azindan kullaniciya anlamli bir fallback mesaji gosterilir.
+- [ ] Eksik `audit.empty_state`, `audit.filter_resource_type`, `audit.filter_action`, `audit.filter_all` anahtarlari `I18N` dict'ine (TR+EN) eklenir; audit-trail sayfasinda ham anahtar gorunmez.
+- [ ] `config.html`'deki null-reference hatasi giderilir (ilgili null-guard eklenir); `privileged_containers.html:1516`'daki debug `console.log` kaldirilir.
+- [ ] Degisiklik sonrasi 5 sayfa (access-control, storage, kubeconfigs, workloads, audit-trail) `console --errors` temiz, gorsel olarak dogru render ediyor.
+
+---
+
+## [Oncelik: Orta] 16. UI/UX: Bilgi Mimarisi, Navigasyon ve Mobil Responsive Duzeltmeler
+
+**Kategori:** UI/UX
+**Bulunma kaynagi:** Ayni UI/UX denetimi (2026-07-24), bkz. backlog #15.
+
+**Mevcut durum:**
+- **"Config" (`/config`) ve "Configuration" (`/configuration`) menu isimleri neredeyse ayni ama tamamen farkli isler yapiyor:** biri cluster kaynak konfigurasyonu (ConfigMaps/Secrets/ResourceQuota/HPA), digeri kubeconfig/cluster baglantisi yonetimi. Uygulamanin en onemli eylemi (cluster ekleme/degistirme) belirsiz bir isim altinda.
+- **Top-bar sayfa basligi coğu sayfada sabit "Dashboard":** `base.html`'deki `{% block page_title %}` home, workloads, k8s-explorer, config, access-control, privileged-containers, vulnerabilities sayfalarinda override edilmemis (nodes, compliance, pss, trivy, audit-trail dogru override ediyor — tutarsizlik).
+- **Sidebar daraltildiginda (collapsed) alt-menulere erisim yok:** `.sidebar.collapsed .dropdown-menu { display:none !important; }` — Guvenlik alt-menusundeki 9 sayfaya (mesh, vulns, exec, privileged, pss, cm-secrets, yaml, trivy, compliance) collapsed modda hic erisilemiyor, flyout/tooltip yok.
+- **Mobilde (390px) gercek yatay tasma:** `/vulnerabilities` namespace filtre satiri sarmiyor, viewport'u ~51px asiyor, alt buton satiri kirpiliyor. `/compliance`'da uzun sayfa basligi top-bar'da 5 satira sariyor ve context badge'i basligin ustune biniyor. `/nodes`'ta kucuk (~5px) bir tasma var.
+- **Top-bar mobilde sikisik:** hamburger + baslik + context badge + dil dropdown 390px'te sikisiyor, badge basliga yapisik duruyor.
+
+**Sorun:** Kullanici uygulamada nerede oldugunu (page title tutarsizligi) her zaman anlayamiyor; en kritik islevlerden biri (cluster degistirme) belirsiz isimlendirme yuzunden bulunmasi zor; mobil/dar ekranda bazi sayfalar kullanilamaz hale geliyor (tasan/kirpilan elemanlar); daraltilmis sidebar guvenlik ozelliklerinin cogunu erisilemez kiliyor.
+
+**Kabul kriterleri:**
+- [ ] `/configuration` route'u ve sidebar etiketi daha net bir isme alinir (or. "Cluster/Kubeconfig Yonetimi"); `/config` "Kaynak Ayarlari" gibi ayristirilir. i18n anahtarlari (TR+EN) guncellenir.
+- [ ] Tum sablomlarda `{% block page_title %}` override edilir (home, workloads, k8s-explorer, config, access-control, privileged-containers, vulnerabilities dahil); top-bar basligi her sayfada dogru sayfa adini gosterir.
+- [ ] Sidebar collapsed modda Guvenlik alt-menusune hover flyout (veya esdeger) ile erisim saglanir; 9 alt-sayfanin tamami collapsed modda da ulasilabilir olur.
+- [ ] `/vulnerabilities` namespace filtre satiri mobilde `flex-wrap` ile sarar, 390px'te yatay tasma olmaz (`scrollWidth <= innerWidth`).
+- [ ] `/compliance` top-bar basligi mobilde `text-truncate` ile kisaltilir, context badge basliga binmez (`flex-shrink:0` + yeterli gap).
+- [ ] `/nodes` mobil tasmasi giderilir.
+- [ ] Top-bar mobil duzeni (hamburger/baslik/badge/dil) sikismadan render olur — badge gerekirse mobilde gizlenir veya alt satira alinir.
+
+---
+
+## [Oncelik: Orta] 17. UI/UX: Gorsel Tasarim Sistemi Tutarliligi
+
+**Kategori:** UI/UX
+**Bulunma kaynagi:** Ayni UI/UX denetimi (2026-07-24), bkz. backlog #15.
+
+**Mevcut durum:**
+- **Hero renk paleti sayfalar arasi tutarsiz:** workloads mor, config yesil, network mor, audit-trail teal, trivy/compliance/pss mavi — ortak bir aksan rengi/CSS degiskeni yok.
+- **Ayni tip veri farkli layout paradigmalariyla sunuluyor:** `access_control.html` kart-grid kullaniyor, config/nodes/network tablo kullaniyor — tarama/karsilastirma zorlasiyor.
+- **`privileged_containers.html`'deki "Asiri Yetkili RBAC Rolleri" tablosu koyu lacivert zeminde**, diger liste tablolariyla (acik zemin, sadece baslik koyu) tutarsiz; bos metrikte "-" gibi zayif gosterim var.
+- **`storage.html`'de sayac/icerik celismesi:** PVCs sekmesi badge'i cluster geneli "13" gosteriyor ama varsayilan namespace filtresiyle liste "PVC bulunamadi" gosteriyor — kullanici kafasi karisiyor.
+- **`common.js`'deki `timeAgo()` fonksiyonu Ingilizce sabit ek kullaniyor** (`'d ago'`, `'h ago'` vb.) — TR arayuzde bile "280d ago" gorunuyor (workloads sayfasi `t("cache.ago")` ile bunu dogru yapiyor, o kalip genellenmeli).
+- **`mesh.html` topoloji gorsellestirmesi zayif olcekleniyor:** dugumler kucuk, alanin cogu bos, etiketler ust uste biniyor, fit-to-viewport yok.
+- **`trivy_operator.html`'de bos tablo durumu belirsiz** (diger sayfalardaki inbox ikonlu bos-durum kalibi kullanilmiyor).
+- **Kucuk yazim hatasi:** workloads.html'de "10 saniye once" -> "önce" olmali.
+
+**Sorun:** Tutarsiz gorsel dil, uygulamanin "birden fazla donemde, ortak bir standart olmadan buyumus" izlenimini veriyor; kullanici her sayfada yeniden ogrenme maliyeti odüyor.
+
+**Kabul kriterleri:**
+- [ ] 1-2 birincil aksan rengi CSS degiskeni olarak tanimlanir, tum hero gradyanlari buna baglanir.
+- [ ] Kaynak listeleme sayfalari (access-control dahil) tutarli bir liste paradigmasina (tercihen tablo) getirilir.
+- [ ] Privileged sayfasindaki RBAC tablosu ortak tablo stiline uydurulur; bos metrikte "-" yerine "0" veya acikca "Veri yok" gosterilir.
+- [ ] Storage sayfasinda sayac ile aktif filtre senkronize edilir veya bos durumda filtre ipucu gosterilir.
+- [ ] `timeAgo()` fonksiyonu `window.i18n`/`t("cache.ago")` kalibina tasinir, tum kullanim noktalarinda lokalize sure ekleri gosterilir.
+- [ ] Mesh gorsellestirmesinde fit-to-viewport ve etiket cakisma onleme uygulanir.
+- [ ] Trivy Operator sayfasinda bos tablo icin acik bir bos-durum satiri eklenir (inbox ikonlu ortak kalip).
+- [ ] "once" -> "önce" yazim hatasi duzeltilir.
+
+---
+
+## [Oncelik: Orta] 18. UI/UX: Erisilebilirlik (Accessibility) Iyilestirmeleri
+
+**Kategori:** UI/UX / Erisilebilirlik
+**Bulunma kaynagi:** Ayni UI/UX denetimi (2026-07-24), bkz. backlog #15.
+
+**Mevcut durum:**
+- Genel olarak ikon-only butonlarin cogunda `aria-label` yok (`config.html`'de ~6 ornek).
+- Filtre `select`/arama `input` alanlarinin cogunda `<label for=...>` yok, yalnizca `placeholder`'a dayaniyor (config, vulnerabilities, workloads birkac istisna).
+- Custom `.btn`/`.nav-link` bilesenlerinde `focus-visible` outline stili tanimli degil — klavye ile gezinen kullanicilar odagin nerede oldugunu goremiyor.
+
+**Sorun:** Ekran okuyucu kullanan veya klavye ile gezinen kullanicilar icin uygulama buyuk olcude kullanilamaz durumda; bu hem WCAG uyumu hem de kurumsal musteriler icin (erisilebilirlik denetimi gerektiren) bir risktir.
+
+**Kabul kriterleri:**
+- [ ] Tum ikon-only butonlara aciklayici `aria-label` eklenir.
+- [ ] Tum filtre/arama form kontrollerine gorunur veya `aria-label`/gizli `<label>` eklenir.
+- [ ] Custom interaktif bilesenlere (`.btn`, `.nav-link`, tablo satir aksiyonlari) belirgin bir `focus-visible` outline stili eklenir.
+- [ ] En az 3 farkli sayfada (workloads, config, access-control) yalnizca klavye (Tab/Enter) ile temel islemler (filtre degistirme, satir detay acma) gerceklestirilebilir oldugu dogrulanir.
+
+---
+
+## [Oncelik: Dusuk] 19. UI/UX: Karanlik Tema (Dark Mode) Destegi
+
+**Kategori:** UI/UX
+**Bulunma kaynagi:** Ayni UI/UX denetimi (2026-07-24), bkz. backlog #15.
+
+**Mevcut durum:**
+- `base.html:2` `data-bs-theme="light"` sabit; hicbir tema toggle mekanizmasi yok (`theme.toggle` i18n anahtari mevcut ama kullanan bir UI elemani bulunamadi/calismiyor).
+- Bootstrap 5.3 zaten `color-mode` (dark/light) destekliyor, custom CSS degiskenleri (`--dark-color` vb.) dark mod icin gozden gecirilmemis.
+
+**Sorun:** DevOps/platform araclarinda karanlik tema guclu bir kullanici beklentisidir (genelde terminal/IDE ile birlikte, uzun sureli ekran kullanimi); hic sunulmuyor olmasi rakip araclara kiyasla eksiklik.
+
+**Kabul kriterleri:**
+- [ ] Top-bar'a bir tema toggle butonu eklenir (`theme.toggle` i18n anahtari kullanilarak), `data-bs-theme` degeri `localStorage`'da tutulur ve sayfa yenilemede korunur.
+- [ ] Custom CSS degiskenleri (renkler, kart/tablo zeminleri) dark mod icin gozden gecirilir; en az 5 temsili sayfada (home, workloads, compliance, nodes, access-control) dark modda okunabilirlik/kontrast dogrulanir.
+- [ ] Toggle her iki dilde de (TR/EN) dogru etiketlenir.
+
+---
+
+## [Oncelik: Dusuk] 20. UI/UX: DevOps Kullanilabilirlik Ozellikleri (Global Arama, Namespace Baglami, Kisayollar)
+
+**Kategori:** UI/UX / Ozellik
+**Bulunma kaynagi:** Ayni UI/UX denetimi (2026-07-24), bkz. backlog #15.
+
+**Mevcut durum:**
+- Global arama yok — kullanici bir kaynagi bulmak icin dogru sayfaya gidip sayfa-ici filtre kullanmak zorunda.
+- Breadcrumb yok.
+- Klavye kisayolu yok.
+- Tablolarda coklu-secim/toplu islem yok.
+- Namespace secimi her sayfada ayri ayri tutuluyor — global/paylasimli bir namespace context'i yok (kullanici her sayfaya gecince namespace'i yeniden seciyor).
+
+**Sorun:** Bu kalip eksiklikleri, deneyimli DevOps kullanicilarinin gunluk kullanimda verimliligini dusuruyor; benzer araclarda (Lens, K9s, Rancher) bu ozellikler standart kabul edilir.
+
+**Kabul kriterleri:**
+- [ ] (Faz 1) Global bir namespace secici eklenir (top-bar'da), secim `sessionStorage`/URL query param ile sayfalar arasi korunur.
+- [ ] (Faz 2) Global kaynak arama eklenir (en azindan isim bazli, mevcut liste endpoint'lerini kullanarak).
+- [ ] (Gelecek donem, opsiyonel) Breadcrumb, klavye kisayollari, tablo coklu-secim/toplu islem — ayri alt-maddeler olarak degerlendirilebilir, bu maddenin ilk surumu kapsam disi.
+
+**Not:** Bu madde diger UI/UX maddelerine (#15-18) kiyasla daha buyuk bir ozellik calismasidir; ayri bir spec/tasarim onerisi gerektirir, oncelik dusuk.
+
+---
+
+## [Oncelik: Kritik] 21. Guvenlik: Kimlik Dogrulama Katmani ve Ag Erisim Kontrolu Eksikligi
+
+**Kategori:** Guvenlik (A01:2021 Broken Access Control / A07 Identification & Authentication Failures)
+**Bulunma kaynagi:** `security-engineer` agent tarafindan yapilan kapsamli statik guvenlik denetimi (2026-07-24), OWASP Top 10 cercevesinde ~25 Python dosyasi ve 100+ route tarandi.
+
+**Mevcut durum:**
+- Kod tabaninda hicbir login, API key, token veya `before_request` auth kontrolu yok (grep ile dogrulandi).
+- Paketlenmis masaustu uygulamasi (`launcher.py`) `127.0.0.1`'e bind ediyor (guvenli), ANCAK `make run` / `python src/main.py` / Docker yolu (`src/main.py:5`, `host="0.0.0.0"`) tum ag arayuzlerine bind ediyor.
+- Uygulama kubeconfig'in tum RBAC yetkileriyle calisiyor (genelde cluster-admin'e yakin).
+
+**Sorun:** Aym agdaki (ofis Wi-Fi, paylasilan VPN) kimlik dogrulamasi olmayan herhangi biri, `0.0.0.0` modunda calisan bir Kube-Sec ornegine tarayicidan erisip: tum Secret'lari okuyabilir (`/k8s-explorer/secret`, base64 degerleri doner), pod silebilir, node drain edebilir, Secret guncelleyebilir, ClusterRoleBinding silebilir — hepsi tek istekle, geri donusu olmadan. Bu, uygulamanin en kritik bulgusu.
+
+**Kabul kriterleri:**
+- [ ] `src/main.py`'nin varsayilan bind adresi `127.0.0.1` olarak degistirilir; `0.0.0.0` (ag disina acilma) yalnizca bilincli bir env var (or. `KUBESEC_ALLOW_NETWORK_BIND=1`) ile mumkun olur.
+- [ ] Ag disina acik modda (bilincli opt-in ile) calistirildiginda EN AZINDAN basit bir zorunlu erisim katmani (yerel PIN/parola veya token — `before_request` hook'u ile) eklenir; auth'suz istekler 401 doner.
+- [ ] Docker imaji (deprecated olsa da hala repoda) ayni varsayilan `127.0.0.1`/auth gereksinimini yansitir veya acikca "sadece guvenilir/izole ag icin" diye README/CLAUDE.md'de belgelenir.
+- [ ] Degisiklik sonrasi `make run` varsayilan olarak yalnizca localhost'tan erisilebilir; masaustu (frozen) davranisi (zaten 127.0.0.1) bozulmaz.
+
+---
+
+## [Oncelik: Yuksek] 22. Guvenlik: Sabit SECRET_KEY (CSRF'i Etkisiz Kiliyor) ve Cookie Guvenlik Bayraklari
+
+**Kategori:** Guvenlik (A02:2021 Cryptographic Failures)
+**Bulunma kaynagi:** Ayni guvenlik denetimi (2026-07-24), bkz. backlog #21.
+
+**Mevcut durum:**
+- `src/web/app.py:47-48`: frozen olmayan (yani `make run` / Docker / plain Flask) yolda `app.secret_key = 'dev-secret-do-not-use-in-production'` — kaynak kodda sabit deger. Masaustu (frozen) yol `~/.kubesec/secret_key`'te rastgele uretilip `chmod 600` yapiyor (bu kisim saglam).
+- `SESSION_COOKIE_SAMESITE` ve `SESSION_COOKIE_SECURE` hic set edilmemis (Flask varsayilani `HTTPONLY=True` iyi durumda, ama `SAMESITE` set degil).
+
+**Sorun:** Secret key kaynak kodda herkese acik oldugundan, ag'a acik `make run`/Docker dagitiminda saldirgan hem `session` cookie'lerini forge edebilir hem de **backlog #6'da eklenen CSRF korumasini tumuyle atlatabilir** (Flask-WTF CSRF token'i `secret_key`'ten turetilir). Yani mevcut CSRF korumasi bu dagitim modunda fiilen calismiyor.
+
+**Kabul kriterleri:**
+- [ ] Non-frozen yolda sabit `secret_key` kaldirilir; her baslatmada `secrets.token_hex(32)` ile rastgele uretilir VEYA `APP_SECRET_KEY` env var'i zorunlu kilinir (yoksa uygulama acik bir hata ile baslamayi reddeder). Sabit dev anahtari yalnizca `FLASK_ENV=development` altinda kullanilabilir.
+- [ ] `SESSION_COOKIE_SAMESITE='Lax'` acikca set edilir; HTTPS destegi eklenirse `SESSION_COOKIE_SECURE=True` de eklenir.
+- [ ] Degisiklik sonrasi CSRF korumasi (backlog #6, `tests/test_csrf.py`) hala calisir; session tabanli ozellikler (kubeconfig aktivasyonu vb.) bozulmaz.
+
+---
+
+## [Oncelik: Yuksek] 23. Guvenlik: Kubeconfig Dosya Islemlerinde Path Traversal ve Izin Sorunlari
+
+**Kategori:** Guvenlik (A01/A03:2021 — Path Traversal, Hassas Veri Ifsasi)
+**Bulunma kaynagi:** Ayni guvenlik denetimi (2026-07-24), bkz. backlog #21.
+
+**Mevcut durum:**
+- `src/web/blueprints/kubeconfigs.py:175-177` (DELETE route): JSON'dan alinan `name` parametresi hic sanitize edilmeden `os.path.join(KUBECONFIG_UPLOAD_DIR, name)` -> `os.remove(path)`'e geciyor. Karsilastirma: `kubeconfigs_add` (satir 58) `safe_name` filtresiyle `/` karakterini engelliyor ama DELETE'te bu filtre yok.
+- `kubeconfigs.py:60-61` ve `kubeconfig_manager.py:16-17`: kubeconfig dosyalari (cluster kimlik bilgileri icerir) `open(path, 'w')` ile varsayilan umask'la (tipik `0644`, dunya-okunabilir) yaziliyor; yukleme dizini de varsayilan izinlerle olusturuluyor. `secret_key` gibi hassas dosyalar `chmod 600` alirken kubeconfig'ler almiyor.
+
+**Sorun:** `name = "../../../../etc/..."` gibi bir degerle disk uzerinde keyfi dosyalar silinebilir (backlog #21'deki auth eksikligiyle birlesince ag'daki bir saldirgan bunu tetikleyebilir). Ayrica coklu-kullanicili bir makinede diger yerel kullanicilar kubeconfig dosyalarini okuyup cluster kimlik bilgilerini ele gecirebilir.
+
+**Kabul kriterleri:**
+- [ ] DELETE route'unda `add` ile ayni `safe_name` filtresi uygulanir; ek olarak `os.path.realpath(path)` sonucunun `KUBECONFIG_UPLOAD_DIR` altinda kaldigi (`os.path.commonpath` ile) dogrulanir.
+- [ ] Kubeconfig dosyalari yazildiktan hemen sonra `os.chmod(path, 0o600)` uygulanir; yukleme dizini `os.makedirs(..., mode=0o700)` ile olusturulur.
+- [ ] Gecerli bir kubeconfig adiyla silme islemi hala calisir (regresyon yok); `../` iceren bir `name` denemesi HTTP 400 ile reddedilir.
+
+---
+
+## [Oncelik: Orta] 24. Guvenlik: SSRF — Prometheus Proxy Endpoint'i Dogrulanmamis URL Kabul Ediyor
+
+**Kategori:** Guvenlik (A10:2021 Server-Side Request Forgery)
+**Bulunma kaynagi:** Ayni guvenlik denetimi (2026-07-24), bkz. backlog #21.
+
+**Mevcut durum:**
+- `src/web/blueprints/explorer/pods.py:57,143` (ve benzer desen 320,329 / 578,599): `manual_url = request.args.get('prometheus')` ile kullanici kontrolundeki host, dogrulama/whitelist olmadan `requests.get(f"{manual_url.rstrip('/')}/api/v1/{api_path}", ..., verify=False)`'e geciyor; yanit govdesi (`r.json()`) cagirana geri donuyor.
+
+**Sorun:** Saldirgan `?prometheus=http://10.0.0.5:6379` gibi bir degerle sunucuyu ic agdaki keyfi host:port'lara istek yapmaya zorlayabilir (port tarama, ic HTTP servislerine erisim, veri sizdirma). `verify=False` ek olarak TLS dogrulamasini kapatiyor.
+
+**Kabul kriterleri:**
+- [ ] `prometheus` query param'i bir allowlist'e/sema-host dogrulamasina tabi tutulur; mumkunse yalnizca env `PROMETHEUS_URL`'e izin verilir, kullanici query param override'i kaldirilir veya sadece bilinen/kayitli Prometheus instance'larina kisitlanir.
+- [ ] Loopback (127.0.0.0/8), link-local (169.254.0.0/16) ve ozel IP araliklari (RFC1918) icin URL reddedilir (kullanici bunu bilerek kendi Prometheus'una izin vermek isterse ayri bir mekanizma dusunulebilir).
+- [ ] Degisiklik sonrasi gecerli/beklenen Prometheus URL'leriyle pod-metrics ozelligi calismaya devam eder.
+
+---
+
+## [Oncelik: Orta] 25. Guvenlik: HTTP Guvenlik Basliklari Eksik ve Hassas Veri Ifsasi (Secret Endpoint'i, Hata Mesajlari)
+
+**Kategori:** Guvenlik (A05:2021 Security Misconfiguration / A02 Hassas Veri Ifsasi)
+**Bulunma kaynagi:** Ayni guvenlik denetimi (2026-07-24), bkz. backlog #21.
+
+**Mevcut durum:**
+- `src/web/app.py`: CSP, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, HSTS basliklarinin hicbiri set edilmiyor (`after_request` hook'u yok).
+- `src/web/blueprints/explorer/config.py:183-186`: `/k8s-explorer/secret` route'u, `read_namespaced_secret` sonucunun TUM `data` alanini (base64 — trivially decode edilebilir) tarayiciya donduruyor.
+- Cok sayida route'ta (`config.py:192`, `scanning.py:291,430,578` vb.) `jsonify({'error': str(e)})` seklinde ham `str(e)`/K8s `ApiException.body` istemciye donuyor — ic host/namespace/dosya yolu ipuclari icerebilir.
+
+**Sorun:** Guvenlik basliklarinin yoklugu clickjacking riski yaratir (panel destructive islemler icerdiginden ozellikle riskli — gorunmez iframe ile "drain" tiklatma). Secret degerlerinin acikca donmesi, auth eksikligiyle (backlog #21) birlesince kritik bir veri ifsasi riskidir. Hata mesajlarindaki ic detaylar kesif (reconnaissance) icin kullanilabilir.
+
+**Kabul kriterleri:**
+- [ ] Bir `after_request` hook'u ile en azindan `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff` ve makul bir CSP eklenir.
+- [ ] `/k8s-explorer/secret` route'u degerleri varsayilan olarak maskeler; acik bir "goster" talebi (ayri bir parametre/onay) olmadan ham deger donmez. (Bu madde backlog #21'deki auth katmaniyla birlikte degerlendirilebilir — auth eklenirse bu route'un o katmanin arkasina alinmasi da bu maddenin bir parcasidir.)
+- [ ] Kullaniciya donen hata mesajlari genellestirilir (`str(e)` yerine sabit/genel bir mesaj); ayrintili hata yalnizca sunucu logunda kalir.
+- [ ] Degisiklik sonrasi mevcut Secret editor islevi (dogru yetkiyle) calismaya devam eder; hata donduren route'lar hala anlamli (ama genel) bir mesaj verir.
+
+---
+
+## [Oncelik: Orta] 26. Guvenlik: Yikici Kubernetes Islemleri icin Sunucu Tarafi Onay Mekanizmasi Yok
+
+**Kategori:** Guvenlik / Tasarim (A04:2021 Insecure Design)
+**Bulunma kaynagi:** Ayni guvenlik denetimi (2026-07-24), bkz. backlog #21.
+
+**Mevcut durum:**
+- Node drain (`cluster.py:96`), generic kaynak silme (`core.py:441-478`), Secret silme (`config.py:244`), scaling islemleri (`scaling.py:136,306`) gibi geri donusu olmayan islemler yalnizca POST alir almaz yuruyor; sunucu tarafinda ikinci bir onay/token (or. kaynak adinin yeniden yazilmasi, `confirm=true` gibi) yok. Onay yalnizca istemci JS'ine (bir tarayici dialog'u) bagli.
+
+**Sorun:** Yanlis cluster context'inde (bkz. CLAUDE.md'deki coklu-sekme global kubeconfig sinirlamasi) yanlislikla production'da node drain'e tiklamak cok kolay; auth yoksa (backlog #21) kotu niyetli tetikleme de trivial hale gelir (istemci tarafi confirm dialog'u atlanabilir, dogrudan API cagrisi yapilabilir).
+
+**Kabul kriterleri:**
+- [ ] En az node-drain ve generic delete route'lari icin sunucu tarafi bir onay parametresi eklenir (or. istegin body'sinde kaynak adinin tekrar gonderilmesi zorunlu kilinir, sadece istemci dialog'una guvenilmez).
+- [ ] "Production" olarak isaretlenmis/adlandirilmis context'lerde (kullanici tanimli veya isim deseni ile, or. context adinda "prod" gecen) ek bir uyari/onay adimi degerlendirilir (opsiyonel, nice-to-have).
+- [ ] Degisiklik sonrasi mevcut UI akisi (tek tiklamalik onay dialog'u) dogru parametreyi gonderdigi surece calismaya devam eder; API'yi dogrudan cagiranlar icin (onay parametresi olmadan) 400 doner.
+
+---
+
+## [Oncelik: Dusuk] 27. Guvenlik: Production Sertlestirme (WSGI Sunucusu, Bagimlilik Guncelleme, Deprecated Dockerfile, Audit Log)
+
+**Kategori:** Guvenlik / Teknik Borc
+**Bulunma kaynagi:** Ayni guvenlik denetimi (2026-07-24), bkz. backlog #21.
+
+**Mevcut durum:**
+- `launcher.py:52,165,170` ve `src/main.py:5`: hem masaustu paket hem de `make run`, uretim icin guvenli/saglam olmayan Werkzeug gelistirme sunucusunu kullaniyor.
+- `requirements.txt`: `pytest==6.2.5` (yalnizca test), `Flask>=2.2,<3.0` (kurulu 2.3.3), `Werkzeug<3.0`, `flask-cors` pin'siz, `urllib3 1.26.20` — surumler yaslaniyor, `<3.0` kisiti guvenlik yamalarini engelleyebilir.
+- `Dockerfile`: "deprecated" yorumu olsa da hala repoda duruyor; `python src/main.py` calistiriyor (-> 0.0.0.0 + backlog #22'deki sabit secret key sorunlarini tetikler), `python:3.9-slim` tabani EOL'e yaklasiyor.
+- `audit_log.py`: `session_id` yalnizca session cookie hash'inin ilk 8 karakteri (auth olmadigindan gercek kullanici kimligi degil); loglar yalnizca yerel `~/.kube-sec/audit.jsonl`'de tutuluyor, harici SIEM'e gonderilmiyor, dosya izinleri chmod'lanmamis.
+
+**Sorun:** Bunlarin hicbiri tek basina kritik degil ama toplu olarak "production-ready" olgunlugunu dusuruyor; ozellikle Dockerfile'in silinmeyip zayif varsayilanlarla durmasi, birinin onu kopyalayip kullanmasi durumunda backlog #21/#22'deki sorunlari yeniden tetikler.
+
+**Kabul kriterleri:**
+- [ ] Ag'a acik dagitim (Docker/`make run`, 0.0.0.0 opt-in) destekleniyorsa Werkzeug yerine `waitress` veya `gunicorn` gibi bir WSGI sunucusuna gecilir.
+- [ ] `Flask`/`Werkzeug` 3.x'e tasima degerlendirilir; `flask-cors` pinlenir; CI'ya (backlog #2) periyodik bir bagimlilik/guvenlik taramasi (`pip-audit` gibi) eklenmesi degerlendirilir.
+- [ ] Deprecated `Dockerfile` ya tamamen kaldirilir ya da guvenli varsayilanlarla (127.0.0.1, zorunlu `APP_SECRET_KEY`, non-root user, WSGI sunucusu, guncel Python) yeniden yazilir.
+- [ ] `audit_log.py` dosyasina yaziminda `chmod 600` uygulanir; auth eklendiginde (backlog #21) gercek aktor kimligi audit kayitlarina yansitilir.

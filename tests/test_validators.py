@@ -7,12 +7,6 @@ Calistirmak icin:
     .venv/bin/python -m pytest tests/test_validators.py -v
 """
 
-import sys
-import os
-
-# src/ dizinini Python yoluna ekle: test'leri proje kokunden calistirabilmek icin
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-
 from web.validators import validate_k8s_name, validate_k8s_namespace, validate_helm_version
 
 

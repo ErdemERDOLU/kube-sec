@@ -6,11 +6,7 @@ Flask-WTF'in ``before_request`` hook'u sayesinde view fonksiyonu hiç
 bir endpoint (`/kubeconfigs`) kullanılsa bile, token eksikse istek
 view koduna hiç ulaşmadan reddedilir.
 """
-import os
 import re
-import sys
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 import pytest
 

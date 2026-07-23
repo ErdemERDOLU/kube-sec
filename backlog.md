@@ -6,10 +6,10 @@
 
 ---
 
-## [Oncelik: Yuksek] 1. Test Altyapisinin Kurulmasi
+## [Oncelik: Yuksek] 1. Test Altyapisinin Kurulmasi — TAMAMLANDI
 
 **Kategori:** Teknik Borc / Kalite Guvencesi
-**Mevcut durum:**
+**Mevcut durum (onceki):**
 - `requirements.txt:6` pytest==6.2.5 bagimlilik olarak listelenmis ancak proje genelinde tek bir test dosyasi bile yok: `find src/ -name "test_*.py" -o -name "*_test.py"` komutu sifir sonuc donuyor.
 - `conftest.py` dosyasi mevcut degil.
 - `Makefile` icerisinde `test` hedefi tanimlanmamis.
@@ -18,14 +18,16 @@
 **Sorun:** Kod tabaninda ~4.000 satir Python (blueprint'ler + altyapi modulleri) ve ~60 route handler mevcut. Herhangi bir degisikligin mevcut islevselligi bozup bozmadigini dogrulamanin otomatik bir yolu yok. Refactoring (ornegin verify_ssl deseni merkezilestirmesi, backlog #3) veya yeni ozellik eklemek yuksek regresyon riski tasiyor.
 
 **Kabul kriterleri:**
-- [ ] `tests/` dizini olusturulur ve en az 1 adet `conftest.py` dosyasi eklenir (Flask test client fixture'u iceren).
-- [ ] Asagidaki 4 kategori icin en az birer test dosyasi yazilir:
+- [x] `tests/` dizini olusturulur ve en az 1 adet `conftest.py` dosyasi eklenir (Flask test client fixture'u iceren).
+- [x] Asagidaki 4 kategori icin en az birer test dosyasi yazilir:
   - `tests/test_health.py`: `/k8s-explorer/app-health` ve `/k8s-explorer/health` endpoint'leri icin en az 2 test (happy path + cluster baglanti hatasi simulasyonu).
   - `tests/test_audit_log.py`: `audit_log.py` icindeki `record_audit_event()` ve `get_recent_events()` fonksiyonlari icin en az 3 birim testi (kayit ekleme, limit kontrolu, disk yazma mock'u).
   - `tests/test_i18n.py`: `translate()` fonksiyonu icin en az 2 test (gecerli anahtar, gecersiz anahtar fallback'i).
   - `tests/test_kubeconfig_manager.py`: `list_kubeconfigs()` ve `get_active_kubeconfig_path()` icin en az 2 test.
-- [ ] `Makefile`'a `test` hedefi eklenir: `$(PYTHON) -m pytest tests/ -v`.
-- [ ] Tum testler `make test` ile hatasiz calisir (exit code 0).
+- [x] `Makefile`'a `test` hedefi eklenir: `$(PYTHON) -m pytest tests/ -v`.
+- [x] Tum testler `make test` ile hatasiz calisir (exit code 0).
+
+**Uygulama notu (2026-07-23):** product-manager -> qa-engineer -> bagimsiz code-reviewer (statik dogrulama) + ben (bizzat `make test` calistirarak AC-7/AC-9/AC-10 teyidi) zinciriyle tamamlandi. Spec: `docs/specs/20260723-test-altyapisi-kurulumu.md` (12 AC). Mevcut `test_csrf.py`/`test_validators.py` (backlog #6/#7'den) `conftest.py`'ye tasindi (tekrarlanan `sys.path.insert` kaldirildi). Sonuc: 59 test, `make test` ile PASSED, exit code 0; audit log ve kubeconfig testleri gercek disk/dizine dokunmuyor (dogrulandi). AC-12 (basarili cluster mock testi) opsiyoneldi, kismi yapildi (Content-Type testi eklendi, `ok:true` senaryosu acik birakildi).
 
 ---
 

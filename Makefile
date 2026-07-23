@@ -16,7 +16,7 @@ APP_NAME ?= Kube-Sec
 
 .PHONY: venv install install-dev upgrade run run-dev clean version-show set-version bump-patch bump-minor bump-major version-sync build-macos tag push-tag \
     build-macos-arm build-macos-intel build-macos-universal sign notarize dmg release-macos \
-    build-windows build-linux
+    build-windows build-linux test
 
 venv:
 	python3 -m venv $(VENV)
@@ -37,6 +37,9 @@ run:
 
 run-dev:
 	FLASK_ENV=development $(PYTHON) src/main.py
+
+test:
+	$(PYTHON) -m pytest tests/ -v
 
 clean:
 	find . -type f -name '*.pyc' -delete

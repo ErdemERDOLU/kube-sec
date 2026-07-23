@@ -320,9 +320,12 @@ Her push ve her pull request'te `.github/workflows/security-scan.yml` otomatik t
 
 ## Contributing
 
-Contributions are welcome. To report a bug or request a feature, please open an issue on GitHub. To submit a change, fork the repository, make your changes on a branch, and open a pull request against `main`.
+Katkı sağlamak için lütfen önce [CONTRIBUTING.md](CONTRIBUTING.md) dosyasını oku — blueprint yapısı,
+route ekleme kalıbı, i18n kullanımı ve cache thread'leri hakkında ayrıntılı geliştirici rehberi
+orada yer alır.
 
-There is no automated test suite at present (pytest is listed in `requirements.txt` but no tests exist). When adding a feature, please verify manually that the affected routes return the expected responses and that the corresponding Jinja2 templates render without errors.
+Hata bildirmek veya özellik talep etmek için GitHub'da issue aç. Değişiklik göndermek için
+repoyu fork'la, branch üzerinde değişikliklerini yap ve `main`'e pull request aç.
 
 ---
 

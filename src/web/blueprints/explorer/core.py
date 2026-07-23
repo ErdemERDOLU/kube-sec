@@ -28,6 +28,30 @@ from web.audit_log import record_audit_event, _short_session_id
 
 from web.blueprints.explorer import bp_explorer
 
+# Desteklenen kubectl describe kaynak tipleri — beyaz liste (flag injection onleme)
+ALLOWED_DESCRIBE_TYPES = frozenset({
+    # Workloads
+    'pod', 'deployment', 'statefulset', 'daemonset',
+    'replicaset', 'job', 'cronjob',
+    # Network
+    'service', 'ingress', 'endpoints', 'networkpolicy',
+    # Config & Storage
+    'configmap', 'secret',
+    'pvc', 'persistentvolumeclaim',
+    'pv', 'persistentvolume',
+    'storageclass', 'sc',
+    # RBAC
+    'serviceaccount', 'sa',
+    'role', 'rolebinding',
+    'clusterrole', 'clusterrolebinding',
+    # Cluster
+    'node', 'namespace',
+    # Scaling & Policy
+    'hpa', 'horizontalpodautoscaler',
+    'pdb', 'poddisruptionbudget',
+    'resourcequota', 'limitrange',
+})
+
 
 @bp_explorer.route('/k8s-explorer/app-health')
 def app_health():
@@ -201,13 +225,20 @@ def k8s_explorer_namespace_children():
 @bp_explorer.route('/k8s-explorer/describe')
 def k8s_explorer_describe():
     import subprocess
-    obj_type = request.args.get('type')
-    namespace = request.args.get('namespace')
-    name = request.args.get('name')
+    from web.validators import validate_k8s_name, validate_k8s_namespace
+
+    obj_type = request.args.get('type', '').lower().strip()
+    namespace = request.args.get('namespace', '').strip()
+    name = request.args.get('name', '').strip()
+
     if not obj_type or not namespace or not name:
         return jsonify({'error': 'type, namespace ve name zorunlu'}), 400
-    if obj_type not in ['pod', 'deployment']:
-        return jsonify({'error': 'Sadece pod veya deployment destekleniyor'}), 400
+    if obj_type not in ALLOWED_DESCRIBE_TYPES:
+        return jsonify({'error': f'Desteklenmeyen kaynak tipi: {obj_type!r}'}), 400
+    if not validate_k8s_name(name):
+        return jsonify({'error': f'Gecersiz kaynak adi (RFC 1123): {name!r}'}), 400
+    if not validate_k8s_namespace(namespace):
+        return jsonify({'error': f'Gecersiz namespace adi (RFC 1123): {namespace!r}'}), 400
     try:
         kubeconfig = get_active_kubeconfig_path()
         cmd = ["kubectl", "describe", obj_type, name, "-n", namespace]

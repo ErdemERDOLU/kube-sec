@@ -152,10 +152,11 @@
 **Sorun:** `shell=False` kullanimi dogrudan shell injection'i onlese de, ozel karakterler iceren `name` veya `namespace` degerleri kubectl komutunun beklenmedik davranmasina yol acabilir. Ornegin, `--kubeconfig /etc/shadow` gibi bir `name` degeri kubectl'in beklenmedik dosyalari okumasina neden olabilir.
 
 **Kabul kriterleri:**
-- [ ] `name` ve `namespace` parametreleri icin bir dogrulama fonksiyonu olusturulur: yalnizca alfanumerik karakterler, tire (-), alt cizgi (_) ve nokta (.) kabul edilir; Kubernetes DNS naming kurallarina uygunluk kontrol edilir (RFC 1123).
-- [ ] `k8s_explorer_describe()` endpoint'i ve `_kubectl_base_args()` kullanan tum endpoint'lerde bu dogrulama uygulanir.
-- [ ] Gecersiz girdi durumunda HTTP 400 ile aciklayici hata mesaji dondurulur.
-- [ ] `obj_type` icin mevcut whitelist kontrolu korunur ve genisletilir (sadece 'pod' ve 'deployment' degil, diger desteklenen tipler de eklenir).
+- [x] `name` ve `namespace` parametreleri icin bir dogrulama fonksiyonu olusturulur (`src/web/validators.py`: `validate_k8s_name()`, `validate_k8s_namespace()`, `validate_helm_version()`) — RFC 1123 DNS subdomain/label kurallarina uygunluk regex ile kontrol edilir (alt cizgi RFC 1123'e uymadigi icin kapsanmadi, K8s'in kendi kurallarina sadik kalindi).
+- [x] `k8s_explorer_describe()` route'unda `name`/`namespace` ve `trivy_operator_install()` route'unda `version` parametresi bu dogrulamadan gecer (guncel kod tabaninda subprocess cagrisi yalnizca bu 2 dosyada, 2 kullanici-girdili noktada bulundu — `_kubectl_base_args()` kendisi subprocess kullanmiyor, sadece arguman listesi uretiyor).
+- [x] Gecersiz girdi durumunda HTTP 400 + aciklayici hata mesaji donduruluyor (flag injection: `name=--kubeconfig`, path traversal: `namespace=../../etc/shadow` dogrulandi).
+- [x] `obj_type` whitelist'i 2 tipten (`pod`, `deployment`) 34 tipe genisletildi (`ALLOWED_DESCRIBE_TYPES` frozenset — workloads, network, config/storage, RBAC, cluster, scaling/policy kaynaklari).
+  - Spec: `docs/specs/20260723-subprocess-girdi-dogrulama.md` (10 AC, 9 zorunlu/orta CONFIRMED — iki bagimsiz dogrulama turu; 1. turda code-reviewer bir teknik kusur buldu (`$` regex anchor'i Python'da trailing `\n`'i gormezden gelebiliyordu, `\Z` ile duzeltildi), 2. turda APPROVE. `tests/test_validators.py` 42 test ile eklendi (backlog #1'in ilk somut adimi). AC-10 (import'lari dosya basina tasima) opsiyoneldi, yapilmadi.
 
 ---
 

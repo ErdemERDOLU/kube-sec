@@ -295,9 +295,15 @@ def trivy_operator_status():
 def trivy_operator_install():
     """Install Trivy Operator via helm if available, else apply static manifest."""
     try:
+        from web.validators import validate_helm_version
+
         data = request.get_json(silent=True) or {}
         use_helm = data.get('use_helm', True)
         version = data.get('version')  # e.g. 0.31.0
+
+        if version:
+            if not validate_helm_version(str(version)):
+                return jsonify({'error': f'Gecersiz versiyon formati: {version!r}'}), 400
 
         # Ensure kubeconfig
         _ = get_active_kubeconfig_path()

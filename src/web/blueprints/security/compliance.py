@@ -5,7 +5,7 @@
   GET /compliance-data   — JSON API: 7 CIS kontrolünü çalıştırır, skorla birlikte döndürür.
 
 Her kontrol ayrı try/except bloğunda çalışır; biri hata verse diğerleri etkilenmez (AC-10).
-Kubeconfig erişimi her istek başında load_kube_config_active() ile yapılır;
+Kubeconfig erişimi her istek başında configure_kube_client() ile yapılır;
 kalıcı/paylaşımlı ApiClient cache'lenmez (AC-9).
 """
 
@@ -23,7 +23,7 @@ from web.background import (
     update_pss_cache,
     update_netpol_coverage_cache,
 )
-from web.kubeconfig_manager import load_kube_config_active, get_active_kubeconfig_path
+from web.kubeconfig_manager import configure_kube_client, get_active_kubeconfig_path
 
 from web.blueprints.security import bp_security
 
@@ -95,11 +95,7 @@ def _init_k8s_clients():
     :returns: (core_v1, rbac_v1) tuple
     :raises: Exception — kubeconfig yüklenemezse veya API sunucusuna erişilemezse
     """
-    load_kube_config_active()
-    c = client.Configuration.get_default_copy()
-    c.verify_ssl = False
-    c.assert_hostname = False
-    client.Configuration.set_default(c)
+    configure_kube_client()
     return client.CoreV1Api(), client.RbacAuthorizationV1Api()
 
 

@@ -21,8 +21,8 @@ from web.background import (
     update_workload_stats_cache,
 )
 from web.kubeconfig_manager import (
+    configure_kube_client,
     get_active_kubeconfig_path,
-    load_kube_config_active,
 )
 from web.audit_log import record_audit_event, _short_session_id
 
@@ -66,13 +66,13 @@ def k8s_explorer_health():
     ok = False
     error = None
     try:
-        # Ensure active kubeconfig is loaded (this sets default client configuration)
-        load_kube_config_active()
-    except Exception as e:
-        # NOT: load_kube_config_active() başarısız olsa bile AŞAĞIDAKİ AC-4 bloğu
+        # Aktif kubeconfig'i yükler ve SSL/hostname konfigürasyonunu ayarlar.
+        # NOT: configure_kube_client() başarısız olsa bile AŞAĞIDAKİ AC-4 bloğu
         # (background_caches/degraded) HER ZAMAN hesaplanmalı -- tam da cluster
         # erişilemezken health endpoint'inin en bilgilendirici olması gerektiği an.
         # Bu yüzden burada erken return YAPILMAZ, sadece ok/error set edilir.
+        configure_kube_client()
+    except Exception as e:
         error = str(e)
     else:
         # After loading, try to list contexts from the same file path to get current context name
@@ -93,10 +93,6 @@ def k8s_explorer_health():
 
         # Lightweight API call to verify connectivity
         try:
-            c = client.Configuration.get_default_copy()
-            c.verify_ssl = False
-            c.assert_hostname = False
-            client.Configuration.set_default(c)
             core_v1 = client.CoreV1Api()
             try:
                 core_v1.list_namespace(_request_timeout=5)
@@ -171,11 +167,7 @@ def k8s_explorer_health():
 @bp_explorer.route('/k8s-explorer/namespaces')
 def k8s_explorer_namespaces():
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         core_v1 = client.CoreV1Api()
         namespaces = [ns.metadata.name for ns in core_v1.list_namespace().items]
         return jsonify({'namespaces': namespaces})
@@ -190,11 +182,7 @@ def k8s_explorer_namespace_children():
     if not namespace:
         return jsonify({'error': 'namespace zorunlu'}), 400
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         networking_v1 = client.NetworkingV1Api()
         core_v1 = client.CoreV1Api()
         # Önce ingressleri al
@@ -221,7 +209,7 @@ def k8s_explorer_describe():
     if obj_type not in ['pod', 'deployment']:
         return jsonify({'error': 'Sadece pod veya deployment destekleniyor'}), 400
     try:
-        kubeconfig = os.environ.get('KUBECONFIG')
+        kubeconfig = get_active_kubeconfig_path()
         cmd = ["kubectl", "describe", obj_type, name, "-n", namespace]
         if kubeconfig:
             cmd = ["kubectl", "--kubeconfig", kubeconfig] + cmd[1:]
@@ -243,11 +231,7 @@ def k8s_explorer_yaml():
             name = request.args.get('name')
             if not obj_type or not name:
                 return 'type ve name zorunlu', 400
-            load_kube_config_active()
-            c = client.Configuration.get_default_copy()
-            c.verify_ssl = False
-            c.assert_hostname = False
-            client.Configuration.set_default(c)
+            configure_kube_client()
             kube_client = type('KubeClient', (), {})()
             if obj_type == 'ingress':
                 kube_client.networking_v1 = client.NetworkingV1Api()
@@ -310,11 +294,7 @@ def k8s_explorer_yaml():
             yaml_str = data.get('yaml')
             if not obj_type or not name or not yaml_str:
                 return 'type, name, yaml zorunlu', 400
-            load_kube_config_active()
-            c = client.Configuration.get_default_copy()
-            c.verify_ssl = False
-            c.assert_hostname = False
-            client.Configuration.set_default(c)
+            configure_kube_client()
             kube_client = type('KubeClient', (), {})()
             body = yaml.safe_load(yaml_str)
             if obj_type == 'ingress':
@@ -406,8 +386,7 @@ def k8s_explorer_delete():
         if obj_type in namespaced_kinds and not namespace:
             return jsonify({'error': 'namespaced kaynak için namespace zorunlu'}), 400
 
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy(); c.verify_ssl=False; c.assert_hostname=False; client.Configuration.set_default(c)
+        configure_kube_client()
         core_v1 = client.CoreV1Api(); apps_v1 = client.AppsV1Api(); storage_v1 = client.StorageV1Api(); rbac_v1 = client.RbacAuthorizationV1Api()
 
         _DELETE_RESOURCE_TYPE_MAP = {
@@ -486,11 +465,7 @@ def k8s_explorer_logs():
     if obj_type != 'pod' or not namespace or not name:
         return 'type=pod, namespace ve name zorunlu', 400
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         core_v1 = client.CoreV1Api()
         log = core_v1.read_namespaced_pod_log(name=name, namespace=namespace, tail_lines=500)
         return log, 200, {'Content-Type': 'text/plain; charset=utf-8'}

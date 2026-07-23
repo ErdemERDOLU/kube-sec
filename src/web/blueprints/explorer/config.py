@@ -13,7 +13,7 @@ from flask import jsonify, request
 from kubernetes import client
 from kubernetes.client.rest import ApiException
 
-from web.kubeconfig_manager import load_kube_config_active
+from web.kubeconfig_manager import configure_kube_client
 from web.audit_log import record_audit_event, _short_session_id
 
 from web.blueprints.explorer import bp_explorer
@@ -44,11 +44,7 @@ def configmaps_summary():
         400: Geçersiz sayfalama parametresi.
     """
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         v1 = client.CoreV1Api()
         # Mevcut namespace filtresi korunur — AC-8 (önce filtrele, sonra dilimle)
         namespace = request.args.get('namespace')
@@ -86,11 +82,7 @@ def get_configmap():
     if not name or not namespace:
         return jsonify({'error': 'name and namespace required'}), 400
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         v1 = client.CoreV1Api()
         cm = v1.read_namespaced_config_map(name, namespace)
         data = getattr(cm, 'data', {}) or {}
@@ -108,11 +100,7 @@ def update_configmap():
         data = payload.get('data')
         if not name or not namespace or data is None:
             return jsonify({'error': 'name, namespace and data are required'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         v1 = client.CoreV1Api()
         # fetch existing, replace data and update resource so deletions are persisted
         # Try replace with retry on 409 Conflict
@@ -160,11 +148,7 @@ def update_configmap():
 def secrets_summary():
     try:
         namespace = request.args.get('namespace')
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         v1 = client.CoreV1Api()
         if namespace and namespace != 'all':
             secrets = v1.list_namespaced_secret(namespace).items
@@ -194,11 +178,7 @@ def get_secret():
     if not name or not namespace:
         return jsonify({'error': 'name and namespace required'}), 400
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         v1 = client.CoreV1Api()
         sec = v1.read_namespaced_secret(name, namespace)
         data = getattr(sec, 'data', {}) or {}
@@ -224,11 +204,7 @@ def update_secret():
         data = payload.get('data')
         if not name or not namespace or data is None:
             return jsonify({'error': 'name, namespace and data are required'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         v1 = client.CoreV1Api()
         max_retries = 3
         for attempt in range(1, max_retries + 1):
@@ -273,11 +249,7 @@ def delete_secret():
         namespace = payload.get('namespace')
         if not name or not namespace:
             return jsonify({'error': 'name and namespace required'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         v1 = client.CoreV1Api()
         v1.delete_namespaced_secret(name, namespace)
         record_audit_event(
@@ -305,11 +277,7 @@ def delete_secret():
 @bp_explorer.route('/k8s-explorer/resource-quotas-summary')
 def resource_quotas_summary():
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         v1 = client.CoreV1Api()
         quotas = v1.list_resource_quota_for_all_namespaces().items
         result = []
@@ -332,11 +300,7 @@ def resource_quotas_summary():
 @bp_explorer.route('/k8s-explorer/limit-ranges-summary')
 def limit_ranges_summary():
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         v1 = client.CoreV1Api()
         limit_ranges = v1.list_limit_range_for_all_namespaces().items
         result = []

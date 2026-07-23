@@ -17,7 +17,7 @@ from collections import deque
 
 from kubernetes import client
 
-from web.kubeconfig_manager import load_kube_config_active
+from web.kubeconfig_manager import configure_kube_client
 
 
 # =============================================================================
@@ -86,11 +86,7 @@ _wsc_consecutive_errors: int = 0  # ardışık hata sayacı (AC-3)
 def update_workload_stats_cache():
     global workload_stats_cache, workload_stats_cache_time, _wsc_last_error
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         core_v1 = client.CoreV1Api()
         apps_v1 = client.AppsV1Api()
         batch_v1 = client.BatchV1Api()
@@ -251,11 +247,7 @@ _psc_consecutive_errors: int = 0  # ardışık hata sayacı (AC-3)
 def update_pods_summary_cache():
     global pods_summary_cache, pods_summary_cache_time, _psc_last_error
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         core_v1 = client.CoreV1Api()
         pods = core_v1.list_pod_for_all_namespaces().items
         result = []
@@ -376,11 +368,7 @@ def _metrics_sampler_loop():
     while True:
         sleep_time = base_interval
         try:
-            load_kube_config_active()
-            c = client.Configuration.get_default_copy()
-            c.verify_ssl = False
-            c.assert_hostname = False
-            client.Configuration.set_default(c)
+            configure_kube_client()
             co = client.CustomObjectsApi()
             core_v1 = client.CoreV1Api()
             # Tüm namespace'leri dolaş ve pod metriklerini al
@@ -567,11 +555,7 @@ def update_pss_cache():
     """
     global pss_cache, pss_cache_time, _pss_last_error
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         core_v1 = client.CoreV1Api()
 
         namespaces = core_v1.list_namespace().items
@@ -785,11 +769,7 @@ def update_netpol_coverage_cache():
     global netpol_coverage_cache, netpol_coverage_cache_time, _npc_last_error
     _start = time.time()
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         core_v1 = client.CoreV1Api()
         net_v1 = client.NetworkingV1Api()
 

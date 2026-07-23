@@ -19,7 +19,7 @@ from web.background import (
     _METRICS_TS,
     _METRICS_TS_LOCK,
 )
-from web.kubeconfig_manager import load_kube_config_active
+from web.kubeconfig_manager import configure_kube_client
 from web.audit_log import record_audit_event, _short_session_id
 
 from web.blueprints.explorer import bp_explorer
@@ -56,11 +56,7 @@ def prometheus_proxy():
         step = request.args.get('step')
         manual_url = request.args.get('prometheus') or os.environ.get('PROMETHEUS_URL')
 
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
 
         core_v1 = client.CoreV1Api()
         api_client = client.ApiClient()
@@ -229,11 +225,7 @@ def pod_properties():
         return jsonify({'error': 'namespace ve name zorunlu'}), 400
 
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
 
         v1 = client.CoreV1Api()
         pod = v1.read_namespaced_pod(name=name, namespace=namespace)
@@ -290,11 +282,7 @@ def restart_pod():
         if not namespace or not name:
             return jsonify({'error': 'namespace ve name zorunlu'}), 400
 
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
 
         v1 = client.CoreV1Api()
         # Delete the pod to restart it (it will be recreated by the controller)
@@ -331,8 +319,7 @@ def pod_metrics():
 
         manual_url = request.args.get('prometheus') or os.environ.get('PROMETHEUS_URL')
 
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy(); c.verify_ssl = False; c.assert_hostname = False; client.Configuration.set_default(c)
+        configure_kube_client()
         core_v1 = client.CoreV1Api(); api_client = client.ApiClient()
 
         q_cpu = f'sum(rate(container_cpu_usage_seconds_total{{namespace="{namespace}",pod="{name}",container!="",image!=""}}[5m]))'
@@ -590,11 +577,7 @@ def pod_metrics_range():
 
         manual_url = request.args.get('prometheus') or os.environ.get('PROMETHEUS_URL')
 
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
 
         core_v1 = client.CoreV1Api()
         api_client = client.ApiClient()

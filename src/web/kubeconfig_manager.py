@@ -8,7 +8,7 @@ import os
 import sys
 from threading import Lock as _Lock
 
-from kubernetes import config
+from kubernetes import client, config
 
 # ---- Kubeconfig Manager (in-memory + optional directory) ----
 KUBECONFIG_STORE = {}
@@ -103,3 +103,29 @@ def load_kube_config_active():
         print(f"[load_kube_config_active] aktif kubeconfig: {path or 'DEFAULT'}", file=sys.stderr)
     except Exception:
         pass
+
+
+def configure_kube_client():
+    """Aktif kubeconfig'i yükler ve K8s client SSL/hostname konfigürasyonunu ayarlar.
+
+    1. load_kube_config_active() çağrılır (session -> global -> env -> fallback).
+    2. verify_ssl ve assert_hostname ayarları ortam değişkenine göre set edilir.
+    3. client.Configuration.set_default() ile varsayılan konfigürasyona atanır.
+
+    Ortam değişkeni: KUBESEC_VERIFY_SSL
+      - Ayarlanmadıysa veya boş string ise: verify_ssl = False (mevcut davranış korunur)
+      - "1", "true", "yes", "on" (büyük/küçük harf farkız): verify_ssl = True
+      - Diğer tüm değerler: verify_ssl = False
+
+    Not: assert_hostname değeri verify_ssl ile aynı değer alır — SSL doğrulama
+    açıksa hostname doğrulama da açık olmalıdır; tersi durumda da kapalı olmalıdır.
+
+    :raises: Exception — kubeconfig yüklenemezse (load_kube_config_active hatası)
+    """
+    load_kube_config_active()
+    c = client.Configuration.get_default_copy()
+    _raw = os.environ.get('KUBESEC_VERIFY_SSL', '')
+    _verify = _raw.strip().lower() in ('1', 'true', 'yes', 'on')
+    c.verify_ssl = _verify
+    c.assert_hostname = _verify
+    client.Configuration.set_default(c)

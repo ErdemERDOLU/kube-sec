@@ -7,7 +7,7 @@ storage-classes-summary, storage-class-details.
 from flask import jsonify, request
 from kubernetes import client
 
-from web.kubeconfig_manager import load_kube_config_active
+from web.kubeconfig_manager import configure_kube_client
 
 from web.blueprints.explorer import bp_explorer
 
@@ -17,11 +17,7 @@ from web.blueprints.explorer import bp_explorer
 def pvcs_summary():
     try:
         namespace = request.args.get('namespace')
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         v1 = client.CoreV1Api()
         if namespace and namespace != 'all':
             items = v1.list_namespaced_persistent_volume_claim(namespace).items
@@ -49,11 +45,7 @@ def pvcs_summary():
 @bp_explorer.route('/k8s-explorer/pvs-summary')
 def pvs_summary():
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         v1 = client.CoreV1Api()
         items = v1.list_persistent_volume().items
         result = []
@@ -81,11 +73,7 @@ def pvs_summary():
 @bp_explorer.route('/k8s-explorer/storage-classes-summary')
 def storage_classes_summary():
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         storage_v1 = client.StorageV1Api()
         items = storage_v1.list_storage_class().items
         result = []
@@ -112,11 +100,7 @@ def pvc_details():
         namespace = request.args.get('namespace')
         if not name or not namespace:
             return jsonify({'error': 'name ve namespace zorunlu'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         v1 = client.CoreV1Api()
         pvc = v1.read_namespaced_persistent_volume_claim(name, namespace)
         md = pvc.metadata; spec = pvc.spec; status = pvc.status
@@ -143,11 +127,7 @@ def pv_details():
         name = request.args.get('name')
         if not name:
             return jsonify({'error': 'name zorunlu'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         v1 = client.CoreV1Api()
         pv = v1.read_persistent_volume(name)
         md = pv.metadata; spec = pv.spec; status = pv.status
@@ -177,11 +157,7 @@ def storage_class_details():
         name = request.args.get('name')
         if not name:
             return jsonify({'error': 'name zorunlu'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         storage_v1 = client.StorageV1Api()
         sc = storage_v1.read_storage_class(name)
         md = sc.metadata

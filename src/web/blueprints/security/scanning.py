@@ -30,7 +30,7 @@ from web.background import (
     _pod_matches_pod_selector,
     _netpol_pod_selector_summary,
 )
-from web.kubeconfig_manager import load_kube_config_active, get_active_kubeconfig_path
+from web.kubeconfig_manager import configure_kube_client, get_active_kubeconfig_path
 from web.audit_log import record_audit_event, _short_session_id
 from web.i18n import translate
 from web.blueprints.security._vuln_checks import scan_pod_template
@@ -84,11 +84,7 @@ def vulnerabilities():
         selected_namespace: str
     """
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         apps_v1 = client.AppsV1Api()
         core_v1 = client.CoreV1Api()
         networking_v1 = client.NetworkingV1Api()
@@ -210,11 +206,7 @@ def trivy_operator_page():
 def trivy_operator_status():
     try:
         # Load kube config and relax SSL verification to avoid false negatives on self-signed clusters
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
 
         # Clients
         apps_api = client.AppsV1Api()
@@ -385,11 +377,7 @@ def list_vulnerability_reports():
     """List VulnerabilityReport CRs across namespaces or a specific namespace."""
     try:
         namespace = request.args.get('namespace')  # optional
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         co = client.CustomObjectsApi()
         group = 'aquasecurity.github.io'
         version = 'v1alpha1'
@@ -448,11 +436,7 @@ def trivy_operator_scan():
         kind = (data.get('kind') or '').lower()
         name = data.get('name')
 
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
 
         anno = {
             'trivy-operator.aquasecurity.github.io/scan': 'true',
@@ -556,11 +540,7 @@ def get_vulnerability_report():
         name = request.args.get('name')
         if not namespace or not name:
             return jsonify({'error': 'namespace and name are required'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         co = client.CustomObjectsApi()
         group = 'aquasecurity.github.io'
         version = 'v1alpha1'
@@ -674,11 +654,7 @@ def k8s_explorer_pss_namespace_detail():
     if not namespace:
         return jsonify({'error': 'namespace parametresi zorunlu'}), 400
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         core_v1 = client.CoreV1Api()
 
         # Namespace'i oku — PSA enforce etiketini belirle
@@ -818,11 +794,7 @@ def k8s_explorer_netpol_coverage_ns_detail():
     if not namespace:
         return jsonify({'error': 'namespace parametresi zorunlu'}), 400
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         core_v1 = client.CoreV1Api()
         net_v1 = client.NetworkingV1Api()
 

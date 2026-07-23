@@ -13,7 +13,7 @@ from web.background import (
     update_pods_summary_cache,
     update_workload_stats_cache,
 )
-from web.kubeconfig_manager import load_kube_config_active
+from web.kubeconfig_manager import configure_kube_client
 from web.audit_log import record_audit_event, _short_session_id
 
 from web.blueprints.explorer import bp_explorer
@@ -43,11 +43,7 @@ def deployments_summary():
     try:
         # Opsiyonel namespace filtresi — AC-9: backend namespace filtresi
         namespace = request.args.get('namespace')
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         apps_v1 = client.AppsV1Api()
         # Namespace filtresi varsa yalnızca o namespace'ten çek
         if namespace and namespace != 'all':
@@ -91,11 +87,7 @@ def k8s_explorer_deployment_detail():
     namespace = request.args.get('namespace')
     name = request.args.get('name')
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         kube_client = type('KubeClient', (), {})()
         kube_client.apps_v1 = client.AppsV1Api()
         kube_client.core_v1 = client.CoreV1Api()
@@ -120,11 +112,7 @@ def deployment_properties():
     if not namespace or not name:
         return jsonify({'error': 'namespace ve name zorunlu'}), 400
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         apps_v1 = client.AppsV1Api()
         dep = apps_v1.read_namespaced_deployment(name=name, namespace=namespace)
         md = dep.metadata
@@ -203,11 +191,7 @@ def restart_deployment():
         if not namespace or not name:
             return jsonify({'error': 'namespace ve name zorunlu'}), 400
 
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
 
         apps_v1 = client.AppsV1Api()
         # Patch deployment's pod template annotation to trigger restart
@@ -255,11 +239,7 @@ def scale_deployment():
         replicas = data.get('replicas')
         if not namespace or not name or replicas is None:
             return jsonify({'error': 'namespace, name ve replicas zorunlu'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         apps_v1 = client.AppsV1Api()
         # Patch the deployment with new replica count
         body = {"spec": {"replicas": int(replicas)}}
@@ -291,11 +271,7 @@ def scale_deployment():
 def statefulsets_summary():
     try:
         namespace = request.args.get('namespace')
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         apps_v1 = client.AppsV1Api()
         if namespace:
             statefulsets = apps_v1.list_namespaced_stateful_set(namespace).items
@@ -326,11 +302,7 @@ def statefulset_properties():
     if not namespace or not name:
         return jsonify({'error': 'namespace ve name zorunlu'}), 400
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         apps_v1 = client.AppsV1Api()
         ss = apps_v1.read_namespaced_stateful_set(name=name, namespace=namespace)
         md = ss.metadata
@@ -406,11 +378,7 @@ def statefulset_logs():
         mode = request.args.get('mode')
         if not namespace or not name:
             return jsonify({'error': 'namespace ve name zorunlu'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         core_v1 = client.CoreV1Api()
         apps_v1 = client.AppsV1Api()
         # Get StatefulSet to find its selector
@@ -458,11 +426,7 @@ def restart_statefulset():
         name = data.get('name')
         if not namespace or not name:
             return jsonify({'error': 'namespace ve name zorunlu'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         apps_v1 = client.AppsV1Api()
         # Patch StatefulSet's pod template annotation to trigger restart
         now = datetime.utcnow().isoformat() + 'Z'
@@ -500,11 +464,7 @@ def scale_statefulset():
         replicas = data.get('replicas')
         if not namespace or not name or replicas is None:
             return jsonify({'error': 'namespace, name ve replicas zorunlu'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         apps_v1 = client.AppsV1Api()
         # Patch the statefulset with new replica count
         body = {"spec": {"replicas": int(replicas)}}
@@ -526,11 +486,7 @@ def scale_statefulset():
 @bp_explorer.route('/k8s-explorer/daemonsets-summary')
 def daemonsets_summary():
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         apps_v1 = client.AppsV1Api()
         daemonsets = apps_v1.list_daemon_set_for_all_namespaces().items
         result = []
@@ -560,11 +516,7 @@ def daemonset_properties():
     if not namespace or not name:
         return jsonify({'error': 'namespace ve name zorunlu'}), 400
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         apps_v1 = client.AppsV1Api()
         ds = apps_v1.read_namespaced_daemon_set(name=name, namespace=namespace)
         md = ds.metadata
@@ -640,11 +592,7 @@ def daemonset_logs():
         mode = request.args.get('mode')
         if not namespace or not name:
             return jsonify({'error': 'namespace ve name zorunlu'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         core_v1 = client.CoreV1Api()
         apps_v1 = client.AppsV1Api()
         # Get DaemonSet to find its selector
@@ -688,11 +636,7 @@ def restart_daemonset():
         name = data.get('name')
         if not namespace or not name:
             return jsonify({'error': 'namespace ve name zorunlu'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         apps_v1 = client.AppsV1Api()
         # Patch DaemonSet's pod template annotation to trigger restart
         now = datetime.utcnow().isoformat() + 'Z'
@@ -724,11 +668,7 @@ def restart_daemonset():
 def replicasets_summary():
     """ReplicaSets summary list (namespace, name, ready, desired, age)."""
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         apps_v1 = client.AppsV1Api()
         rsets = apps_v1.list_replica_set_for_all_namespaces().items
         result = []
@@ -760,11 +700,7 @@ def delete_replicasets():
         items = data.get('items') if isinstance(data, dict) else None
         if not items or not isinstance(items, list):
             return jsonify({'error': 'items listesi zorunlu'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         apps_v1 = client.AppsV1Api()
         deleted = []
         errors = []
@@ -797,11 +733,7 @@ def delete_replicasets():
 def jobs_summary():
     """Jobs summary list (namespace, name, succeeded, failed, completions, age)."""
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         batch_v1 = client.BatchV1Api()
         jobs = batch_v1.list_job_for_all_namespaces().items
         result = []
@@ -827,11 +759,7 @@ def jobs_summary():
 def cronjobs_summary():
     """CronJobs summary list (namespace, name, schedule, suspended, last_schedule_time, active, age)."""
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         batch_v1 = client.BatchV1Api()
         batch_v1beta1 = client.BatchV1beta1Api() if hasattr(client, 'BatchV1beta1Api') else None
         cronjobs = []

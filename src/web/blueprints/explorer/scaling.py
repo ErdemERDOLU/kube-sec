@@ -8,7 +8,7 @@ from flask import jsonify, request
 from kubernetes import client
 from kubernetes.client.rest import ApiException
 
-from web.kubeconfig_manager import load_kube_config_active
+from web.kubeconfig_manager import configure_kube_client
 from web.audit_log import record_audit_event, _short_session_id
 
 from web.blueprints.explorer import bp_explorer
@@ -18,11 +18,7 @@ from web.blueprints.explorer import bp_explorer
 def hpa_summary():
     try:
         namespace = request.args.get('namespace')
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         autoscaling_v1 = client.AutoscalingV1Api()
         if namespace and namespace != 'all':
             hpas = autoscaling_v1.list_namespaced_horizontal_pod_autoscaler(namespace).items
@@ -58,11 +54,7 @@ def get_hpa():
         namespace = request.args.get('namespace')
         if not name or not namespace:
             return jsonify({'error': 'name and namespace are required'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         autoscaling_v1 = client.AutoscalingV1Api()
         hpa = autoscaling_v1.read_namespaced_horizontal_pod_autoscaler(name=name, namespace=namespace)
         md = hpa.metadata
@@ -97,11 +89,7 @@ def update_hpa():
             return jsonify({'error': 'name and namespace are required'}), 400
         if min_r is None and max_r is None:
             return jsonify({'error': 'nothing to update'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         autoscaling_v1 = client.AutoscalingV1Api()
         patch_spec = {}
         if min_r is not None:
@@ -143,11 +131,7 @@ def delete_hpa():
         namespace = data.get('namespace')
         if not name or not namespace:
             return jsonify({'error': 'name and namespace are required'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         autoscaling_v1 = client.AutoscalingV1Api()
         autoscaling_v1.delete_namespaced_horizontal_pod_autoscaler(name=name, namespace=namespace)
         record_audit_event(
@@ -172,11 +156,7 @@ def delete_hpa():
 def pdb_summary():
     try:
         namespace = request.args.get('namespace')
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         policy_v1 = client.PolicyV1Api()
         if namespace and namespace not in ('all', None):
             pdbs = policy_v1.list_namespaced_pod_disruption_budget(namespace).items
@@ -219,11 +199,7 @@ def get_pdb():
         namespace = request.args.get('namespace')
         if not name or not namespace:
             return jsonify({'error': 'name and namespace are required'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         policy_v1 = client.PolicyV1Api()
         pdb = policy_v1.read_namespaced_pod_disruption_budget(name=name, namespace=namespace)
         md = pdb.metadata
@@ -263,11 +239,7 @@ def update_pdb():
             return jsonify({'error': 'name and namespace are required'}), 400
         if (min_av is None or min_av == '') and (max_un is None or max_un == ''):
             return jsonify({'error': 'nothing to update'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         policy_v1 = client.PolicyV1Api()
 
         def parse_int_or_str(v):
@@ -329,11 +301,7 @@ def delete_pdb():
         namespace = data.get('namespace')
         if not name or not namespace:
             return jsonify({'error': 'name and namespace are required'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         policy_v1 = client.PolicyV1Api()
         policy_v1.delete_namespaced_pod_disruption_budget(name=name, namespace=namespace)
         record_audit_event(

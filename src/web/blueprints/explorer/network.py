@@ -8,7 +8,7 @@ network-policies-summary.
 from flask import jsonify, request
 from kubernetes import client
 
-from web.kubeconfig_manager import load_kube_config_active
+from web.kubeconfig_manager import configure_kube_client
 
 from web.blueprints.explorer import bp_explorer
 
@@ -18,11 +18,7 @@ from web.blueprints.explorer import bp_explorer
 def services_summary():
     try:
         namespace = request.args.get('namespace')
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         v1 = client.CoreV1Api()
         if namespace and namespace != 'all':
             items = v1.list_namespaced_service(namespace).items
@@ -75,11 +71,7 @@ def k8s_explorer_service_detail():
     namespace = request.args.get('namespace')
     name = request.args.get('name')
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         kube_client = type('KubeClient', (), {})()
         kube_client.core_v1 = client.CoreV1Api()
         kube_client.apps_v1 = client.AppsV1Api()
@@ -115,11 +107,7 @@ def k8s_explorer_service_details():
     if not namespace or not name:
         return jsonify({'error': 'namespace ve name zorunlu'}), 400
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         core_v1 = client.CoreV1Api()
         svc = core_v1.read_namespaced_service(name, namespace)
         md = svc.metadata
@@ -165,11 +153,7 @@ def k8s_explorer_service_details():
 def api_service_pods(namespace, name):
     """Return pods belonging to a Service by using its selector."""
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         core_v1 = client.CoreV1Api()
         svc = core_v1.read_namespaced_service(name, namespace)
         selector = svc.spec.selector or {}
@@ -207,11 +191,7 @@ def api_service_pods(namespace, name):
 def endpoints_summary():
     try:
         namespace = request.args.get('namespace')
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         v1 = client.CoreV1Api()
         if namespace and namespace != 'all':
             items = v1.list_namespaced_endpoints(namespace).items
@@ -247,11 +227,7 @@ def k8s_explorer_ingress_detail():
     namespace = request.args.get('namespace')
     name = request.args.get('name')
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         kube_client = type('KubeClient', (), {})()
         kube_client.networking_v1 = client.NetworkingV1Api()
         kube_client.core_v1 = client.CoreV1Api()
@@ -281,11 +257,7 @@ def k8s_explorer_ingress_detail():
 @bp_explorer.route('/k8s-explorer/ingresses')
 def k8s_explorer_ingresses():
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         kube_client = type('KubeClient', (), {})()
         kube_client.networking_v1 = client.NetworkingV1Api()
         ingresses = kube_client.networking_v1.list_ingress_for_all_namespaces().items
@@ -299,11 +271,7 @@ def k8s_explorer_ingresses():
 def ingresses_summary():
     try:
         namespace = request.args.get('namespace')
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         net_v1 = client.NetworkingV1Api()
         if namespace and namespace != 'all':
             items = net_v1.list_namespaced_ingress(namespace).items
@@ -338,11 +306,7 @@ def ingresses_summary():
 @bp_explorer.route('/k8s-explorer/ingress-classes-summary')
 def ingress_classes_summary():
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         net_v1 = client.NetworkingV1Api()
         items = net_v1.list_ingress_class().items
         result = []
@@ -387,11 +351,7 @@ def ingress_classes_summary():
 def network_policies_summary():
     try:
         namespace = request.args.get('namespace')
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         net_v1 = client.NetworkingV1Api()
         if namespace and namespace != 'all':
             items = net_v1.list_namespaced_network_policy(namespace).items

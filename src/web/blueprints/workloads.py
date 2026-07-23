@@ -16,7 +16,7 @@ from flask import Blueprint, jsonify, render_template, request
 from kubernetes import client
 
 from web.audit_log import get_recent_events
-from web.kubeconfig_manager import load_kube_config_active
+from web.kubeconfig_manager import configure_kube_client
 
 bp_workloads = Blueprint('workloads', __name__)
 
@@ -137,11 +137,7 @@ def mesh_data():
     Hata durumunda: {error: str} (küme bağlantısı yoksa)
     """
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         kube_client = type('KubeClient', (), {})()
         kube_client.core_v1 = client.CoreV1Api()
         kube_client.apps_v1 = client.AppsV1Api()

@@ -70,11 +70,12 @@
 **Sorun:** (1) Bir hata duzeltmesi veya davranis degisikligi yapildiginda 40+ kopyayi ayri ayri guncellemek gerekiyor ve unutulan kopyalar tutarsizlik yaratir. (2) SSL dogrulamasinin koşulsuz devre disi birakilmasi, man-in-the-middle saldiri riskini artiriyor — ozellikle uzak cluster'larla iletisimde. (3) `describe` endpoint'i yanlis kubeconfig kullanabilir.
 
 **Kabul kriterleri:**
-- [ ] Yeni bir yardimci fonksiyon olusturulur (ornegin `kubeconfig_manager.py` icinde `get_kube_api_client()` veya benzeri) — `load_kube_config_active()` + `Configuration` ayarlamalarini tek bir yere toplar.
-- [ ] Tum blueprint dosyalarindaki tekrarlanan 6 satirlik bloklar bu yeni fonksiyonla degistirilir.
-- [ ] `verify_ssl` ayari bir ortam degiskeninden (`KUBESEC_VERIFY_SSL=1` gibi) okunur; varsayilan `False` kalabilir ama dokumante edilir.
-- [ ] `core.py` icindeki `k8s_explorer_describe()` route'u `get_active_kubeconfig_path()` kullanacak sekilde duzeltilir; `os.environ.get('KUBECONFIG')` kullanimindan cekilir.
-- [ ] Degisiklik sonrasi uygulama hatasiz baslar ve en az 3 farkli sayfa (workloads, nodes, network) duzgun calisir.
+- [x] Yeni bir yardimci fonksiyon olusturulur (`kubeconfig_manager.py` icinde `configure_kube_client()`) — `load_kube_config_active()` + `Configuration` ayarlamalarini tek bir yere toplar.
+- [x] Tum blueprint dosyalarindaki tekrarlanan 6 satirlik bloklar bu yeni fonksiyonla degistirilir (13 dosya, gercek envanter 94 degil **99 konum** — spec'in tahmininden fazlasi bulunup duzeltildi; `grep -rn "verify_ssl\s*=\s*False" src/web/` sifir sonuc).
+- [x] `verify_ssl` ayari bir ortam degiskeninden (`KUBESEC_VERIFY_SSL=1` gibi) okunur; varsayilan `False` kalir, `CLAUDE.md`'de dokumante edildi. Breaking change yok.
+- [x] `core.py` icindeki `k8s_explorer_describe()` route'u `get_active_kubeconfig_path()` kullanacak sekilde duzeltildi; `os.environ.get('KUBECONFIG')` kullanimindan cekildi.
+- [x] Degisiklik sonrasi uygulama hatasiz basliyor, `/k8s-explorer/health`, `/compliance`, `/k8s-explorer/nodes`, `/k8s-explorer/services-summary`, `/k8s-explorer/rbac-summary` HTTP 200 donuyor.
+  - Spec: `docs/specs/20260722-kube-client-merkezilestirme.md` (10 AC, 8 zorunlu/orta CONFIRMED — iki bagimsiz dogrulama; code-reviewer 2 kucuk bulgu (kullanilmayan import x2, guncel olmayan docstring) tespit etti, dogrudan duzeltildi. AC-9 dokumantasyon opsiyoneldi, yapildi.
 
 ---
 

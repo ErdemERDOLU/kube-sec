@@ -13,7 +13,7 @@ import yaml
 from flask import jsonify, render_template, request
 from kubernetes import client
 
-from web.kubeconfig_manager import load_kube_config_active
+from web.kubeconfig_manager import configure_kube_client
 
 from web.blueprints.security import bp_security
 
@@ -243,11 +243,7 @@ def configmap_secrets():
 @bp_security.route('/configmap-secrets-data')
 def configmap_secrets_data():
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         core_v1 = client.CoreV1Api()
         keywords = ['password', 'passwd', 'secret', 'key', 'token', 'apikey', 'api_key', 'auth', 'credential', 'private', 'jwt', 'access', 'refresh']
         suspects = []
@@ -293,11 +289,7 @@ def rbac_risky_roles():
                       type: object
     """
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         kube_client = type('KubeClient', (), {})()
         kube_client.rbac_v1 = client.RbacAuthorizationV1Api()
     except Exception as e:
@@ -366,11 +358,7 @@ def privileged_containers():
                 type: object
     """
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         kube_client = type('KubeClient', (), {})()
         kube_client.core_v1 = client.CoreV1Api()
     except Exception as e:
@@ -453,11 +441,7 @@ def exec_events():
                 type: object
     """
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         core_v1 = client.CoreV1Api()
         k8s_events = core_v1.list_event_for_all_namespaces().items
         events = []

@@ -11,7 +11,7 @@ from flask import jsonify, request
 from kubernetes import client
 from kubernetes.client.rest import ApiException
 
-from web.kubeconfig_manager import load_kube_config_active
+from web.kubeconfig_manager import configure_kube_client
 from web.audit_log import record_audit_event, _short_session_id
 
 from web.blueprints.explorer import bp_explorer
@@ -20,11 +20,7 @@ from web.blueprints.explorer import bp_explorer
 @bp_explorer.route('/k8s-explorer/nodes')
 def k8s_explorer_nodes():
     try:
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         kube_client = type('KubeClient', (), {})()
         kube_client.core_v1 = client.CoreV1Api()
         nodes = kube_client.core_v1.list_node().items
@@ -52,11 +48,7 @@ def k8s_explorer_node_uncordon():
         node_name = data.get('node')
         if not node_name:
             return 'Node adı zorunlu', 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         kube_client = type('KubeClient', (), {})()
         kube_client.core_v1 = client.CoreV1Api()
         # Node'u uncordon et
@@ -82,11 +74,7 @@ def k8s_explorer_node_cordon():
         node_name = data.get('node')
         if not node_name:
             return 'Node adı zorunlu', 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         kube_client = type('KubeClient', (), {})()
         kube_client.core_v1 = client.CoreV1Api()
         # Node'u cordon et
@@ -112,11 +100,7 @@ def k8s_explorer_node_drain():
         node_name = data.get('node')
         if not node_name:
             return 'Node adı zorunlu', 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         kube_client = type('KubeClient', (), {})()
         kube_client.core_v1 = client.CoreV1Api()
         log_lines = []
@@ -156,8 +140,7 @@ def rbac_summary():
        Optional namespace param filters namespaced sets, default=default."""
     try:
         namespace = request.args.get('namespace') or 'default'
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy(); c.verify_ssl=False; c.assert_hostname=False; client.Configuration.set_default(c)
+        configure_kube_client()
         core_v1 = client.CoreV1Api()
         rbac_v1 = client.RbacAuthorizationV1Api()
 
@@ -252,7 +235,7 @@ def rbac_detail():
         namespace = request.args.get('namespace')
         if not kind or not name:
             return jsonify({'error': 'kind ve name zorunlu'}), 400
-        load_kube_config_active(); c = client.Configuration.get_default_copy(); c.verify_ssl=False; c.assert_hostname=False; client.Configuration.set_default(c)
+        configure_kube_client()
         core_v1 = client.CoreV1Api(); rbac_v1 = client.RbacAuthorizationV1Api()
         obj = None
         if kind == 'serviceaccount':
@@ -282,11 +265,7 @@ def rbac_detail():
 def priority_classes_summary():
     try:
         _ = request.args.get('namespace')  # ignored
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         scheduling_v1 = client.SchedulingV1Api()
         pcs = scheduling_v1.list_priority_class().items
         result = []
@@ -312,11 +291,7 @@ def get_priority_class():
         name = request.args.get('name')
         if not name:
             return jsonify({'error': 'name is required'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         scheduling_v1 = client.SchedulingV1Api()
         pc = scheduling_v1.read_priority_class(name=name)
         md = pc.metadata
@@ -347,11 +322,7 @@ def update_priority_class():
         preemption_policy = data.get('preemption_policy')
         description = data.get('description')
 
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         scheduling_v1 = client.SchedulingV1Api()
 
         patch_body = {}
@@ -405,11 +376,7 @@ def delete_priority_class():
         name = data.get('name')
         if not name:
             return jsonify({'error': 'name is required'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         scheduling_v1 = client.SchedulingV1Api()
         scheduling_v1.delete_priority_class(name=name)
         record_audit_event(
@@ -434,11 +401,7 @@ def delete_priority_class():
 def runtime_classes_summary():
     try:
         _ = request.args.get('namespace')  # ignored
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         co = client.CustomObjectsApi()
         objs = co.list_cluster_custom_object(group="node.k8s.io", version="v1", plural="runtimeclasses")
         items = objs.get('items', [])
@@ -470,11 +433,7 @@ def get_runtime_class():
         name = request.args.get('name')
         if not name:
             return jsonify({'error': 'name is required'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         co = client.CustomObjectsApi()
         rc = co.get_cluster_custom_object(group="node.k8s.io", version="v1", plural="runtimeclasses", name=name)
         md = rc.get('metadata', {})
@@ -580,11 +539,7 @@ def update_runtime_class():
 
         patch_body = { 'spec': patch_spec }
 
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         co = client.CustomObjectsApi()
         co.patch_cluster_custom_object(group="node.k8s.io", version="v1", plural="runtimeclasses", name=name, body=patch_body)
         record_audit_event(
@@ -612,11 +567,7 @@ def delete_runtime_class():
         name = data.get('name')
         if not name:
             return jsonify({'error': 'name is required'}), 400
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         co = client.CustomObjectsApi()
         co.delete_cluster_custom_object(group="node.k8s.io", version="v1", plural="runtimeclasses", name=name)
         record_audit_event(
@@ -641,11 +592,7 @@ def delete_runtime_class():
 def leases_summary():
     try:
         namespace = request.args.get('namespace')
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         coord_v1 = client.CoordinationV1Api()
         if namespace and namespace not in ('all', None):
             leases = coord_v1.list_namespaced_lease(namespace).items
@@ -680,11 +627,7 @@ def leases_summary():
 def mutating_webhooks_summary():
     try:
         namespace = request.args.get('namespace')
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         ar = client.AdmissionregistrationV1Api()
         items = ar.list_mutating_webhook_configuration().items
         result = []
@@ -729,11 +672,7 @@ def mutating_webhooks_summary():
 def validating_webhooks_summary():
     try:
         namespace = request.args.get('namespace')
-        load_kube_config_active()
-        c = client.Configuration.get_default_copy()
-        c.verify_ssl = False
-        c.assert_hostname = False
-        client.Configuration.set_default(c)
+        configure_kube_client()
         ar = client.AdmissionregistrationV1Api()
         items = ar.list_validating_webhook_configuration().items
         result = []

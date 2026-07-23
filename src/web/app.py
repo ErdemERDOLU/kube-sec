@@ -120,11 +120,19 @@ def inject_i18n():
     }
 
 
-# Guvenlik: Frozen (uretim) build'de debug endpoint'ini devre disi birak — dosya sistemi
-# yollarini ve template/static listesini herkese ifsa etmemek icin route yalnizca
-# gelistirme ortaminda (sys.frozen == False) kayit edilir; frozen build'de 404 doner.
+# Guvenlik: Debug endpoint'ini yalnizca gelistirme ortaminda aktif et.
+# Kosul: (1) PyInstaller frozen build DEGILSE *VE* (2) FLASK_ENV=development veya
+# FLASK_DEBUG=1 ise route kayit edilir. Aksi halde Flask otomatik 404 doner.
+# - make run-dev (FLASK_ENV=development) -> endpoint AKTIF
+# - make run (env var yok) -> endpoint PASIF (404)
+# - PyInstaller build (frozen=True) -> endpoint PASIF (404), env var'lardan bagimsiz
 # Not: Ileride eklenecek tum /_debug/* route'lari ayni if blogu icinde tanimlanmalidir.
-if not getattr(sys, 'frozen', False):
+_debug_enabled = (
+    not getattr(sys, 'frozen', False)
+    and (os.environ.get('FLASK_ENV') == 'development'
+         or os.environ.get('FLASK_DEBUG') == '1')
+)
+if _debug_enabled:
     @app.route('/_debug/list-templates')
     def _debug_list_templates():
         try:

@@ -112,9 +112,10 @@
 **Sorun:** Uretim ortaminda sunucu dosya sistemi yapisi disariya sizdirilir. Bu bilgi, bir saldirganin hedefli dosya dahil etme (file inclusion) veya path traversal saldirilari planlamasina yardimci olabilir.
 
 **Kabul kriterleri:**
-- [ ] `/_debug/list-templates` endpoint'i yalnizca `FLASK_ENV=development` veya `FLASK_DEBUG=1` iken erisime acik olur; aksi halde 404 dondurur.
-- [ ] PyInstaller bundle'inda (`getattr(sys, 'frozen', False)` durumunda) bu endpoint her zaman devre disi kalir.
-- [ ] Degisiklik sonrasi `make run-dev` ile endpoint erisilebilir, `make run` ile erisilemez.
+- [x] `/_debug/list-templates` endpoint'i yalnizca `FLASK_ENV=development` veya `FLASK_DEBUG=1` iken erisime acik olur; aksi halde route Flask'in `url_map`'ine hic kayit edilmez (guvenlik hedefi: handler kodu hicbir zaman calismiyor, dosya sistemi bilgisi sizmiyor).
+- [x] PyInstaller bundle'inda (`getattr(sys, 'frozen', False)` durumunda) bu endpoint her zaman devre disi kalir (env var'lardan bagimsiz, `AND` kisa devre).
+- [x] Degisiklik sonrasi `make run-dev` ile endpoint erisilebilir (HTTP 200), `make run` ile erisilemez.
+  - Spec: `docs/specs/20260723-debug-endpoint-flask-env-kapisi.md` (10 AC, tumu CONFIRMED — iki bagimsiz dogrulama). **Not:** `make run` modunda literal HTTP kodu 404 degil 500 donuyor; nedeni bu maddenin degisikligi degil, uygulamadaki onceden var olan genel `@app.errorhandler(Exception)` handler'inin `NotFound` dahil TUM exception'lari 500'e cevirmesi (bkz. madde 14). Route `url_map`'te kesin olarak yok (dogrulandi), guvenlik hedefi tam saglaniyor.
 
 ---
 
@@ -276,3 +277,24 @@ Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagit
 - [ ] (Gelecek donem) En az `kubectl describe` islevselliginin Python client'a tasinmasi ile subprocess bagimliligi azaltilir.
 
 **Not:** Bu madde bilinçli olarak ertelenmis bir karar noktasidir; aktif gelistirme onceligi degildir.
+
+---
+
+## [Oncelik: Orta] 14. Guvenlik: Global Error Handler Stack Trace Sizintisi ve Yanlis HTTP Status Kodlari
+
+**Kategori:** Guvenlik / Teknik Borc
+**Bulunma kaynagi:** Backlog #5 (debug endpoint kapatma) dogrulama sirasinda code-reviewer tarafindan tespit edildi (2026-07-23).
+
+**Mevcut durum:**
+- `src/web/app.py` icindeki `@app.errorhandler(Exception)` handler'i (`handle_exception()`), `isinstance(e, HTTPException)` kontrolu yapmadan **TUM** exception turlerini yakalayip kosulsuz `jsonify({'error': str(e), 'traceback': tb}), 500` donduruyor.
+- Flask'in kendi `_find_error_handler` mekanizmasi (`(code, None)` cift gecis mantigi), `werkzeug.exceptions.NotFound` (404), `MethodNotAllowed` (405) gibi standart HTTP exception'lari da bu genel handler'a yonlendiriyor — bu yuzden var olmayan HERHANGI bir route icin dogru 404 yerine 500 donuyor.
+- **Daha ciddisi:** `'traceback': tb` satiri, tam Python stack trace'ini `make run` (production-benzeri, `FLASK_ENV`/`FLASK_DEBUG` set edilmemis) modunda bile HTTP yanit body'sine JSON olarak ekliyor. Bu, dosya yollari, fonksiyon isimleri, satir numaralari, bazen degisken degerleri gibi hassas ic bilgiyi disariya sizdirir.
+
+**Sorun:** (1) Uretim benzeri modda calisan bir saldirgan, kasitli olarak hatali istekler (var olmayan route, gecersiz parametre vb.) gondererek uygulamanin ic yapisi (dosya yollari, kullanilan kutuphaneler, kod akisi) hakkinda detayli bilgi toplayabilir — bu, hedefli saldirilar icin bir kesif (reconnaissance) vektorudur. (2) Var olmayan route'lar icin 404 yerine 500 donmesi, izleme/monitoring araclarinin (ornegin bir uptime checker) yanlis alarm uretmesine veya gercek sunucu hatalarini 404'lerden ayirt edememesine yol acar.
+
+**Kabul kriterleri:**
+- [ ] `handle_exception()` fonksiyonu `isinstance(e, HTTPException)` kontrolu yapar: eger `e` bir `HTTPException` ise (404, 405, 400 vb.), kendi `e.code` status kodu ve `e.description` mesajiyla donmeli — genel 500'e cevrilmemeli.
+- [ ] Yalnizca gercek beklenmeyen sunucu hatalari (HTTPException OLMAYAN exception'lar) icin 500 donulmeye devam eder.
+- [ ] `traceback` alani yanitdan tamamen kaldirilir VEYA yalnizca `FLASK_ENV=development`/`FLASK_DEBUG=1` iken response body'ye eklenir (production'da sadece loglanir, kullaniciya donmez) — backlog #5'teki `_debug_enabled` kalibina benzer bir yaklasim kullanilabilir.
+- [ ] Degisiklik sonrasi var olmayan bir route (`curl /hicbir-yerde-olmayan-route`) `make run` modunda dogru HTTP 404 doner (500 degil).
+- [ ] Mevcut hata loglamasi (stderr'e `traceback.format_exc()` yazma) korunur — sadece HTTP yanitina traceback eklenmesi kisitlanir, sunucu taraflarindaki loglama kaybolmaz.

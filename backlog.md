@@ -159,28 +159,9 @@
 
 ---
 
-## [Oncelik: Orta] 8. Docker Imajinin Iyilestirilmesi
+## [Oncelik: --] 8. Docker Destegi (DEPRECATE EDILDI)
 
-**Kategori:** Paketleme / Dagitim
-**Mevcut durum:**
-- `Dockerfile`: `python:3.9-slim` temel imajı kullaniyor (Python 3.9 Ekim 2025'te end-of-life oldu).
-- Container root kullanici olarak calisiyor — `USER` direktifi yok.
-- Health check tanimlanmamis (`HEALTHCHECK` yok).
-- `yaml/` dizini `COPY` edilmiyor; Trivy Operator install ve kubectl-based islemler `yaml/` altindaki manifest dosyalarina bagimli (icerisindeki dosyalar bulunamaz).
-- `styles/` dizini de kopyalanmiyor (paketlenmis uygulama icin gerekli olabilir).
-- Port expose edilmemis (`EXPOSE 8080` yok).
-- `.dockerignore` dosyasi mevcut degil; `.venv/`, `node_modules/`, `dist/`, `build/`, `kubeconfigs/` gibi gereksiz dosyalar imaja dahil olabilir.
-
-**Sorun:** Mevcut Docker imaji uretim ortami icin en iyi uygulamalara uymuyor. Root olarak calismasi container-escape senaryolarinda riski artirir; health check olmamasi orkestrasyon platformlarinin (Kubernetes, Docker Swarm) konteynerin saglik durumunu izlemesini engeller.
-
-**Kabul kriterleri:**
-- [ ] Temel imaj `python:3.11-slim` veya `python:3.12-slim` (aktif olarak desteklenen surum) olarak guncellenir.
-- [ ] Dockerfile'a non-root kullanici eklenir (`RUN adduser --disabled-password appuser && USER appuser`).
-- [ ] `HEALTHCHECK CMD curl -f http://localhost:8080/k8s-explorer/app-health || exit 1` (veya wget tabanlı) eklenir.
-- [ ] `yaml/` dizini `COPY yaml/ ./yaml/` ile imaja dahil edilir.
-- [ ] `EXPOSE 8080` eklenir.
-- [ ] `.dockerignore` dosyasi olusturulur: `.venv/`, `node_modules/`, `dist/`, `build/`, `kubeconfigs/`, `.git/`, `__pycache__/`, `*.pyc` dahil edilir.
-- [ ] `docker build -t kube-sec . && docker run --rm kube-sec` ile imaj basariyla build edilir ve uygulama baslar.
+Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagitilmaktadir. Docker imaji artik bakim altinda degildir ve iyilestirme planlanmamaktadir.
 
 ---
 

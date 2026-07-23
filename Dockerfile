@@ -1,3 +1,6 @@
+# DEPRECATED: Bu Docker imaji artik bakim altinda degildir. Kube-Sec yalnizca
+# masaustu (PyInstaller ile paketlenmis) uygulama olarak desteklenmektedir.
+
 FROM python:3.9-slim
 
 # Set the working directory

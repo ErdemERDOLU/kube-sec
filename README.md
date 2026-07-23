@@ -100,6 +100,8 @@ Open your browser at `http://localhost:8080` after startup.
 
 ### Docker
 
+> **DEPRECATED:** Docker destegi artik bakim altinda degildir. Uygulama yalnizca masaustu (desktop) paketi olarak kullanilmalidir.
+
 ```bash
 # Build the image
 docker build -t kube-sec .

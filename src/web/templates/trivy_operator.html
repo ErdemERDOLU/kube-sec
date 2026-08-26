@@ -582,7 +582,7 @@ function renderPager(){
   if (pages <= 1){ pager.innerHTML=''; return; }
   
   let html = '';
-  html += `<button class="page-btn ${currentPage===1?'disabled':''}" data-p="prev"><i class="bi bi-chevron-left"></i></button>`;
+  html += `<button class="page-btn ${currentPage===1?'disabled':''}" data-p="prev" aria-label="{{ 'Önceki sayfa' if current_locale != 'en' else 'Previous page' }}"><i class="bi bi-chevron-left"></i></button>`;
   
   for(let i=1;i<=pages;i++){
     if(i === 1 || i === pages || (i >= currentPage - 1 && i <= currentPage + 1)) {
@@ -592,7 +592,7 @@ function renderPager(){
     }
   }
   
-  html += `<button class="page-btn ${currentPage===pages?'disabled':''}" data-p="next"><i class="bi bi-chevron-right"></i></button>`;
+  html += `<button class="page-btn ${currentPage===pages?'disabled':''}" data-p="next" aria-label="{{ 'Sonraki sayfa' if current_locale != 'en' else 'Next page' }}"><i class="bi bi-chevron-right"></i></button>`;
   pager.innerHTML = html;
   
   pager.querySelectorAll('button.page-btn').forEach(btn=>{

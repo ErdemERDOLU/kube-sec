@@ -405,24 +405,29 @@ function renderMeshNetworkGraph(nsFilterVal) {
 
 // Enhanced D3.js network graph
 function drawNetworkGraph(nodes, links) {
-    const width = document.getElementById('network-graph').clientWidth;
-    const height = 500;
-    
+    const container = document.getElementById('network-graph');
+    const width = container.clientWidth;
+    const height = Math.max(500, container.clientHeight || 500);
+
     d3.select('#network-graph').selectAll('*').remove();
-    
+
+    if (nodes.length === 0) return;
+
+    const zoom = d3.zoom().scaleExtent([0.3, 3]).on('zoom', (event) => {
+        g.attr('transform', event.transform);
+    });
+
     const svg = d3.select('#network-graph').append('svg')
         .attr('width', width)
         .attr('height', height)
-        .call(d3.zoom().scaleExtent([0.3, 3]).on('zoom', (event) => {
-            g.attr('transform', event.transform);
-        }));
-    
+        .call(zoom);
+
     const g = svg.append('g');
-    
+
     const color = d3.scaleOrdinal()
         .domain(['service', 'pod'])
         .range(['var(--primary-color)', 'var(--danger-color)']);
-    
+
     svg.append('defs').append('marker')
         .attr('id', 'arrow')
         .attr('viewBox', '0 -5 10 10')
@@ -434,7 +439,7 @@ function drawNetworkGraph(nodes, links) {
         .append('path')
         .attr('d', 'M0,-5L10,0L0,5')
         .attr('fill', '#666');
-    
+
     const link = g.append('g')
         .selectAll('line')
         .data(links)
@@ -443,7 +448,7 @@ function drawNetworkGraph(nodes, links) {
         .attr('stroke', '#999')
         .attr('stroke-dasharray', '4,2')
         .attr('marker-end', 'url(#arrow)');
-    
+
     const node = g.append('g')
         .selectAll('g')
         .data(nodes)
@@ -452,52 +457,73 @@ function drawNetworkGraph(nodes, links) {
             .on('start', dragstarted)
             .on('drag', dragged)
             .on('end', dragended));
-    
+
     node.append('circle')
         .attr('r', 20)
         .attr('fill', d => color(d.group))
         .attr('stroke', '#fff')
         .attr('stroke-width', 3);
-    
+
     node.append('text')
         .attr('text-anchor', 'middle')
-        .attr('dy', 4)
+        .attr('dy', 35)
         .attr('font-size', 10)
         .attr('font-weight', 'bold')
-        .attr('fill', '#fff')
+        .attr('fill', '#333')
         .text(d => d.label.length > 8 ? d.label.substring(0, 8) + '...' : d.label);
-    
+
     node.append('title')
         .text(d => `${d.group}: ${d.label}\nNamespace: ${d.namespace}`);
-    
+
     const simulation = d3.forceSimulation(nodes)
         .force('link', d3.forceLink(links).id(d => d.id).distance(100))
         .force('charge', d3.forceManyBody().strength(-400))
         .force('center', d3.forceCenter(width / 2, height / 2))
-        .force('collision', d3.forceCollide(30))
-        .on('tick', ticked);
-    
+        .force('collision', d3.forceCollide(45))
+        .on('tick', ticked)
+        .on('end', fitToViewport);
+
     function ticked() {
         link
             .attr('x1', d => d.source.x)
             .attr('y1', d => d.source.y)
             .attr('x2', d => d.target.x)
             .attr('y2', d => d.target.y);
-        
+
         node.attr('transform', d => `translate(${d.x},${d.y})`);
     }
-    
+
+    function fitToViewport() {
+        const ns = nodes;
+        if (!ns.length) return;
+        const xs = ns.map(d => d.x);
+        const ys = ns.map(d => d.y);
+        const minX = Math.min(...xs) - 50;
+        const minY = Math.min(...ys) - 50;
+        const maxX = Math.max(...xs) + 50;
+        const maxY = Math.max(...ys) + 50;
+        const bWidth = maxX - minX;
+        const bHeight = maxY - minY;
+        const scale = Math.min(0.9, Math.min(width / bWidth, height / bHeight));
+        const tx = (width - bWidth * scale) / 2 - minX * scale;
+        const ty = (height - bHeight * scale) / 2 - minY * scale;
+        svg.transition().duration(500).call(
+            zoom.transform,
+            d3.zoomIdentity.translate(tx, ty).scale(scale)
+        );
+    }
+
     function dragstarted(event, d) {
         if (!event.active) simulation.alphaTarget(0.3).restart();
         d.fx = d.x;
         d.fy = d.y;
     }
-    
+
     function dragged(event, d) {
         d.fx = event.x;
         d.fy = event.y;
     }
-    
+
     function dragended(event, d) {
         if (!event.active) simulation.alphaTarget(0);
         d.fx = null;

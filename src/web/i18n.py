@@ -232,14 +232,28 @@ I18N = {
     'error.fetch_failed': {'tr': 'Veri alinamadi', 'en': 'Failed to fetch data'},
     'error.http_detail': {'tr': 'HTTP {status} hatasi', 'en': 'HTTP {status} error'},
     'cache.last_update': {'tr': 'Son guncelleme', 'en': 'Last updated'},
-    'cache.ago': {'tr': 'once', 'en': 'ago'},
+    'cache.ago': {'tr': 'önce', 'en': 'ago'},
     'cache.seconds': {'tr': 'saniye', 'en': 'seconds'},
     'cache.minutes': {'tr': 'dakika', 'en': 'minutes'},
     'cache.stale_warning': {'tr': 'Gosterilen veri 5 dakikadan eski olabilir.', 'en': 'Displayed data may be older than 5 minutes.'},
     'cache.error_prefix': {'tr': 'Veri guncellenemedi', 'en': 'Data update failed'},
     'cache.error_stale_data': {'tr': 'gosterilen veri eski olabilir.', 'en': 'displayed data may be outdated.'},
-    'cache.just_now': {'tr': 'az once', 'en': 'just now'},
+    'cache.just_now': {'tr': 'az önce', 'en': 'just now'},
     'cache.live_data': {'tr': 'Canli veri', 'en': 'Live data'},
+    # timeAgo / calculateAge lokalizasyonu (common.js) — AC-14
+    'time.seconds_ago': {'tr': '{n}sn önce', 'en': '{n}s ago'},
+    'time.minutes_ago': {'tr': '{n}dk önce', 'en': '{n}m ago'},
+    'time.hours_ago':   {'tr': '{n}sa önce', 'en': '{n}h ago'},
+    'time.days_ago':    {'tr': '{n}g önce',  'en': '{n}d ago'},
+    'time.seconds':     {'tr': '{n}sn',      'en': '{n}s'},
+    'time.minutes':     {'tr': '{n}dk',      'en': '{n}m'},
+    'time.hours':       {'tr': '{n}sa',      'en': '{n}h'},
+    'time.days':        {'tr': '{n}g',       'en': '{n}d'},
+    # Storage filtre ipucu — AC-15
+    'storage.empty_filter_hint': {
+        'tr': 'Başka bir namespace seçmeyi deneyin',
+        'en': 'Try selecting a different namespace',
+    },
     # YAML Linter
     'yaml_linter.empty_content': {'tr': 'YAML içeriği boş', 'en': 'YAML content is empty'},
     # Güncelleme bildirimi (AC-6)

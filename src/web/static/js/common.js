@@ -71,21 +71,29 @@ function escapeHtml(str) {
 }
 
 /**
- * Bir ISO timestamp'ten "Xs ago / Xm ago / Xh ago / Xd ago" formatinda sure dondurur.
+ * Bir ISO timestamp'ten lokalize edilmis "Xsn once / Xdk once / Xsa once / Xg once" formatinda sure dondurur.
+ * window.i18n ve window.locale uzerinden lokalize edilir; tanimli degilse Ingilizce fallback kullanilir.
  * @param {string|null} ts - ISO 8601 timestamp
  * @returns {string}
  */
 function timeAgo(ts) {
   if (!ts) return '-';
   const diff = Math.floor((new Date() - new Date(ts)) / 1000);
-  if (diff < 60)    return diff + 's ago';
-  if (diff < 3600)  return Math.floor(diff / 60) + 'm ago';
-  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-  return Math.floor(diff / 86400) + 'd ago';
+  const _i = window.i18n || {};
+  const _l = window.locale || 'tr';
+  const _t = (key, n) => {
+    const tpl = (_i[key] && _i[key][_l]) || (_i[key] && _i[key]['en']) || '';
+    return tpl ? tpl.replace('{n}', n) : n + key.split('.').pop();
+  };
+  if (diff < 60)    return _t('time.seconds_ago', diff);
+  if (diff < 3600)  return _t('time.minutes_ago', Math.floor(diff / 60));
+  if (diff < 86400) return _t('time.hours_ago', Math.floor(diff / 3600));
+  return _t('time.days_ago', Math.floor(diff / 86400));
 }
 
 /**
- * Bir ISO timestamp'ten "Xd / Xh / Xm" formatinda sure dondurur ("ago" soneki yok).
+ * Bir ISO timestamp'ten lokalize edilmis "Xg / Xsa / Xdk" formatinda sure dondurur ("ago" soneki yok).
+ * window.i18n ve window.locale uzerinden lokalize edilir; tanimli degilse Ingilizce fallback kullanilir.
  * @param {string|null} ts - ISO 8601 timestamp
  * @returns {string}
  */
@@ -95,9 +103,15 @@ function calculateAge(ts) {
   const d = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   const h = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const m = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-  if (d > 0) return d + 'd';
-  if (h > 0) return h + 'h';
-  return m + 'm';
+  const _i = window.i18n || {};
+  const _l = window.locale || 'tr';
+  const _t = (key, n) => {
+    const tpl = (_i[key] && _i[key][_l]) || (_i[key] && _i[key]['en']) || '';
+    return tpl ? tpl.replace('{n}', n) : n + key.split('.').pop();
+  };
+  if (d > 0) return _t('time.days', d);
+  if (h > 0) return _t('time.hours', h);
+  return _t('time.minutes', m);
 }
 
 /**

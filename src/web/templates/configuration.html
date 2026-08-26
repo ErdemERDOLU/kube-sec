@@ -53,7 +53,7 @@ function _ct(key, fallback) {
 }
 
 async function fetchConfigs(){
-  const res = await fetch('/kubeconfigs',{credentials:'include'});
+  const res = await fetch('/kubeconfigs',{credentials:'include',headers:{'Accept':'application/json'}});
   const data = await res.json();
   renderTable(data.items, data.active);
 }

@@ -103,14 +103,18 @@
 (function () {
   'use strict';
 
-  // window.i18n ve window.locale base.html'de tanımlanır
-  var _i18n = window.i18n || {};
+  // window.i18n ve window.locale base.html'de tanımlanır.
+  // Bu IIFE, content bloğu içinde olduğundan base.html'deki window.i18n atama
+  // scripti henüz çalışmamış olabilir. tr() fonksiyonu her çağrıda window.i18n'i
+  // okuyarak DOMContentLoaded sonrası doğru çevirileri alır (lazy okuma).
   var _locale = window.locale || 'tr';
 
-  /** i18n sözlüğünden metni çeker. */
+  /** i18n sözlüğünden metni çeker — window.i18n'i her çağrıda okur (lazy). */
   function tr(key) {
-    var entry = _i18n[key];
-    if (entry && entry[_locale]) return entry[_locale];
+    var dict = window.i18n || {};
+    var locale = window.locale || _locale;
+    var entry = dict[key];
+    if (entry && entry[locale]) return entry[locale];
     if (entry && entry['tr']) return entry['tr'];
     return key;
   }

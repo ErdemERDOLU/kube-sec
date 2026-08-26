@@ -17,7 +17,7 @@
               {{ t('nodes.subtitle') }}
             </p>
           </div>
-          <div class="d-flex gap-2">
+          <div class="d-flex gap-2 flex-wrap nodes-header-actions">
             <button class="btn btn-light btn-lg" onclick="renderNodes()" id="refreshBtn">
               <i class="bi bi-arrow-clockwise me-2"></i>{{ t('nodes.btn_refresh') }}
             </button>
@@ -155,6 +155,14 @@
 </div>
 
 <style>
+/* Mobil buton grubu küçültme — AC-6 (backlog #16) */
+@media (max-width: 576px) {
+  .nodes-header-actions .btn {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+  }
+}
+
 /* Fixed and organized CSS styles for proper layout */
 .node-status-badge {
   display: inline-flex;

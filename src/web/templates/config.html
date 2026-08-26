@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}Config - Kubernetes Security Checker{% endblock %}
+{% block page_title %}{{ t('config.title') }}{% endblock %}
 
 {% block content %}
 <style>
@@ -777,6 +778,15 @@
 
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 <script>
+// Bulgu 5 (backlog #15): .nav-link.active null-guard yardımcı fonksiyonu.
+// Sayfa yüklenirken veya Bootstrap tab state'i henüz ayarlanmamışsa querySelector null
+// döndürebilir; bu durum .getAttribute().replace() zincirini TypeError'a düşürür.
+// getActiveTabId() null-safe şekilde aktif tab id'sini döndürür, bulunamazsa '' döner.
+function getActiveTabId() {
+  var el = document.querySelector('.nav-link.active');
+  return el ? (el.getAttribute('data-bs-target') || '').replace('#', '') : '';
+}
+
 // Ensure global handlers exist before dynamic table renders to avoid ReferenceError from inline onclicks
 window.showConfigMap = window.showConfigMap || function(name, namespace) { console.debug('showConfigMap called early', name, namespace); };
 window.editConfigMap = window.editConfigMap || function(name, namespace) { console.debug('editConfigMap called early', name, namespace); };
@@ -1208,7 +1218,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const v = sel.value;
         document.getElementById('clearConfigNsFilter').classList.toggle('d-none', v === 'all');
         // if currently on configmaps tab, refresh it
-        const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+        const activeTab = getActiveTabId();
         if (activeTab === 'configmaps') fetchAndRenderConfigMapsTable();
       });
       document.getElementById('clearConfigNsFilter').addEventListener('click', () => {
@@ -1231,7 +1241,7 @@ document.addEventListener('DOMContentLoaded', function() {
         secretsSel.addEventListener('change', () => {
           const v = secretsSel.value;
           document.getElementById('clearSecretsNsFilter').classList.toggle('d-none', v === 'all');
-          const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+          const activeTab = getActiveTabId();
           if (activeTab === 'secrets') fetchAndRenderSecretsTable();
         });
         document.getElementById('clearSecretsNsFilter').addEventListener('click', () => {
@@ -1255,7 +1265,7 @@ document.addEventListener('DOMContentLoaded', function() {
         j.namespaces.forEach(ns => ensureOpt(ns, ns));
         hpaSel.value = j.namespaces.includes('default') ? 'default' : 'all';
         hpaSel.addEventListener('change', () => {
-          const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+          const activeTab = getActiveTabId();
           if (activeTab === 'hpa') fetchAndRenderHPATable();
         });
       }
@@ -1272,7 +1282,7 @@ document.addEventListener('DOMContentLoaded', function() {
         j.namespaces.forEach(ns => ensureOpt2(ns, ns));
         pdbSel.value = j.namespaces.includes('default') ? 'default' : 'all';
         pdbSel.addEventListener('change', () => {
-          const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+          const activeTab = getActiveTabId();
           if (activeTab === 'pdb') fetchAndRenderPDBTable();
         });
       }
@@ -1289,7 +1299,7 @@ document.addEventListener('DOMContentLoaded', function() {
         j.namespaces.forEach(ns => ensureOpt3(ns, ns));
         pcSel.value = j.namespaces.includes('default') ? 'default' : 'all';
         pcSel.addEventListener('change', () => {
-          const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+          const activeTab = getActiveTabId();
           if (activeTab === 'priority-classes') fetchAndRenderPriorityClassesTable();
         });
       }
@@ -1306,7 +1316,7 @@ document.addEventListener('DOMContentLoaded', function() {
         j.namespaces.forEach(ns => ensureOpt4(ns, ns));
         rcSel.value = j.namespaces.includes('default') ? 'default' : 'all';
         rcSel.addEventListener('change', () => {
-          const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+          const activeTab = getActiveTabId();
           if (activeTab === 'runtime-classes') fetchAndRenderRuntimeClassesTable();
         });
       }
@@ -1323,7 +1333,7 @@ document.addEventListener('DOMContentLoaded', function() {
         j.namespaces.forEach(ns => ensureOpt5(ns, ns));
         leasesSel.value = j.namespaces.includes('default') ? 'default' : 'all';
         leasesSel.addEventListener('change', () => {
-          const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+          const activeTab = getActiveTabId();
           if (activeTab === 'leases') fetchAndRenderLeasesTable();
         });
       }
@@ -1340,7 +1350,7 @@ document.addEventListener('DOMContentLoaded', function() {
         j.namespaces.forEach(ns => ensureOpt6(ns, ns));
         mutSel.value = j.namespaces.includes('default') ? 'default' : 'all';
         mutSel.addEventListener('change', () => {
-          const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+          const activeTab = getActiveTabId();
           if (activeTab === 'webhooks') fetchAndRenderMutatingWebhooksTable();
         });
       }
@@ -1356,17 +1366,17 @@ document.addEventListener('DOMContentLoaded', function() {
         j.namespaces.forEach(ns => ensureOpt7(ns, ns));
         valSel.value = j.namespaces.includes('default') ? 'default' : 'all';
         valSel.addEventListener('change', () => {
-          const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+          const activeTab = getActiveTabId();
           if (activeTab === 'webhooks') fetchAndRenderValidatingWebhooksTable();
         });
       }
     }
     // trigger initial render for the active tab (configmaps by default)
-    const activeTabAfterNs = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+    const activeTabAfterNs = getActiveTabId();
     setTimeout(() => handleTabChange(activeTabAfterNs), 50);
   }).catch(() => {
     // if namespace list fetch fails, still try to render active tab
-    const activeTabAfterNs = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+    const activeTabAfterNs = getActiveTabId();
     setTimeout(() => handleTabChange(activeTabAfterNs), 50);
   });
   
@@ -1385,7 +1395,7 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   // Fallback: trigger initial render for the active tab immediately
   try {
-    const initialActive = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+    const initialActive = getActiveTabId();
     if (initialActive === 'configmaps') setTimeout(fetchAndRenderConfigMapsTable, 50);
   } catch (e) {
     // ignore
@@ -2624,7 +2634,7 @@ function openPcEditModal(name) {
 
 function refreshAllData() {
   loadOverviewData();
-  const activeTab = document.querySelector('.nav-link.active').getAttribute('data-bs-target').replace('#', '');
+  const activeTab = getActiveTabId();
   handleTabChange(activeTab);
 }
 // The second function only supported JSON editing and was preventing key deletion from working properly

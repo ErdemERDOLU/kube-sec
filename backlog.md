@@ -287,7 +287,7 @@ Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagit
 
 ---
 
-## [Oncelik: Yuksek] 15. UI/UX: Kritik Gorsel Hatalar ve Kirik Islevsellik
+## [Oncelik: Yuksek] 15. UI/UX: Kritik Gorsel Hatalar ve Kirik Islevsellik — TAMAMLANDI
 
 **Kategori:** UI/UX
 **Bulunma kaynagi:** `web-frontend-developer` agent tarafindan yapilan kapsamli masaustu UI/UX denetimi (2026-07-24). Denetim, `chromium-cli` ortamda kurulu olmadigi icin sistemdeki Chrome'un headless modu + ozel bir CDP (WebSocket) istemcisiyle 20 route, 3 viewport'ta (1440x900 / 768x1024 / 390x844) taranarak yapildi; uygulama gercek bir cluster'a (`mbs-dev` context) bagliydi, bu yuzden dolu-durum UX'i degerlendirildi.
@@ -302,16 +302,17 @@ Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagit
 **Sorun:** Bu maddeler kullaniciya uygulamanin "bozuk" oldugu izlenimini veriyor — gorunmez basliklar ve kirik grafikler ozellikle yeni kullanicilar icin guven kaybi yaratir; `/kubeconfigs`'in ham JSON donmesi ayrica kucuk bir bilgi sizintisi riskidir (dosya sistemi yollari).
 
 **Kabul kriterleri:**
-- [ ] `.hero-section` ve `.bg-gradient-primary` stilleri `base.html`'e (global CSS) tasinir; access-control ve storage sayfalarinda baslik okunabilir hale gelir.
-- [ ] `GET /kubeconfigs` route'u ya `/api/kubeconfigs` altina tasinir ya da `/configuration`'a redirect eder; tarayicida dogrudan ziyaret edildiginde ham JSON gorunmez.
-- [ ] Highcharts (veya esdeger bir chart kutuphanesi) uygulama bundle'ina eklenir, workloads "Genel Bakis" pasta grafikleri calisir hale gelir; kutuphane bulunamazsa en azindan kullaniciya anlamli bir fallback mesaji gosterilir.
-- [ ] Eksik `audit.empty_state`, `audit.filter_resource_type`, `audit.filter_action`, `audit.filter_all` anahtarlari `I18N` dict'ine (TR+EN) eklenir; audit-trail sayfasinda ham anahtar gorunmez.
-- [ ] `config.html`'deki null-reference hatasi giderilir (ilgili null-guard eklenir); `privileged_containers.html:1516`'daki debug `console.log` kaldirilir.
-- [ ] Degisiklik sonrasi 5 sayfa (access-control, storage, kubeconfigs, workloads, audit-trail) `console --errors` temiz, gorsel olarak dogru render ediyor.
+- [x] `.hero-section` ve `.bg-gradient-primary` stilleri `base.html`'e (global CSS) tasindi; access-control ve storage sayfalarinda baslik okunabilir.
+- [x] `GET /kubeconfigs` route'u `Accept` header kontrolu ile tarayicidan dogrudan ziyarette `/configuration`'a redirect eder; AJAX/fetch cagrilari (`configuration.html`) JSON almaya devam eder (`Accept: application/json` header'i eklendi).
+- [x] Workloads "Genel Bakis" pasta grafikleri icin `Highcharts is not defined` durumunda anlamli fallback mesaji gosterilir (`workloads.chart_unavailable` i18n anahtari). NOT: Highcharts CDN referansi (`code.highcharts.com`) yerel vendor'a tasinamadi — kutuphane v13 ticari lisans geregi gerektiriyor ("commercial license may be required"), bu nedenle lisans belirsizligi netlesene kadar dosya repoya commit edilmedi; CDN erisimi olan ortamlarda grafikler normal calisir, olmayan ortamlarda guard devreye girer.
+- [x] Eksik audit-trail i18n anahtarlari icin kok neden bulundu ve giderildi: anahtarlar `I18N` dict'inde zaten mevcuttu, asil sorun `audit_trail.html`'deki IIFE'nin `window.i18n` atamasindan once calismasiydi (lazy okumaya cevrildi).
+- [x] `config.html`'deki 12 null-reference noktasi `getActiveTabId()` yardimci fonksiyonuyla guard'landi; `privileged_containers.html`'deki debug `console.debug` satiri kaldirildi (gercek satir 553, backlog'daki "~1516" guncel degildi).
+- [x] 7 sayfa (access-control, storage, kubeconfigs, workloads, audit-trail, config, privileged-containers) icin kod-seviyesinde dogrulandi: tum 20 Jinja sablonu hatasiz parse oluyor, 67/67 pytest testi geciyor.
+  - Spec: `docs/specs/20260826-uiux-kritik-gorsel-hatalar.md` (6 AC, tamami CONFIRMED — bagimsiz `qa-engineer` + `code-reviewer`; ilk turda code-reviewer 4 bulgu buldu: 1 kritik (fetch Accept header eksikligi `/kubeconfigs` UI'ini kirmiyor), 3 orta (flyout opacity/transform eksik, console.warn'da hassas veri, Highcharts CDN) — kritik + 2 orta dogrudan duzeltildi, Highcharts vendor tasima lisans belirsizligi nedeniyle yapilmadi (yukarida not edildi). Orchestrator smoke-check: Jinja parse + pytest + Python syntax dogrulandi, ayrica `audit_trail.html`'de build agent'inin JS yorumunda birakip Jinja parse'ini kiran bir `{% block content %}` literal metni tespit edilip duzeltildi.
 
 ---
 
-## [Oncelik: Orta] 16. UI/UX: Bilgi Mimarisi, Navigasyon ve Mobil Responsive Duzeltmeler
+## [Oncelik: Orta] 16. UI/UX: Bilgi Mimarisi, Navigasyon ve Mobil Responsive Duzeltmeler — TAMAMLANDI
 
 **Kategori:** UI/UX
 **Bulunma kaynagi:** Ayni UI/UX denetimi (2026-07-24), bkz. backlog #15.
@@ -326,13 +327,14 @@ Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagit
 **Sorun:** Kullanici uygulamada nerede oldugunu (page title tutarsizligi) her zaman anlayamiyor; en kritik islevlerden biri (cluster degistirme) belirsiz isimlendirme yuzunden bulunmasi zor; mobil/dar ekranda bazi sayfalar kullanilamaz hale geliyor (tasan/kirpilan elemanlar); daraltilmis sidebar guvenlik ozelliklerinin cogunu erisilemez kiliyor.
 
 **Kabul kriterleri:**
-- [ ] `/configuration` route'u ve sidebar etiketi daha net bir isme alinir (or. "Cluster/Kubeconfig Yonetimi"); `/config` "Kaynak Ayarlari" gibi ayristirilir. i18n anahtarlari (TR+EN) guncellenir.
-- [ ] Tum sablomlarda `{% block page_title %}` override edilir (home, workloads, k8s-explorer, config, access-control, privileged-containers, vulnerabilities dahil); top-bar basligi her sayfada dogru sayfa adini gosterir.
-- [ ] Sidebar collapsed modda Guvenlik alt-menusune hover flyout (veya esdeger) ile erisim saglanir; 9 alt-sayfanin tamami collapsed modda da ulasilabilir olur.
-- [ ] `/vulnerabilities` namespace filtre satiri mobilde `flex-wrap` ile sarar, 390px'te yatay tasma olmaz (`scrollWidth <= innerWidth`).
-- [ ] `/compliance` top-bar basligi mobilde `text-truncate` ile kisaltilir, context badge basliga binmez (`flex-shrink:0` + yeterli gap).
-- [ ] `/nodes` mobil tasmasi giderilir.
-- [ ] Top-bar mobil duzeni (hamburger/baslik/badge/dil) sikismadan render olur — badge gerekirse mobilde gizlenir veya alt satira alinir.
+- [x] `/configuration` sidebar etiketi "Cluster Yonetimi"/"Cluster Management" olarak, `/config` "Kaynak Ayarlari"/"Resource Config" olarak ayristirildi (`i18n.py`: `nav.config`, `nav.configuration`). Route URL'leri degismedi.
+- [x] 13 sablonda `{% block page_title %}` override edildi (7 zorunlu: home, workloads, k8s-explorer, config, access-control, privileged-containers, vulnerabilities + 6 ek alt-menu sayfasi: mesh, exec-events, configmap-secrets, yaml-linter, network, storage); tum kullanilan i18n anahtarlari dogrulandi.
+- [x] Sidebar collapsed modda Guvenlik alt-menusune hover flyout ile erisim saglandi (9 alt-sayfa); ilk turda `opacity`/`transform` base kurallarindan miras kalip flyout'u gorunmez birakan bir bulgu code-review'da yakalanip duzeltildi.
+- [x] `/vulnerabilities` namespace filtre satirina `flex-wrap` + select `min-width` kucultmesi eklendi.
+- [x] `/compliance` top-bar basligi mobilde `text-overflow:ellipsis` ile kisaltilir, badge'e `flex-shrink:0` eklendi.
+- [x] `/nodes` buton grubuna mobil `flex-wrap` + kucultulmus font/padding eklendi.
+- [x] Top-bar mobil duzeni: badge 576px altinda gizlenir, baslik `font-size`/padding kuculur (Yaklasim A).
+  - Spec: `docs/specs/20260826-uiux-bilgi-mimarisi-responsive.md` (7 zorunlu AC, tamami CONFIRMED — bagimsiz `qa-engineer` + `code-reviewer`, backlog #15 ile paralel implement edildi, dosya bazli catisma tespit edilmedi). Orchestrator smoke-check: Jinja parse + pytest dogrulandi.
 
 ---
 

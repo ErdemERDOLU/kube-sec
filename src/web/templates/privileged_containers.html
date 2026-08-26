@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ t('privsec.title') }}{% endblock %}
+{% block page_title %}{{ t('privsec.title') }}{% endblock %}
 {% block content %}
 <div class="container-fluid">
     <!-- Page Header -->
@@ -550,7 +551,6 @@ function loadPrivilegedData() {
     fetch('/privileged-containers?allpods=1')
       .then(resp => resp.json())
       .then(data => {
-    console.debug('loadPrivilegedData: fetched data', data);
         const resultDiv = document.getElementById('result');
         const table = document.getElementById('privileged-table');
         
@@ -576,7 +576,7 @@ function loadPrivilegedData() {
                 }
 
                         if (!podsList || podsList.length === 0) {
-                            console.warn('loadPrivilegedData: podsList empty after normalization', {podsList, data});
+                            console.warn('loadPrivilegedData: podsList empty after normalization', {podsList});
                             // Show debug info to help identify why UI is empty
                             let debugHtml = `<div class='alert alert-warning'><i class="fas fa-info-circle me-2"></i>{{ t('privsec.empty_pods') }}</div>`;
                             try {

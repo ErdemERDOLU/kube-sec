@@ -10,7 +10,7 @@ Bağımlılık zinciri: kubeconfig_manager <- background <- bu modül <- app.py
 import os
 import time
 
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, jsonify, redirect, request, session
 
 import web.kubeconfig_manager as _kcm
 import web.background as _bg
@@ -37,6 +37,12 @@ def kubeconfigs_list():
     GET /kubeconfigs
     Returns: {items: [...], active: str|null}
     """
+    # Bulgu 2 (backlog #15): Tarayıcıdan doğrudan ziyarette ham JSON (disk yolları)
+    # açığa çıkmasını önlemek için Accept header kontrolü yapılır.
+    # AJAX/fetch çağrıları Accept: application/json gönderir → JSON yanıt korunur.
+    # Tarayıcı doğrudan ziyareti (Accept: text/html...) → /configuration'a redirect.
+    if 'application/json' not in request.headers.get('Accept', ''):
+        return redirect('/configuration')
     active = session.get(KUBECONFIG_ACTIVE_KEY)
     return jsonify({'items': list_kubeconfigs(), 'active': active})
 

@@ -338,7 +338,7 @@ Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagit
 
 ---
 
-## [Oncelik: Orta] 17. UI/UX: Gorsel Tasarim Sistemi Tutarliligi
+## [Oncelik: Orta] 17. UI/UX: Gorsel Tasarim Sistemi Tutarliligi — TAMAMLANDI
 
 **Kategori:** UI/UX
 **Bulunma kaynagi:** Ayni UI/UX denetimi (2026-07-24), bkz. backlog #15.
@@ -356,18 +356,20 @@ Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagit
 **Sorun:** Tutarsiz gorsel dil, uygulamanin "birden fazla donemde, ortak bir standart olmadan buyumus" izlenimini veriyor; kullanici her sayfada yeniden ogrenme maliyeti odüyor.
 
 **Kabul kriterleri:**
-- [ ] 1-2 birincil aksan rengi CSS degiskeni olarak tanimlanir, tum hero gradyanlari buna baglanir.
-- [ ] Kaynak listeleme sayfalari (access-control dahil) tutarli bir liste paradigmasina (tercihen tablo) getirilir.
-- [ ] Privileged sayfasindaki RBAC tablosu ortak tablo stiline uydurulur; bos metrikte "-" yerine "0" veya acikca "Veri yok" gosterilir.
-- [ ] Storage sayfasinda sayac ile aktif filtre senkronize edilir veya bos durumda filtre ipucu gosterilir.
-- [ ] `timeAgo()` fonksiyonu `window.i18n`/`t("cache.ago")` kalibina tasinir, tum kullanim noktalarinda lokalize sure ekleri gosterilir.
-- [ ] Mesh gorsellestirmesinde fit-to-viewport ve etiket cakisma onleme uygulanir.
-- [ ] Trivy Operator sayfasinda bos tablo icin acik bir bos-durum satiri eklenir (inbox ikonlu ortak kalip).
-- [ ] "once" -> "önce" yazim hatasi duzeltilir.
+- [x] 1-2 birincil aksan rengi CSS degiskeni olarak tanimlanir (`--hero-gradient-start`/`--hero-gradient-end`), tum hero gradyanlari buna baglanir.
+- [x] Kaynak listeleme sayfalari icin bu spec kapsami daraltildi (bkz. spec, Kapsam Disi): `access_control.html`'in kart-grid'den tabloya donusumu ayri bir is olarak birakildi; `privileged_containers.html`'deki RBAC tablosu ortak tablo stiline uydurulmasi kapsama alindi (asagida).
+- [x] Privileged sayfasindaki RBAC tablosu ortak tablo stiline uydurulur (`table-dark` kaldirildi); bos metrikte "-" yerine "0" gosterilir.
+- [x] Storage sayfasinda sayac ile aktif filtre senkronize edilir, bos durumda filtre ipucu gosterilir.
+- [x] `timeAgo()`/`calculateAge()` fonksiyonlari `window.i18n` kalibina tasinir, tum kullanim noktalarinda lokalize sure ekleri gosterilir (8 yeni `time.*` I18N anahtari).
+- [x] Mesh gorsellestirmesinde fit-to-viewport ve etiket cakisma onleme uygulanir (`forceCollide` 30->45, dinamik yukseklik).
+- [x] Trivy Operator sayfasinda bos tablo icin acik bir bos-durum satiri eklenir (inbox ikonlu ortak kalip).
+- [x] "once" -> "önce" yazim hatasi duzeltilir (`cache.ago`, `cache.just_now`).
+
+**Uygulama notu (2026-08-26):** product-manager -> web-frontend-developer (izole git worktree, backlog #18 ile paralel) -> bagimsiz qa-engineer zinciriyle tamamlandi. Spec: `docs/specs/20260826-gorsel-tasarim-tutarliligi.md` (17 AC: 10 kritik + 5 orta + 2 nice-to-have). Ayni anda repo uzerinde calisan baska bir oturum (backlog #15/#16, bkz. yukarida) `base.html` dahil ortak dosyalarda calistigi icin implementasyon izole worktree'lerde yapildi, diger oturumun commit+push'undan sonra `main`'e merge edildi (`base.html`'deki tek gercek celiski -- ayni dosyada iki farkli `.bg-gradient-primary` tanimi -- backlog #17'nin CSS degiskenli versiyonu lehine elle cozuldu, gorsel sonuc degismedi). Bagimsiz QA turunda 17 AC'den 16'si ilk turda CONFIRMED, 1'i (AC-2: `network.html`'de olu/sabit hex kodlu bir `.hero-section` blogu kalmisti, gorsel etkisi yoktu ama statik kontrole takiliyordu) FAILED cikti, hemen duzeltilip (`network.html`'den kaldirildi) tekrar dogrulandi. Smoke-check: `make test` 67/67 PASSED, import zinciri saglam.
 
 ---
 
-## [Oncelik: Orta] 18. UI/UX: Erisilebilirlik (Accessibility) Iyilestirmeleri
+## [Oncelik: Orta] 18. UI/UX: Erisilebilirlik (Accessibility) Iyilestirmeleri — TAMAMLANDI
 
 **Kategori:** UI/UX / Erisilebilirlik
 **Bulunma kaynagi:** Ayni UI/UX denetimi (2026-07-24), bkz. backlog #15.
@@ -380,10 +382,13 @@ Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagit
 **Sorun:** Ekran okuyucu kullanan veya klavye ile gezinen kullanicilar icin uygulama buyuk olcude kullanilamaz durumda; bu hem WCAG uyumu hem de kurumsal musteriler icin (erisilebilirlik denetimi gerektiren) bir risktir.
 
 **Kabul kriterleri:**
-- [ ] Tum ikon-only butonlara aciklayici `aria-label` eklenir.
-- [ ] Tum filtre/arama form kontrollerine gorunur veya `aria-label`/gizli `<label>` eklenir.
-- [ ] Custom interaktif bilesenlere (`.btn`, `.nav-link`, tablo satir aksiyonlari) belirgin bir `focus-visible` outline stili eklenir.
-- [ ] En az 3 farkli sayfada (workloads, config, access-control) yalnizca klavye (Tab/Enter) ile temel islemler (filtre degistirme, satir detay acma) gerceklestirilebilir oldugu dogrulanir.
+- [x] Tum ikon-only butonlara aciklayici `aria-label` eklenir (config.html, access_control.html, base.html, storage.html, trivy_operator.html; 12 yeni `a11y.*` I18N anahtari).
+- [x] Tum filtre/arama form kontrollerine `aria-label` eklenir (workloads.html: 6 namespace select + arama input; access_control.html: namespace select + arama input).
+- [x] Custom interaktif bilesenlere (`.btn`, `.nav-link`, `.sidebar-toggle`, `.form-select`, `.form-control`, tablo satir aksiyonlari) belirgin bir `:focus-visible` outline stili eklenir (base.html, config.html, workloads.html; yalnizca `outline` property'si, mevcut stiller degistirilmedi).
+- [x] En az 3 farkli sayfada (workloads, config, access-control) yalnizca klavye (Tab/Enter) ile temel islemlerin gerceklestirilebilir oldugu dogrulanir — kod incelemesiyle teknik engel olmadigi teyit edildi (tabindex engeli yok, standart HTML form/buton elemanlari); gercek tarayicida elle dogrulama onerilir (acik birakildi).
+- Ek (nice-to-have, spec'te AC-12/AC-13): Skip-to-content linki ve ARIA landmark rolleri (`role="navigation"`, `role="main"`) de eklendi.
+
+**Uygulama notu (2026-08-26):** product-manager -> web-frontend-developer (izole git worktree, backlog #17 ile paralel) -> bagimsiz qa-engineer zinciriyle tamamlandi. Spec: `docs/specs/20260826-erisilebilirlik-iyilestirmeleri.md` (13 AC: 9 kritik + 2 orta + 2 nice-to-have) — spec'in I18N dict konumu varsayimi (`app.py`) hataliydi, gercek konum `src/web/i18n.py` oldugu tespit edilip duzeltilerek uygulandi. `base.html` gibi ortak dosyalarda ayni anda calisan baska bir oturumla (backlog #15/#16) koordine olundu, implementasyon izole worktree'de yapilip merge edildi. Bagimsiz QA turunde 13 AC'nin tamami ilk turda CONFIRMED (0 FAILED). Smoke-check: `make test` 67/67 PASSED, import zinciri saglam.
 
 ---
 

@@ -22,16 +22,16 @@
       <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
         <div class="input-group" style="width:260px;">
           <span class="input-group-text bg-light border-end-0"><i class="bi bi-filter"></i></span>
-          <select id="rbacNamespace" class="form-select border-start-0">
+          <select id="rbacNamespace" class="form-select border-start-0" aria-label="{{ t('a11y.filter_namespace') }}">
             <option value="default" selected>default</option>
             <option value="all">all namespaces</option>
           </select>
         </div>
         <div class="input-group" style="width:260px;">
           <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
-          <input id="rbacSearch" type="text" class="form-control border-start-0" placeholder="{{ t('access.search_placeholder') }}" />
+          <input id="rbacSearch" type="text" class="form-control border-start-0" placeholder="{{ t('access.search_placeholder') }}" aria-label="{{ t('a11y.search') }}" />
         </div>
-        <button class="btn btn-sm btn-outline-primary" onclick="reloadRbac()"><i class="bi bi-arrow-clockwise"></i></button>
+        <button class="btn btn-sm btn-outline-primary" onclick="reloadRbac()" aria-label="{{ t('a11y.btn_reload') }}"><i class="bi bi-arrow-clockwise"></i></button>
         <button class="btn btn-sm btn-outline-secondary" onclick="exportAccessControl()"><i class="bi bi-download me-1"></i>{{ t('access.btn_export_csv') }}</button>
       </div>
 
@@ -86,9 +86,9 @@
   function card(title, subtitle, metrics, actions){ return `<div class='col-xl-4 col-lg-6 col-md-12'><div class='card rbac-card h-100'><div class='card-header d-flex justify-content-between align-items-start'><div><h6 class='mb-0 fw-bold'>${title}</h6>${subtitle?`<small class='opacity-75'>${subtitle}</small>`:''}</div><div class='d-flex gap-1 flex-wrap'>${actions}</div></div><div class='card-body'>${metrics.map(m=>`<div class='metric'><span>${m[0]}</span><span class='font-monospace'>${m[1]??'-'}</span></div>`).join('')}</div></div></div>`; }
   function renderGrid(elId, list, kind){ const el=document.getElementById(elId); if(!list.length){ el.innerHTML = emptyState(kind); return;} el.innerHTML = list.map(i=>{ const actions = actionButtons(kind, i.namespace, i.name); let metrics=[]; if(kind==='serviceaccount'){ metrics=[[accI18n.colSecrets, i.secrets], [accI18n.colAge, timeAgo(i.age)]]; } else if(kind==='role'){ metrics=[[accI18n.colRules, i.rules_count], [accI18n.colAge, timeAgo(i.age)]]; } else if(kind==='rolebinding'){ metrics=[[accI18n.colSubjects, i.subjects], [accI18n.colRoleRef, (i.roleRef&&i.roleRef.name)||'-'], [accI18n.colAge, timeAgo(i.age)]]; } else if(kind==='clusterrole'){ metrics=[[accI18n.colRules, i.rules_count], [accI18n.colAge, timeAgo(i.age)]]; } else if(kind==='clusterrolebinding'){ metrics=[[accI18n.colSubjects, i.subjects], [accI18n.colRoleRef, (i.roleRef&&i.roleRef.name)||'-'], [accI18n.colAge, timeAgo(i.age)]]; } return card(i.name, i.namespace||'', metrics, actions); }).join(''); }
 
-  function actionButtons(kind, namespace, name){ return `<button class='btn btn-sm btn-outline-secondary' onclick=\"openDetail('${kind}','${namespace||''}','${name}')\" title='${accI18n.btnDetail}'><i class='bi bi-info-circle'></i></button>`+
-    `<button class='btn btn-sm btn-outline-primary' onclick=\"openYaml('${kind}','${namespace||''}','${name}')\" title='YAML'><i class='bi bi-code-slash'></i></button>`+
-    `<button class='btn btn-sm btn-outline-danger' onclick=\"confirmDelete('${kind}','${namespace||''}','${name}')\" title='${accI18n.btnDelete}'><i class='bi bi-trash'></i></button>`; }
+  function actionButtons(kind, namespace, name){ return `<button class='btn btn-sm btn-outline-secondary' onclick=\"openDetail('${kind}','${namespace||''}','${name}')\" title='${accI18n.btnDetail}' aria-label='{{ t("a11y.btn_detail") }}'><i class='bi bi-info-circle'></i></button>`+
+    `<button class='btn btn-sm btn-outline-primary' onclick=\"openYaml('${kind}','${namespace||''}','${name}')\" title='YAML' aria-label='{{ t("a11y.btn_yaml") }}'><i class='bi bi-code-slash'></i></button>`+
+    `<button class='btn btn-sm btn-outline-danger' onclick=\"confirmDelete('${kind}','${namespace||''}','${name}')\" title='${accI18n.btnDelete}' aria-label='{{ t("a11y.btn_delete") }}'><i class='bi bi-trash'></i></button>`; }
 
   function openDetail(kind, namespace, name){ const qs=new URLSearchParams({kind,name}); if(namespace) qs.append('namespace',namespace); fetch('/k8s-explorer/rbac-detail?'+qs.toString()).then(r=>r.json()).then(j=>{ if(j.error){ showToast('{{ t("access.error_detail") }} '+j.error,'error'); return;} const pre = `<pre class='border rounded p-2 small bg-light text-dark' style='max-height:500px;overflow:auto;'>${escapeHtml(JSON.stringify(j.object,null,2))}</pre>`; document.getElementById('detailModalLabel').textContent = kind.toUpperCase()+" "+name; document.getElementById('detailModalBody').innerHTML = pre; new bootstrap.Modal(document.getElementById('detailModal')).show(); }).catch(e=>showToast('{{ t("access.error_detail") }} '+e.message,'error')); }
 

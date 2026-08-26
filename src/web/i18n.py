@@ -1132,6 +1132,19 @@ I18N = {
     'compliance.status_pass':  {'tr': 'Geçti',      'en': 'Pass'},
     'compliance.status_fail':  {'tr': 'Başarısız',  'en': 'Fail'},
     'compliance.status_error': {'tr': 'Hata',       'en': 'Error'},
+    # AC-10 — Erişilebilirlik (Accessibility) aria-label anahtarları (backlog #18)
+    'a11y.btn_view':               {'tr': 'Görüntüle',               'en': 'View'},
+    'a11y.btn_edit':               {'tr': 'Düzenle',                 'en': 'Edit'},
+    'a11y.btn_delete':             {'tr': 'Sil',                     'en': 'Delete'},
+    'a11y.btn_detail':             {'tr': 'Detay',                   'en': 'Detail'},
+    'a11y.btn_yaml':               {'tr': 'YAML Görüntüle',          'en': 'View YAML'},
+    'a11y.btn_reload':             {'tr': 'Yenile',                  'en': 'Reload'},
+    'a11y.btn_toggle_sidebar':     {'tr': 'Kenar çubuğunu aç/kapa', 'en': 'Toggle sidebar'},
+    'a11y.btn_toggle_mobile_menu': {'tr': 'Menü',                    'en': 'Menu'},
+    'a11y.btn_remove_row':         {'tr': 'Satırı kaldır',           'en': 'Remove row'},
+    'a11y.filter_namespace':       {'tr': 'Namespace filtre',        'en': 'Namespace filter'},
+    'a11y.search':                 {'tr': 'Ara',                     'en': 'Search'},
+    'a11y.nav_main':               {'tr': 'Ana navigasyon',          'en': 'Main navigation'},
 }
 
 

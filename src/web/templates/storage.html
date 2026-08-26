@@ -38,7 +38,7 @@
           <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
           <input id="storageSearch" type="text" class="form-control border-start-0" placeholder="{{ t('storage.search_placeholder') }}" />
         </div>
-        <button class="btn btn-sm btn-outline-primary" onclick="reloadStorage()"><i class="bi bi-arrow-clockwise"></i></button>
+        <button class="btn btn-sm btn-outline-primary" onclick="reloadStorage()" aria-label="{{ t('a11y.btn_reload') }}"><i class="bi bi-arrow-clockwise"></i></button>
       </div>
 
       <div class="tab-content" id="storageTabsContent">
@@ -191,9 +191,9 @@
   // ACTIONS
   function actionButtons(kind, namespace, name){
     return `
-      <button class='btn btn-sm btn-outline-secondary' title='${_st('explorer.btn_detail','Detayları görüntüle')}' onclick="openDetail('${kind}','${namespace||''}','${name}')"><i class='bi bi-info-circle'></i></button>
-      <button class='btn btn-sm btn-outline-primary' title='${_st('explorer.btn_yaml_view','YAML Görüntüle')}' onclick="openYamlEdit('${kind}','${namespace||''}','${name}')"><i class='bi bi-code-slash'></i></button>
-      <button class='btn btn-sm btn-outline-danger' title='${_st('explorer.btn_delete','Sil')}' onclick="confirmDelete('${kind}','${namespace||''}','${name}')"><i class='bi bi-trash'></i></button>
+      <button class='btn btn-sm btn-outline-secondary' title='${_st('explorer.btn_detail','Detayları görüntüle')}' aria-label='{{ t("a11y.btn_detail") }}' onclick="openDetail('${kind}','${namespace||''}','${name}')"><i class='bi bi-info-circle'></i></button>
+      <button class='btn btn-sm btn-outline-primary' title='${_st('explorer.btn_yaml_view','YAML Görüntüle')}' aria-label='{{ t("a11y.btn_yaml") }}' onclick="openYamlEdit('${kind}','${namespace||''}','${name}')"><i class='bi bi-code-slash'></i></button>
+      <button class='btn btn-sm btn-outline-danger' title='${_st('explorer.btn_delete','Sil')}' aria-label='{{ t("a11y.btn_delete") }}' onclick="confirmDelete('${kind}','${namespace||''}','${name}')"><i class='bi bi-trash'></i></button>
     `;
   }
 

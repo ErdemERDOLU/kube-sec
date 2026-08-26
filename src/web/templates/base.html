@@ -415,19 +415,47 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* AC-6: Focus-visible outline — klavye navigasyonu için görsel odak göstergesi (backlog #18)
+           Yalnızca outline/outline-offset eklenir; mevcut background/color/border/box-shadow değerlerine DOKUNULMAZ */
+        .btn:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+        .sidebar-nav .nav-link:focus-visible { outline: 2px solid rgba(255,255,255,0.8); outline-offset: 2px; }
+        .sidebar-toggle:focus-visible { outline: 2px solid rgba(255,255,255,0.8); outline-offset: 2px; }
+        .form-select:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+        .form-control:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+
+        /* AC-12: Skip-to-content link — içeriğe atla (backlog #18) */
+        .skip-to-content {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: #2563eb;
+            color: white;
+            padding: 0.5rem 1rem;
+            z-index: 9999;
+            text-decoration: none;
+            font-weight: 600;
+            border-radius: 0 0 0.5rem 0;
+            transition: top 0.2s;
+        }
+        .skip-to-content:focus {
+            top: 0;
+        }
     </style>
 </head>
 <body>
+    <!-- AC-12: İçeriğe atla bağlantısı (backlog #18) -->
+    <a href="#mainContent" class="skip-to-content">{% if current_locale == 'en' %}Skip to main content{% else %}İçeriğe atla{% endif %}</a>
     <!-- New sidebar layout structure -->
     <div class="app-layout">
         <!-- Mobile Overlay -->
         <div class="mobile-overlay" id="mobileOverlay"></div>
 
         <!-- Sidebar -->
-    <nav class="sidebar" id="sidebar">
+    <nav class="sidebar" id="sidebar" role="navigation" aria-label="{{ t('a11y.nav_main') }}">
             <div class="sidebar-header">
         <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Kube-Sec Logo" class="app-logo" onerror="this.style.display='none'">
-                <button class="sidebar-toggle" id="sidebarToggle">
+                <button class="sidebar-toggle" id="sidebarToggle" aria-label="{{ t('a11y.btn_toggle_sidebar') }}">
                     <i class="bi bi-list"></i>
                 </button>
             </div>
@@ -546,7 +574,7 @@
             <!-- Top Bar -->
             <div class="top-bar">
                 <div class="d-flex align-items-center">
-                    <button class="btn btn-link d-md-none me-2" id="mobileSidebarToggle">
+                    <button class="btn btn-link d-md-none me-2" id="mobileSidebarToggle" aria-label="{{ t('a11y.btn_toggle_mobile_menu') }}">
                         <i class="bi bi-list"></i>
                     </button>
                     <h1 class="h4 mb-0">{% block page_title %}{{ t('base.page_dashboard') }}{% endblock %}</h1>
@@ -599,7 +627,7 @@
             </div>
 
             <!-- Page Content -->
-            <div class="container-main">
+            <div class="container-main" role="main">
                 {% block content %}{% endblock %}
             </div>
 

@@ -452,6 +452,11 @@
     color: #64748b;
     font-size: 1.125rem;
   }
+
+  /* AC-7: Focus-visible outline — klavye navigasyonu (backlog #18)
+     Yalnızca outline/outline-offset eklenir; mevcut border/background/box-shadow/color değerleri değiştirilmez */
+  .nav-pills .nav-link:focus-visible { outline: 2px solid #059669; outline-offset: 2px; }
+  .config-card .btn:focus-visible { outline: 2px solid #059669; outline-offset: 2px; }
 </style>
 
 <div class="d-flex justify-content-between align-items-center mb-5 page-header">
@@ -1002,7 +1007,7 @@ window.editConfigMap = function(name, namespace) {
                         <textarea class="form-control config-value" rows="3" style="font-family: monospace;">${value}</textarea>
                       </div>
                       <div class="col-md-1 d-flex align-items-end">
-                        <button type="button" class="btn btn-outline-danger btn-sm remove-config-row">
+                        <button type="button" class="btn btn-outline-danger btn-sm remove-config-row" aria-label="{{ t('a11y.btn_remove_row') }}">
                           <i class="fas fa-trash"></i>
                         </button>
                       </div>
@@ -1054,7 +1059,7 @@ window.editConfigMap = function(name, namespace) {
               <textarea class="form-control config-value" rows="3" style="font-family: monospace;"></textarea>
             </div>
             <div class="col-md-1 d-flex align-items-end">
-              <button type="button" class="btn btn-outline-danger btn-sm remove-config-row">
+              <button type="button" class="btn btn-outline-danger btn-sm remove-config-row" aria-label="{{ t('a11y.btn_remove_row') }}">
                 <i class="fas fa-trash"></i>
               </button>
             </div>
@@ -1583,10 +1588,10 @@ async function fetchAndRenderConfigMapsTable() {
           <td><span class="badge bg-info">${cm.data_count} {{ t("config.unit_keys") }}</span></td>
           <td>${age}</td>
           <td>
-                <button type="button" class="btn btn-sm btn-outline-primary me-1 btn-view-configmap" data-name="${cm.name}" data-namespace="${cm.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('view', '${cm.name}', '${cm.namespace}')">
+                <button type="button" class="btn btn-sm btn-outline-primary me-1 btn-view-configmap" data-name="${cm.name}" data-namespace="${cm.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('view', '${cm.name}', '${cm.namespace}')" aria-label="{{ t('a11y.btn_view') }}">
                   <i class="bi bi-eye"></i>
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-configmap" data-name="${cm.name}" data-namespace="${cm.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('edit', '${cm.name}', '${cm.namespace}')">
+                <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-configmap" data-name="${cm.name}" data-namespace="${cm.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('edit', '${cm.name}', '${cm.namespace}')" aria-label="{{ t('a11y.btn_edit') }}">
                   <i class="bi bi-pencil"></i>
                 </button>
           </td>
@@ -1655,13 +1660,13 @@ async function fetchAndRenderSecretsTable() {
           <td><span class="badge bg-info">${secret.data_count} {{ t("config.unit_keys") }}</span></td>
           <td>${age}</td>
               <td>
-                <button type="button" class="btn btn-sm btn-outline-primary me-1 btn-view-secret" data-name="${secret.name}" data-namespace="${secret.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('view-secret', '${secret.name}', '${secret.namespace}')">
+                <button type="button" class="btn btn-sm btn-outline-primary me-1 btn-view-secret" data-name="${secret.name}" data-namespace="${secret.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('view-secret', '${secret.name}', '${secret.namespace}')" aria-label="{{ t('a11y.btn_view') }}">
                   <i class="bi bi-eye"></i>
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary me-1 btn-edit-secret" data-name="${secret.name}" data-namespace="${secret.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('edit-secret', '${secret.name}', '${secret.namespace}')">
+                <button type="button" class="btn btn-sm btn-outline-secondary me-1 btn-edit-secret" data-name="${secret.name}" data-namespace="${secret.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('edit-secret', '${secret.name}', '${secret.namespace}')" aria-label="{{ t('a11y.btn_edit') }}">
                   <i class="bi bi-pencil"></i>
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-secret" data-name="${secret.name}" data-namespace="${secret.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('delete-secret', '${secret.name}', '${secret.namespace}')">
+                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-secret" data-name="${secret.name}" data-namespace="${secret.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('delete-secret', '${secret.name}', '${secret.namespace}')" aria-label="{{ t('a11y.btn_delete') }}">
                   <i class="bi bi-trash"></i>
                 </button>
               </td>
@@ -1718,20 +1723,20 @@ async function fetchAndRenderResourceQuotasTable() {
           <td><span class="badge bg-info">${usedResources} {{ t("config.unit_used") }}</span></td>
           <td>${age}</td>
           <td>
-            <button class="btn btn-sm btn-outline-primary me-1">
+            <button class="btn btn-sm btn-outline-primary me-1" aria-label="{{ t('a11y.btn_view') }}">
               <i class="bi bi-eye"></i>
             </button>
-            <button class="btn btn-sm btn-outline-secondary">
+            <button class="btn btn-sm btn-outline-secondary" aria-label="{{ t('a11y.btn_edit') }}">
               <i class="bi bi-pencil"></i>
             </button>
           </td>
         </tr>
       `;
     });
-    
+
     tableHtml += '</tbody></table></div>';
     container.innerHTML = tableHtml;
-    
+
   } catch (error) {
     container.innerHTML = '<div class="alert alert-danger">{{ t("config.error_resource_quotas") }}: ' + error.message + '</div>';
   }
@@ -1770,17 +1775,17 @@ async function fetchAndRenderLimitRangesTable() {
           <td><span class="badge bg-info">${lr.limits_count} {{ t("config.unit_limits") }}</span></td>
           <td>${age}</td>
           <td>
-            <button class="btn btn-sm btn-outline-primary me-1">
+            <button class="btn btn-sm btn-outline-primary me-1" aria-label="{{ t('a11y.btn_view') }}">
               <i class="bi bi-eye"></i>
             </button>
-            <button class="btn btn-sm btn-outline-secondary">
+            <button class="btn btn-sm btn-outline-secondary" aria-label="{{ t('a11y.btn_edit') }}">
               <i class="bi bi-pencil"></i>
             </button>
           </td>
         </tr>
       `;
     });
-    
+
     tableHtml += '</tbody></table></div>';
     container.innerHTML = tableHtml;
     
@@ -1836,8 +1841,8 @@ async function fetchAndRenderHPATable() {
           <td><span class="badge bg-secondary">${min} / ${max}</span></td>
           <td>${age}</td>
           <td>
-            <button class="btn btn-sm btn-outline-primary me-1 btn-edit-hpa" data-name="${h.name}" data-namespace="${h.namespace}"><i class="bi bi-pencil"></i></button>
-            <button class="btn btn-sm btn-outline-danger btn-delete-hpa" data-name="${h.name}" data-namespace="${h.namespace}"><i class="bi bi-trash"></i></button>
+            <button class="btn btn-sm btn-outline-primary me-1 btn-edit-hpa" data-name="${h.name}" data-namespace="${h.namespace}" aria-label="{{ t('a11y.btn_edit') }}"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-sm btn-outline-danger btn-delete-hpa" data-name="${h.name}" data-namespace="${h.namespace}" aria-label="{{ t('a11y.btn_delete') }}"><i class="bi bi-trash"></i></button>
           </td>
         </tr>
       `;
@@ -1923,8 +1928,8 @@ async function fetchAndRenderPDBTable() {
           <td>${p.expected_pods ?? '-'}</td>
           <td>${age}</td>
           <td>
-            <button class="btn btn-sm btn-outline-primary me-1 btn-edit-pdb" data-name="${p.name}" data-namespace="${p.namespace}"><i class="bi bi-pencil"></i></button>
-            <button class="btn btn-sm btn-outline-danger btn-delete-pdb" data-name="${p.name}" data-namespace="${p.namespace}"><i class="bi bi-trash"></i></button>
+            <button class="btn btn-sm btn-outline-primary me-1 btn-edit-pdb" data-name="${p.name}" data-namespace="${p.namespace}" aria-label="{{ t('a11y.btn_edit') }}"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-sm btn-outline-danger btn-delete-pdb" data-name="${p.name}" data-namespace="${p.namespace}" aria-label="{{ t('a11y.btn_delete') }}"><i class="bi bi-trash"></i></button>
           </td>
         </tr>
       `;
@@ -2138,8 +2143,8 @@ async function fetchAndRenderPriorityClassesTable() {
           <td style="max-width: 220px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; word-wrap: break-word;" title="${pc.description || ''}">${pc.description || ''}</td>
           <td>${age}</td>
           <td style="white-space: nowrap;">
-            <button class=\"btn btn-sm btn-outline-primary me-1 btn-edit-pc\" data-name=\"${pc.name}\"><i class=\"bi bi-pencil\"></i></button>
-            <button class=\"btn btn-sm btn-outline-danger btn-delete-pc\" data-name=\"${pc.name}\"><i class=\"bi bi-trash\"></i></button>
+            <button class=\"btn btn-sm btn-outline-primary me-1 btn-edit-pc\" data-name=\"${pc.name}\" aria-label=\"{{ t('a11y.btn_edit') }}\"><i class=\"bi bi-pencil\"></i></button>
+            <button class=\"btn btn-sm btn-outline-danger btn-delete-pc\" data-name=\"${pc.name}\" aria-label=\"{{ t('a11y.btn_delete') }}\"><i class=\"bi bi-trash\"></i></button>
           </td>
         </tr>
       `;
@@ -2222,8 +2227,8 @@ async function fetchAndRenderRuntimeClassesTable() {
           <td><code>${overhead}</code></td>
           <td>${age}</td>
           <td>
-            <button class="btn btn-sm btn-outline-primary me-1 btn-edit-rc" data-name="${rc.name}"><i class="bi bi-pencil"></i></button>
-            <button class="btn btn-sm btn-outline-danger btn-delete-rc" data-name="${rc.name}"><i class="bi bi-trash"></i></button>
+            <button class="btn btn-sm btn-outline-primary me-1 btn-edit-rc" data-name="${rc.name}" aria-label="{{ t('a11y.btn_edit') }}"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-sm btn-outline-danger btn-delete-rc" data-name="${rc.name}" aria-label="{{ t('a11y.btn_delete') }}"><i class="bi bi-trash"></i></button>
           </td>
         </tr>
       `;

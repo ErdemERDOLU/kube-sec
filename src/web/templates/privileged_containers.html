@@ -32,7 +32,7 @@
                             <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
                                 {{ t('privsec.stat_risky_rbac') }}
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="rbac-count">-</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="rbac-count">0</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-user-shield fa-2x text-gray-300"></i>
@@ -49,7 +49,7 @@
                             <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
                                 {{ t('privsec.stat_privileged') }}
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="privileged-count">-</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="privileged-count">0</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
@@ -66,7 +66,7 @@
                             <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
                                 {{ t('privsec.stat_root') }}
                             </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="root-count">-</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800" id="root-count">0</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-user-cog fa-2x text-gray-300"></i>
@@ -98,7 +98,7 @@
             <div id="result-rbac"></div>
             <div class="table-responsive">
                 <table class="table table-bordered table-hover d-none" id="rbac-table">
-                    <thead class="table-dark">
+                    <thead>
                         <tr>
                             <th><i class="fas fa-layer-group me-1"></i>{{ t('privsec.col_namespace') }}</th>
                             <th><i class="fas fa-user-tag me-1"></i>{{ t('privsec.col_role') }}</th>
@@ -142,7 +142,7 @@
             <div id="result"></div>
             <div class="table-responsive">
                 <table class="table table-bordered table-hover d-none" id="privileged-table">
-                    <thead class="table-dark">
+                    <thead>
                         <tr>
                             <th><i class="fas fa-layer-group me-1"></i>{{ t('privsec.col_namespace') }}</th>
                             <th><i class="fas fa-cube me-1"></i>{{ t('privsec.col_pod') }}</th>
@@ -186,7 +186,7 @@
             <div id="result-root"></div>
             <div class="table-responsive">
                 <table class="table table-bordered table-hover d-none" id="root-table">
-                    <thead class="table-dark">
+                    <thead>
                         <tr>
                             <th><i class="fas fa-layer-group me-1"></i>{{ t('privsec.col_namespace') }}</th>
                             <th><i class="fas fa-cube me-1"></i>{{ t('privsec.col_pod') }}</th>
@@ -282,9 +282,9 @@ const filterState = {
 
 // Summary card update functions
 function updateSummaryCards(rbacCount, privilegedCount, rootCount) {
-    document.getElementById('rbac-count').textContent = rbacCount;
-    document.getElementById('privileged-count').textContent = privilegedCount;
-    document.getElementById('root-count').textContent = rootCount;
+    document.getElementById('rbac-count').textContent = rbacCount ?? 0;
+    document.getElementById('privileged-count').textContent = privilegedCount ?? 0;
+    document.getElementById('root-count').textContent = rootCount ?? 0;
 }
 
 function showLoadingState(elementId) {

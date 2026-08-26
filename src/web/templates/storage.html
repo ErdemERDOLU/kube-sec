@@ -111,9 +111,7 @@
   }
 
   function updateBadges(){
-    document.getElementById('pvcsBadge').textContent = storageData.pvcs.length;
-    document.getElementById('pvsBadge').textContent = storageData.pvs.length;
-    document.getElementById('scBadge').textContent = storageData.sc.length;
+    // Badge'ler artık filterAllStorage() içinde filtrelenmiş sayılarla güncelleniyor (AC-6)
   }
 
   function filterAllStorage(){
@@ -122,6 +120,10 @@
     const pvcFiltered = storageData.pvcs.filter(i => (ns==='all'||i.namespace===ns) && (!term || i.name.toLowerCase().includes(term)) );
     const pvFiltered = storageData.pvs.filter(i => (!term || i.name.toLowerCase().includes(term)) ); // PV cluster scope
     const scFiltered = storageData.sc.filter(i => (!term || i.name.toLowerCase().includes(term)) );
+    // Badge'leri filtrelenmiş sayılarla senkronize et (AC-6)
+    document.getElementById('pvcsBadge').textContent = pvcFiltered.length;
+    document.getElementById('pvsBadge').textContent = pvFiltered.length;
+    document.getElementById('scBadge').textContent = scFiltered.length;
     renderPVCs(pvcFiltered);
     renderPVs(pvFiltered);
     renderSCs(scFiltered);
@@ -137,7 +139,7 @@
 
   function renderPVCs(list){
     const el = document.getElementById('pvcsGrid');
-    if (!list.length){ el.innerHTML = emptyState('PVC'); return; }
+    if (!list.length){ el.innerHTML = emptyState('PVC', storageData.pvcs.length); return; }
     el.innerHTML = list.map(p=>{
       const actions = actionButtons('pvc', p.namespace, p.name);
       return card('', '', p.name, p.namespace, [
@@ -153,7 +155,7 @@
 
   function renderPVs(list){
     const el = document.getElementById('pvsGrid');
-    if (!list.length){ el.innerHTML = emptyState('PV'); return; }
+    if (!list.length){ el.innerHTML = emptyState('PV', storageData.pvs.length); return; }
     el.innerHTML = list.map(p=>{
       const actions = actionButtons('pv', null, p.name);
       return card('', 'pv-card', p.name, '', [
@@ -170,7 +172,7 @@
 
   function renderSCs(list){
     const el = document.getElementById('scGrid');
-    if (!list.length){ el.innerHTML = emptyState('StorageClass'); return; }
+    if (!list.length){ el.innerHTML = emptyState('StorageClass', storageData.sc.length); return; }
     el.innerHTML = list.map(s=>{
       const actions = actionButtons('storageclass', null, s.name);
       return card('', 'sc-card', s.name, '', [
@@ -183,9 +185,10 @@
     }).join('');
   }
 
-  function emptyState(label){
+  function emptyState(label, totalCount){
     const notFound = _st('storage.empty_state', 'bulunamadı');
-    return `<div class='col-12 text-center py-5'><i class="bi bi-inboxes text-muted" style='font-size:3rem;'></i><p class='text-muted mb-0'>${label} ${notFound}</p></div>`;
+    const filterHint = totalCount > 0 ? `<p class='text-muted small mb-0'>${_st('storage.empty_filter_hint', 'Başka bir namespace seçmeyi deneyin')}</p>` : '';
+    return `<div class='col-12 text-center py-5'><i class="bi bi-inboxes text-muted" style='font-size:3rem;'></i><p class='text-muted mb-0'>${label} ${notFound}</p>${filterHint}</div>`;
   }
 
   // ACTIONS

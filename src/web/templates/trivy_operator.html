@@ -6,7 +6,7 @@
 <style>
   /* Enhanced styling that matches the existing Bootstrap theme */
   .trivy-header {
-    background: linear-gradient(135deg, var(--primary-color) 0%, #1d4ed8 100%);
+    background: linear-gradient(135deg, var(--hero-gradient-start) 0%, var(--hero-gradient-end) 100%);
     color: white;
     padding: 2rem;
     border-radius: 1rem;
@@ -474,11 +474,9 @@
     </table>
   </div>
   
-  <div id="no-data" class="alert-modern alert-info" style="display:none;">
-    <span class="icon-wrapper">
-      <i class="bi bi-info-circle-fill"></i>
-    </span>
-    <span>{{ t('trivy.empty_reports') }}</span>
+  <div id="no-data" style="display:none;" class="text-center py-5">
+    <i class="bi bi-inboxes text-muted" style="font-size:3rem;"></i>
+    <p class="text-muted mb-0">{{ t('trivy.empty_reports') }}</p>
   </div>
   
   <div id="error" class="alert-modern alert-danger" style="display:none;">
@@ -632,7 +630,7 @@ function renderTable(){
     tbody.appendChild(tr);
   });
   
-  document.getElementById('no-data').style.display = (filtered.length===0)?'flex':'none';
+  document.getElementById('no-data').style.display = (filtered.length===0)?'block':'none';
   updateStats();
   renderPager();
 }

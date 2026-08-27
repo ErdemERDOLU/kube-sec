@@ -453,7 +453,7 @@ Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagit
 
 ---
 
-## [Oncelik: Yuksek] 22. Guvenlik: Sabit SECRET_KEY (CSRF'i Etkisiz Kiliyor) ve Cookie Guvenlik Bayraklari
+## [Oncelik: Yuksek] 22. Guvenlik: Sabit SECRET_KEY (CSRF'i Etkisiz Kiliyor) ve Cookie Guvenlik Bayraklari — TAMAMLANDI
 
 **Kategori:** Guvenlik (A02:2021 Cryptographic Failures)
 **Bulunma kaynagi:** Ayni guvenlik denetimi (2026-07-24), bkz. backlog #21.
@@ -465,13 +465,15 @@ Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagit
 **Sorun:** Secret key kaynak kodda herkese acik oldugundan, ag'a acik `make run`/Docker dagitiminda saldirgan hem `session` cookie'lerini forge edebilir hem de **backlog #6'da eklenen CSRF korumasini tumuyle atlatabilir** (Flask-WTF CSRF token'i `secret_key`'ten turetilir). Yani mevcut CSRF korumasi bu dagitim modunda fiilen calismiyor.
 
 **Kabul kriterleri:**
-- [ ] Non-frozen yolda sabit `secret_key` kaldirilir; her baslatmada `secrets.token_hex(32)` ile rastgele uretilir VEYA `APP_SECRET_KEY` env var'i zorunlu kilinir (yoksa uygulama acik bir hata ile baslamayi reddeder). Sabit dev anahtari yalnizca `FLASK_ENV=development` altinda kullanilabilir.
-- [ ] `SESSION_COOKIE_SAMESITE='Lax'` acikca set edilir; HTTPS destegi eklenirse `SESSION_COOKIE_SECURE=True` de eklenir.
-- [ ] Degisiklik sonrasi CSRF korumasi (backlog #6, `tests/test_csrf.py`) hala calisir; session tabanli ozellikler (kubeconfig aktivasyonu vb.) bozulmaz.
+- [x] Non-frozen yolda sabit `secret_key` kaldirildi: `APP_SECRET_KEY` env var'i varsa kullanilir, `FLASK_ENV=development` ise sabit dev anahtari (uyariyla), diger tum durumlarda `secrets.token_hex(32)` ile rastgele uretilir (uyari logu ile).
+- [x] `SESSION_COOKIE_SAMESITE='Lax'` acikca set edildi; `KUBESEC_SECURE_COOKIES` env var'iyla kosullu `SESSION_COOKIE_SECURE=True` destegi eklendi (nice-to-have).
+- [x] Degisiklik sonrasi CSRF korumasi (backlog #6, `tests/test_csrf.py`) calismaya devam ediyor; session tabanli ozellikler bozulmadi.
+
+**Uygulama notu (2026-08-27):** product-manager -> backend-developer -> bagimsiz qa-engineer zinciriyle tamamlandi. Spec: `docs/specs/20260827-sabit-secret-key-cookie-guvenlik.md` (12 AC, tumu CONFIRMED — tek dogrulama turu, hicbir FAILED cikmadi). Frozen (masaustu) yol dokunulmadi. `tests/test_secret_key.py` (5 test) eklendi. `CLAUDE.md`'nin ortam degiskenleri tablosuna `APP_SECRET_KEY` ve `KUBESEC_SECURE_COOKIES` satirlari eklendi.
 
 ---
 
-## [Oncelik: Yuksek] 23. Guvenlik: Kubeconfig Dosya Islemlerinde Path Traversal ve Izin Sorunlari
+## [Oncelik: Yuksek] 23. Guvenlik: Kubeconfig Dosya Islemlerinde Path Traversal ve Izin Sorunlari — TAMAMLANDI
 
 **Kategori:** Guvenlik (A01/A03:2021 — Path Traversal, Hassas Veri Ifsasi)
 **Bulunma kaynagi:** Ayni guvenlik denetimi (2026-07-24), bkz. backlog #21.
@@ -483,9 +485,11 @@ Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagit
 **Sorun:** `name = "../../../../etc/..."` gibi bir degerle disk uzerinde keyfi dosyalar silinebilir (backlog #21'deki auth eksikligiyle birlesince ag'daki bir saldirgan bunu tetikleyebilir). Ayrica coklu-kullanicili bir makinede diger yerel kullanicilar kubeconfig dosyalarini okuyup cluster kimlik bilgilerini ele gecirebilir.
 
 **Kabul kriterleri:**
-- [ ] DELETE route'unda `add` ile ayni `safe_name` filtresi uygulanir; ek olarak `os.path.realpath(path)` sonucunun `KUBECONFIG_UPLOAD_DIR` altinda kaldigi (`os.path.commonpath` ile) dogrulanir.
-- [ ] Kubeconfig dosyalari yazildiktan hemen sonra `os.chmod(path, 0o600)` uygulanir; yukleme dizini `os.makedirs(..., mode=0o700)` ile olusturulur.
-- [ ] Gecerli bir kubeconfig adiyla silme islemi hala calisir (regresyon yok); `../` iceren bir `name` denemesi HTTP 400 ile reddedilir.
+- [x] DELETE route'unda `add` ile ayni `safe_name` filtresi uygulanir; ek olarak `os.path.realpath(path)` sonucunun `KUBECONFIG_UPLOAD_DIR` altinda kaldigi (`os.path.commonpath` ile) dogrulanir. Filtreleme mantigi tek bir yardimci fonksiyonda (`_sanitize_kubeconfig_name()`) merkezilestirildi, hem POST hem DELETE bunu kullaniyor.
+- [x] Kubeconfig dosyalari yazildiktan hemen sonra `os.chmod(path, 0o600)` uygulanir; yukleme dizini `os.makedirs(..., mode=0o700)` ile olusturulur, mevcut/eski izinli dizinler de baslangicta duzeltilir.
+- [x] Gecerli bir kubeconfig adiyla silme islemi hala calisir (regresyon yok); `../` iceren bir `name` denemesi dosya silme gerceklesmeden reddedilir (HTTP 400 veya 404 — `safe_name` filtresi sonrasi zararsiz bir isme donusen denemeler icin 404, filtre sonrasi bos/gecersiz kalanlar icin 400; her iki durumda da hedef dosya kesinlikle silinmez).
+
+**Uygulama notu (2026-08-27):** product-manager -> backend-developer -> bagimsiz qa-engineer zinciriyle tamamlandi. Spec: `docs/specs/20260827-kubeconfig-path-traversal-izinler.md` (12 AC). Ilk QA turunde AC-7 FAILED cikti — spec metni path traversal denemesi icin kesin "HTTP 400" bekliyordu ama `safe_name` filtresi `/` karakterini kaldirdigi icin gercek davranis HTTP 404 (dosya bulunamadi, hicbir sey silinmiyor) oluyordu; bu, AC-1'in zaten kabul ettigi "400 veya 404" davranisiyla ayniydi, sadece AC-7'nin metni tutarsizdi. Gercek guvenlik hedefi (keyfi dosya silinmemesi) canli testle dogrulandigi icin spec metni duzeltildi (kod degisikligi gerekmedi), AC-7 CONFIRMED'e cevrildi. `tests/test_kubeconfig_security.py` (17 test) eklendi.
 
 ---
 

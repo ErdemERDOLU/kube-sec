@@ -1160,6 +1160,18 @@ I18N = {
     'a11y.filter_namespace':       {'tr': 'Namespace filtre',        'en': 'Namespace filter'},
     'a11y.search':                 {'tr': 'Ara',                     'en': 'Search'},
     'a11y.nav_main':               {'tr': 'Ana navigasyon',          'en': 'Main navigation'},
+    # Backlog #20 Faz 1 — Global Namespace Seçici
+    'ns.all_namespaces':                 {'tr': "Tüm Namespace'ler",                                   'en': 'All Namespaces'},
+    'a11y.global_namespace_selector':    {'tr': 'Global namespace seçici',                             'en': 'Global namespace selector'},
+    # Backlog #20 Faz 2 — Global Kaynak Arama
+    'search.title':                      {'tr': 'Kaynak Ara',                                          'en': 'Search Resources'},
+    'search.placeholder':                {'tr': 'Pod, Deployment, Service adı ara...',                 'en': 'Search pod, deployment, service name...'},
+    'search.no_results':                 {'tr': 'Sonuç bulunamadı',                                    'en': 'No results found'},
+    'search.min_chars':                  {'tr': 'En az 2 karakter girin',                              'en': 'Enter at least 2 characters'},
+    'search.error':                      {'tr': 'Arama sırasında hata oluştu',                         'en': 'Error during search'},
+    'search.result_count':               {'tr': '{count} sonuç bulundu',                               'en': '{count} results found'},
+    'search.truncated':                  {'tr': 'Sonuçlar sınırlandırıldı, aramayı daraltmayı deneyin', 'en': 'Results truncated, try narrowing your search'},
+    'a11y.global_search_btn':            {'tr': 'Global kaynak arama',                                 'en': 'Global resource search'},
 }
 
 

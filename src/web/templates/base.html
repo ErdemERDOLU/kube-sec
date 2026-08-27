@@ -12,6 +12,20 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/bootstrap-icons.css') }}">
     <!-- Added Font Awesome for better icon support -->
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
+    <!-- FOUC önleme: tema tercihi localStorage'dan senkron okunup uygulanır (backlog #19) -->
+    <script>
+        (function() {
+            var stored = localStorage.getItem('kube-sec-theme');
+            var theme;
+            if (stored === 'dark' || stored === 'light') {
+                theme = stored;
+            } else {
+                // İlk ziyaret: işletim sistemi tercihini algıla (AC-4)
+                theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+            }
+            document.documentElement.setAttribute('data-bs-theme', theme);
+        })();
+    </script>
     <!-- Custom CSS -->
     <style>
         :root {
@@ -495,6 +509,80 @@
         .skip-to-content:focus {
             top: 0;
         }
+
+        /* Dark mode CSS override'ları (backlog #19) ================================= */
+        [data-bs-theme="dark"] {
+            /* CSS değişken override'ları */
+            --light-color: #1a1a2e;
+            --dark-color: #e2e8f0;
+            --secondary-color: #94a3b8;
+        }
+
+        /* Top-bar: dark modda koyu arka plan */
+        [data-bs-theme="dark"] .top-bar {
+            background: #1e293b;
+            border-bottom-color: #334155;
+        }
+
+        /* Tablo border rengi dark modda */
+        [data-bs-theme="dark"] .table td {
+            border-color: #334155;
+        }
+
+        /* .table th, --dark-color'u arka plan olarak kullanıyor (satır ~436); dark modda
+           bu değişken açık renge (#e2e8f0) dönüyor ve beyaz metinle kontrast kayboluyor.
+           Tablo başlığı için ayrı, sabit koyu bir renk tanımlanır. */
+        [data-bs-theme="dark"] .table th {
+            background-color: #334155;
+            color: #f8fafc;
+        }
+
+        /* Workloads: YAML textarea — inline background:#f8f9fa override */
+        [data-bs-theme="dark"] #yamlEditArea {
+            background: #1e1e2e !important;
+            color: #cdd6f4 !important;
+            border-color: #4a4a6a !important;
+        }
+
+        /* Workloads: describe modal pre — inline background:#f8f9fa override */
+        [data-bs-theme="dark"] #describeModalBody {
+            background: #1e1e2e !important;
+            color: #cdd6f4 !important;
+            border-color: #4a4a6a !important;
+        }
+
+        /* Compliance: SVG score text — fill:#1e293b override (CSS fill, SVG attribute'u geçer) */
+        [data-bs-theme="dark"] #score-pct-text {
+            fill: #e2e8f0;
+        }
+
+        /* Compliance: text-gray-800 dark modda okunabilir hale */
+        [data-bs-theme="dark"] .text-gray-800 {
+            color: #e2e8f0 !important;
+        }
+
+        /* Nodes: bg-white kart başlığı dark modda */
+        [data-bs-theme="dark"] .card-header.bg-white {
+            background-color: #1e293b !important;
+            border-bottom-color: #334155 !important;
+        }
+
+        /* Access Control: rbac-card header gradient dark moda uyarlanır */
+        [data-bs-theme="dark"] .rbac-card .card-header {
+            background: linear-gradient(135deg, #1e3a5f, #1a2d4a) !important;
+        }
+
+        /* Access Control: metric label dark modda kontrast */
+        [data-bs-theme="dark"] .metric span:first-child {
+            color: #94a3b8 !important;
+        }
+
+        /* Access Control: openDetail() bg-light text-dark pre dark modda */
+        [data-bs-theme="dark"] .bg-light.text-dark {
+            background-color: #1e293b !important;
+            color: #e2e8f0 !important;
+        }
+        /* ============================================================ */
     </style>
 </head>
 <body>
@@ -635,10 +723,38 @@
                 </div>
                 
                 <div class="d-flex align-items-center gap-3">
+                    <!-- Global Namespace Seçici (Backlog #20 Faz 1) -->
+                    <select id="globalNamespaceSelector"
+                            class="form-select form-select-sm d-none d-sm-inline-block"
+                            style="width:auto; min-width:150px; max-width:220px;"
+                            aria-label="{{ t('a11y.global_namespace_selector') }}">
+                        <option value="">{{ t('ns.all_namespaces') }}</option>
+                    </select>
+
+                    <!-- Global Arama Butonu (Backlog #20 Faz 2) -->
+                    <button id="globalSearchBtn"
+                            class="btn btn-sm btn-outline-secondary"
+                            type="button"
+                            data-bs-toggle="modal"
+                            data-bs-target="#globalSearchModal"
+                            aria-label="{{ t('a11y.global_search_btn') }}"
+                            title="{{ t('search.title') }}">
+                        <i class="bi bi-search"></i>
+                    </button>
+
                     <!-- Active Kubernetes Context Badge -->
                     <span id="activeContextBadge" class="badge rounded-pill bg-info text-dark" style="{% if active_kubeconfig_name %}display:inline-block{% else %}display:none{% endif %}; font-size:0.75rem; flex-shrink:0;">
                         <span id="activeContextName">{{ active_kubeconfig_name or t('base.context_none') }}</span>
                     </span>
+
+                    <!-- Tema Toggle Butonu (backlog #19) -->
+                    <button id="themeToggleBtn"
+                            type="button"
+                            class="btn btn-sm btn-outline-secondary"
+                            aria-label="{{ t('theme.toggle') }}"
+                            title="{{ t('theme.toggle') }}">
+                        <i id="themeToggleIcon" class="bi bi-moon-stars-fill"></i>
+                    </button>
 
                     <!-- Language switcher -->
                     <div class="dropdown">
@@ -788,6 +904,31 @@
                 }
             });
         });
+
+        // Dark mode toggle (backlog #19)
+        (function() {
+            function applyTheme(theme) {
+                document.documentElement.setAttribute('data-bs-theme', theme);
+                var icon = document.getElementById('themeToggleIcon');
+                if (icon) {
+                    icon.className = theme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
+                }
+            }
+
+            // Sayfa yüklenirken mevcut temayı ikona yansıt
+            var currentTheme = document.documentElement.getAttribute('data-bs-theme') || 'light';
+            applyTheme(currentTheme);
+
+            var btn = document.getElementById('themeToggleBtn');
+            if (btn) {
+                btn.addEventListener('click', function() {
+                    var current = document.documentElement.getAttribute('data-bs-theme') || 'light';
+                    var next = current === 'dark' ? 'light' : 'dark';
+                    localStorage.setItem('kube-sec-theme', next);
+                    applyTheme(next);
+                });
+            }
+        })();
 
         // Loading state helper
         function showLoading(element, text) {
@@ -960,6 +1101,9 @@
                             // Kullanıcı bu versiyonu henüz kapatmamış → banner göster (AC-3)
                             showContextSwitchBanner();
                         }
+                        // KK-10 (backlog #20): diğer dinleyicilere (ör. global namespace seçici)
+                        // ayrı bir poller açmadan haber ver.
+                        window.dispatchEvent(new CustomEvent('kubeconfigActivationChanged', { detail: { version: activationVersion } }));
                     } else {
                         // Versiyon baseline ile aynı (ör. sayfa yenilendi) → banner'ı gizle (AC-5)
                         hideContextSwitchBanner();
@@ -1139,6 +1283,273 @@
         } else {
             setTimeout(runVersionCheck, CHECK_DELAY_MS);
         }
+    })();
+    </script>
+
+    <!-- ===== Global Arama Modal'ı (Backlog #20 Faz 2) ===== -->
+    <div class="modal fade" id="globalSearchModal" tabindex="-1"
+         aria-labelledby="globalSearchModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h5 class="modal-title" id="globalSearchModalLabel">
+                        <i class="bi bi-search me-2"></i>{{ t('search.title') }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                            aria-label="{{ t('base.btn_close') }}"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <input type="search"
+                           id="globalSearchInput"
+                           class="form-control form-control-lg mb-2"
+                           placeholder="{{ t('search.placeholder') }}"
+                           autocomplete="off"
+                           spellcheck="false">
+                    <div id="globalSearchHint" class="text-muted small mb-2">
+                        <i class="bi bi-info-circle me-1"></i>{{ t('search.min_chars') }}
+                    </div>
+                    <div id="globalSearchLoading" class="text-center py-3" style="display:none;">
+                        <div class="spinner-border spinner-border-sm" role="status">
+                            <span class="visually-hidden">{{ t('loading') }}</span>
+                        </div>
+                    </div>
+                    <div id="globalSearchCount" class="text-muted small mb-1"></div>
+                    <ul id="globalSearchResults" class="list-group list-group-flush"
+                        style="max-height:420px; overflow-y:auto;"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Global Namespace Seçici + Arama JS (Backlog #20) ===== -->
+    <script>
+    (function () {
+        'use strict';
+
+        /* ---- Yardımcı: i18n metni al ---- */
+        function gi18n(key) {
+            try {
+                var loc = (document.documentElement.lang || 'tr').split('-')[0].toLowerCase();
+                return (window.i18n && window.i18n[key] && window.i18n[key][loc]) || key;
+            } catch (e) { return key; }
+        }
+
+        /* ---- URL param yardımcıları ---- */
+        var GNS_SESSION_KEY = 'globalNamespace';
+        var GNS_URL_PARAM   = 'ns';
+
+        function getUrlParam(name) {
+            try { return new URLSearchParams(window.location.search).get(name) || ''; }
+            catch (e) { return ''; }
+        }
+
+        function setUrlParam(name, value) {
+            try {
+                var params = new URLSearchParams(window.location.search);
+                if (value) { params.set(name, value); }
+                else       { params.delete(name); }
+                var newUrl = window.location.pathname
+                           + (params.toString() ? '?' + params.toString() : '')
+                           + window.location.hash;
+                history.replaceState(null, '', newUrl);
+            } catch (e) {}
+        }
+
+        /* ---- FAZ 1: Global Namespace Seçici ---- */
+        function initGlobalNamespaceSelector() {
+            var sel = document.getElementById('globalNamespaceSelector');
+            if (!sel) return;
+
+            /* Namespace listesini endpoint'ten çek */
+            fetch('/k8s-explorer/namespaces', { credentials: 'same-origin' })
+                .then(function (r) { return r.ok ? r.json() : { namespaces: [] }; })
+                .then(function (data) {
+                    var namespaces = (data.namespaces || []).slice().sort(function (a, b) {
+                        return a.localeCompare(b);
+                    });
+                    namespaces.forEach(function (ns) {
+                        var opt = document.createElement('option');
+                        opt.value = ns;
+                        opt.textContent = ns;
+                        sel.appendChild(opt);
+                    });
+
+                    /* Öncelik: URL param > sessionStorage > boş */
+                    var urlNs = getUrlParam(GNS_URL_PARAM);
+                    var storedNs = '';
+                    try { storedNs = sessionStorage.getItem(GNS_SESSION_KEY) || ''; } catch (e) {}
+                    var selectedNs = urlNs || storedNs;
+
+                    if (selectedNs) {
+                        sel.value = selectedNs;
+                        if (!urlNs && storedNs) { setUrlParam(GNS_URL_PARAM, storedNs); }
+                        try { sessionStorage.setItem(GNS_SESSION_KEY, selectedNs); } catch (e) {}
+                    }
+                })
+                .catch(function (e) {
+                    console.error('[GlobalNS] Namespace listesi yüklenemedi:', e);
+                });
+
+            /* Değişiklik eventi */
+            sel.addEventListener('change', function () {
+                var newNs = sel.value;
+                try { sessionStorage.setItem(GNS_SESSION_KEY, newNs); } catch (e) {}
+                setUrlParam(GNS_URL_PARAM, newNs);
+                window.dispatchEvent(
+                    new CustomEvent('globalNamespaceChanged', { detail: { namespace: newNs } })
+                );
+            });
+        }
+
+        /* KK-10: Kubeconfig değişiminde seçiciyi sıfırla — ayrı bir poller açmak yerine
+           mevcut sağlık poller'ının (yukarıda, satır ~1090) fırlattığı event'i dinler. */
+        window.addEventListener('kubeconfigActivationChanged', function () {
+            var sel = document.getElementById('globalNamespaceSelector');
+            if (sel) sel.value = '';
+            try { sessionStorage.removeItem(GNS_SESSION_KEY); } catch (e) {}
+            setUrlParam(GNS_URL_PARAM, '');
+        });
+
+        /* ---- FAZ 2: Global Kaynak Arama ---- */
+        var RESOURCE_ICONS = {
+            pod:           'bi-box',
+            deployment:    'bi-arrow-repeat',
+            statefulset:   'bi-stack',
+            daemonset:     'bi-broadcast',
+            replicaset:    'bi-copy',
+            job:           'bi-play-circle',
+            cronjob:       'bi-clock',
+            service:       'bi-diagram-3',
+            ingress:       'bi-globe2',
+            networkpolicy: 'bi-shield-check',
+        };
+
+        var searchTimer = null;
+        var SEARCH_DEBOUNCE = 300;
+        var SEARCH_MIN      = 2;
+
+        function runSearch(q) {
+            var resultsEl = document.getElementById('globalSearchResults');
+            var countEl   = document.getElementById('globalSearchCount');
+            var loadEl    = document.getElementById('globalSearchLoading');
+            if (!resultsEl) return;
+
+            var ns = '';
+            try {
+                var gSel = document.getElementById('globalNamespaceSelector');
+                if (gSel) ns = gSel.value;
+            } catch (e) {}
+
+            var url = '/k8s-explorer/global-search?q=' + encodeURIComponent(q);
+            if (ns) url += '&ns=' + encodeURIComponent(ns);
+
+            if (loadEl)    loadEl.style.display = '';
+            resultsEl.innerHTML = '';
+            if (countEl) countEl.textContent = '';
+
+            fetch(url, { credentials: 'same-origin' })
+                .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+                .then(function (data) {
+                    if (loadEl) loadEl.style.display = 'none';
+                    var results = data.results || [];
+
+                    if (countEl) {
+                        countEl.textContent = gi18n('search.result_count')
+                            .replace('{count}', results.length);
+                    }
+
+                    if (results.length === 0) {
+                        resultsEl.innerHTML = '<li class="list-group-item text-muted">'
+                            + gi18n('search.no_results') + '</li>';
+                        return;
+                    }
+
+                    /* Türe göre grupla */
+                    var groups = {};
+                    results.forEach(function (item) {
+                        if (!groups[item.type]) groups[item.type] = [];
+                        groups[item.type].push(item);
+                    });
+
+                    var html = '';
+                    Object.keys(groups).sort().forEach(function (type) {
+                        var icon = RESOURCE_ICONS[type] || 'bi-box';
+                        html += '<li class="list-group-item list-group-item-secondary fw-bold py-1 px-3 small text-uppercase">'
+                              + '<i class="bi ' + icon + ' me-2"></i>' + type + '</li>';
+                        groups[type].forEach(function (item) {
+                            var href = item.url ? item.url : '#';
+                            html += '<li class="list-group-item list-group-item-action py-2 px-3">'
+                                  + '<a href="' + href + '" class="text-decoration-none d-flex align-items-center gap-2">'
+                                  + '<span class="badge bg-secondary rounded-pill">' + (item.namespace || '') + '</span>'
+                                  + '<span class="fw-medium">' + escHtml(item.name) + '</span>'
+                                  + '</a></li>';
+                        });
+                    });
+
+                    if (data.truncated) {
+                        html += '<li class="list-group-item text-warning small">'
+                              + '<i class="bi bi-exclamation-triangle me-1"></i>'
+                              + gi18n('search.truncated') + '</li>';
+                    }
+
+                    resultsEl.innerHTML = html;
+                })
+                .catch(function (e) {
+                    if (loadEl) loadEl.style.display = 'none';
+                    console.error('[GlobalSearch] Hata:', e);
+                    resultsEl.innerHTML = '<li class="list-group-item text-danger">'
+                        + gi18n('search.error') + '</li>';
+                });
+        }
+
+        function escHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function initGlobalSearch() {
+            var inputEl   = document.getElementById('globalSearchInput');
+            var hintEl    = document.getElementById('globalSearchHint');
+            var modalEl   = document.getElementById('globalSearchModal');
+            var resultsEl = document.getElementById('globalSearchResults');
+            var countEl   = document.getElementById('globalSearchCount');
+            if (!inputEl) return;
+
+            inputEl.addEventListener('input', function () {
+                var q = inputEl.value.trim();
+                if (q.length > 0 && q.length < SEARCH_MIN) {
+                    if (hintEl) hintEl.style.display = '';
+                    return;
+                }
+                if (hintEl) hintEl.style.display = 'none';
+                clearTimeout(searchTimer);
+                if (q.length < SEARCH_MIN) { return; }
+                searchTimer = setTimeout(function () { runSearch(q); }, SEARCH_DEBOUNCE);
+            });
+
+            if (modalEl) {
+                modalEl.addEventListener('shown.bs.modal', function () {
+                    inputEl.focus();
+                });
+                modalEl.addEventListener('hidden.bs.modal', function () {
+                    inputEl.value = '';
+                    if (resultsEl) resultsEl.innerHTML = '';
+                    if (countEl)   countEl.textContent = '';
+                    if (hintEl)    hintEl.style.display = '';
+                    clearTimeout(searchTimer);
+                });
+            }
+        }
+
+        /* Başlatma */
+        document.addEventListener('DOMContentLoaded', function () {
+            initGlobalNamespaceSelector();
+            initGlobalSearch();
+        });
+
     })();
     </script>
 </body>

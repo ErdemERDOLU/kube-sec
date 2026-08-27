@@ -54,6 +54,8 @@
   .metric{display:flex;justify-content:space-between;font-size:.8rem;padding:.35rem 0;border-bottom:1px solid #f1f3f5}
   .metric:last-child{border-bottom:none}
   .metric span:first-child{color:#6c757d;font-weight:500}
+
+  [data-bs-theme="dark"] .metric{border-bottom-color:#334155}
 </style>
 
 <script>
@@ -105,7 +107,7 @@
       onConfirm: () => doDelete(kind, namespace, name)
     });
   }
-  function doDelete(kind, namespace, name){ const map={serviceaccount:'serviceaccount',role:'role',rolebinding:'rolebinding',clusterrole:'clusterrole',clusterrolebinding:'clusterrolebinding'}; const body={type:map[kind], name:name}; if(namespace) body.namespace=namespace; return fetch('/k8s-explorer/delete',{method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCsrfToken()}, body: JSON.stringify(body)}).then(r=>r.json()).then(j=>{ if(j.error){ showToast('{{ t("access.error_delete") }} '+j.error,'error'); return;} showToast(accI18n.toastDeleted); reloadRbac(); }).catch(e=>showToast('{{ t("access.error_delete") }} '+e.message,'error')); }
+  function doDelete(kind, namespace, name){ const map={serviceaccount:'serviceaccount',role:'role',rolebinding:'rolebinding',clusterrole:'clusterrole',clusterrolebinding:'clusterrolebinding'}; const body={type:map[kind], name:name}; if(namespace) body.namespace=namespace; body.confirm_name=name; return fetch('/k8s-explorer/delete',{method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCsrfToken()}, body: JSON.stringify(body)}).then(r=>r.json()).then(j=>{ if(j.error){ showToast('{{ t("access.error_delete") }} '+j.error,'error'); return;} showToast(accI18n.toastDeleted); reloadRbac(); }).catch(e=>showToast('{{ t("access.error_delete") }} '+e.message,'error')); }
 
   function emptyState(label){ return `<div class='col-12 text-center py-5'><i class="bi bi-inboxes text-muted" style='font-size:3rem;'></i><p class='text-muted mb-0'>${label} ${accI18n.emptyState}</p></div>`; }
 

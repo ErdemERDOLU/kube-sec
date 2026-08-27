@@ -550,7 +550,38 @@
     loadNamespaces();
     loadNetworkData();
     setupEventListeners();
+
+    // Backlog #20 Faz 1 — Sayfa yüklenince global namespace seçicisini uygula
+    var globalSel = document.getElementById('globalNamespaceSelector');
+    if (globalSel && globalSel.value) {
+      _applyNetworkNamespace(globalSel.value);
+    }
   });
+
+  // Backlog #20 Faz 1 — Global namespace değişiminde ağ filtrelerini güncelle
+  window.addEventListener('globalNamespaceChanged', function (e) {
+    var ns = (e && e.detail && e.detail.namespace !== undefined) ? e.detail.namespace : '';
+    _applyNetworkNamespace(ns);
+    if (typeof filterAndDisplayServices === 'function')       filterAndDisplayServices();
+    if (typeof filterAndDisplayEndpoints === 'function')      filterAndDisplayEndpoints();
+    if (typeof filterAndDisplayIngresses === 'function')      filterAndDisplayIngresses();
+    if (typeof filterAndDisplayNetworkPolicies === 'function') filterAndDisplayNetworkPolicies();
+  });
+
+  // network.html'de "all namespaces" için 'all' değeri kullanıldığından dönüşüm yapılır
+  function _applyNetworkNamespace(ns) {
+    var mappedNs = ns || 'all';
+    var filterIds = [
+      'servicesNamespaceFilter',
+      'endpointsNamespaceFilter',
+      'ingressesNamespaceFilter',
+      'networkPoliciesNamespaceFilter',
+    ];
+    filterIds.forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.value = mappedNs;
+    });
+  }
 
   function loadNamespaces() {
     fetch('/k8s-explorer/namespaces')
@@ -909,7 +940,7 @@
         const r = await fetch('/k8s-explorer/delete', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-          body: JSON.stringify({ type: 'endpoints', namespace, name })
+          body: JSON.stringify({ type: 'endpoints', namespace, name, confirm_name: name })
         });
         const j = await r.json().catch(() => ({}));
         if (!r.ok || j.error) throw new Error(j.error || `HTTP ${r.status}`);
@@ -1078,7 +1109,7 @@
         const r = await fetch('/k8s-explorer/delete', {
           method: 'DELETE',
           headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-          body: JSON.stringify({ type: 'service', namespace, name })
+          body: JSON.stringify({ type: 'service', namespace, name, confirm_name: name })
         });
         const j = await r.json().catch(() => ({}));
         if (!r.ok || j.error) throw new Error(j.error || `HTTP ${r.status}`);

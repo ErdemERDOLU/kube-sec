@@ -392,7 +392,7 @@ Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagit
 
 ---
 
-## [Oncelik: Dusuk] 19. UI/UX: Karanlik Tema (Dark Mode) Destegi
+## [Oncelik: Dusuk] 19. UI/UX: Karanlik Tema (Dark Mode) Destegi — TAMAMLANDI
 
 **Kategori:** UI/UX
 **Bulunma kaynagi:** Ayni UI/UX denetimi (2026-07-24), bkz. backlog #15.
@@ -404,13 +404,14 @@ Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagit
 **Sorun:** DevOps/platform araclarinda karanlik tema guclu bir kullanici beklentisidir (genelde terminal/IDE ile birlikte, uzun sureli ekran kullanimi); hic sunulmuyor olmasi rakip araclara kiyasla eksiklik.
 
 **Kabul kriterleri:**
-- [ ] Top-bar'a bir tema toggle butonu eklenir (`theme.toggle` i18n anahtari kullanilarak), `data-bs-theme` degeri `localStorage`'da tutulur ve sayfa yenilemede korunur.
-- [ ] Custom CSS degiskenleri (renkler, kart/tablo zeminleri) dark mod icin gozden gecirilir; en az 5 temsili sayfada (home, workloads, compliance, nodes, access-control) dark modda okunabilirlik/kontrast dogrulanir.
-- [ ] Toggle her iki dilde de (TR/EN) dogru etiketlenir.
+- [x] Top-bar'a `theme.toggle` i18n anahtarli bir tema toggle butonu eklendi (`themeToggleBtn`); `data-bs-theme` degeri `localStorage` (`kube-sec-theme`) ile kalici, `<head>`'de senkron bir FOUC-onleme script'i ile sayfa yuklenirken uygulaniyor (ilk ziyarette `prefers-color-scheme` de dikkate aliniyor).
+- [x] `:root` CSS degiskenleri ve 5 temsili sayfadaki (home, workloads, compliance, nodes, access-control) ozel/sabit renkler `[data-bs-theme="dark"]` altinda override edildi. Code-review'da bulunan kritik bir kontrast hatasi (`.table th` dark modda acik zeminde beyaz yazi — okunmuyordu) duzeltildi; sayfa-yerel tekrar eden CSS kurallari (compliance/nodes/access-control) temizlenip tek bir global tanima indirgendi.
+- [x] Toggle TR/EN dogru etiketleniyor (`i18n.py`'de mevcut `theme.toggle` anahtari kullanildi).
+  - Spec: `docs/specs/20260827-uiux-dark-mode.md` (4 AC — 3 zorunlu + 1 nice-to-have, tamami CONFIRMED). Backlog #20 ile paralel implement edildi, top-bar DOM sirasi iki spec arasinda onceden koordine edildi, catisma olmadi.
 
 ---
 
-## [Oncelik: Dusuk] 20. UI/UX: DevOps Kullanilabilirlik Ozellikleri (Global Arama, Namespace Baglami, Kisayollar)
+## [Oncelik: Dusuk] 20. UI/UX: DevOps Kullanilabilirlik Ozellikleri (Global Arama, Namespace Baglami, Kisayollar) — TAMAMLANDI (Faz 1 + Faz 2)
 
 **Kategori:** UI/UX / Ozellik
 **Bulunma kaynagi:** Ayni UI/UX denetimi (2026-07-24), bkz. backlog #15.
@@ -425,11 +426,10 @@ Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagit
 **Sorun:** Bu kalip eksiklikleri, deneyimli DevOps kullanicilarinin gunluk kullanimda verimliligini dusuruyor; benzer araclarda (Lens, K9s, Rancher) bu ozellikler standart kabul edilir.
 
 **Kabul kriterleri:**
-- [ ] (Faz 1) Global bir namespace secici eklenir (top-bar'da), secim `sessionStorage`/URL query param ile sayfalar arasi korunur.
-- [ ] (Faz 2) Global kaynak arama eklenir (en azindan isim bazli, mevcut liste endpoint'lerini kullanarak).
-- [ ] (Gelecek donem, opsiyonel) Breadcrumb, klavye kisayollari, tablo coklu-secim/toplu islem — ayri alt-maddeler olarak degerlendirilebilir, bu maddenin ilk surumu kapsam disi.
-
-**Not:** Bu madde diger UI/UX maddelerine (#15-18) kiyasla daha buyuk bir ozellik calismasidir; ayri bir spec/tasarim onerisi gerektirir, oncelik dusuk.
+- [x] (Faz 1) Top-bar'a global bir namespace secici (`globalNamespaceSelector`) eklendi; secim `sessionStorage` (`globalNamespace`) + URL `?ns=` ile sayfalar arasi korunuyor (oncelik: URL > sessionStorage > bos = tum NS). `workloads.html`, `network.html` (client-side) ve `vulnerabilities.html` (server-side redirect) `globalNamespaceChanged` event'ini dinleyip senkronize oluyor. Mobilde (<576px) gizleniyor.
+- [x] (Faz 2) Global kaynak arama eklendi: yeni `GET /k8s-explorer/global-search` backend route'u (`explorer/search.py`, `configure_kube_client()` merkezi kalibini kullaniyor), Pod/Deployment/StatefulSet/DaemonSet/Service turlerinde isim bazli arama yapiyor; top-bar'daki arama butonu (`globalSearchBtn`) 300ms debounce ile sonuclari turune gore gruplu gosteriyor.
+- [x] (Gelecek donem, opsiyonel) Breadcrumb, klavye kisayollari, tablo coklu-secim/toplu islem — bu surumde YAPILMADI, kapsam disi birakildi (plana uygun).
+  - Spec: `docs/specs/20260827-uiux-devops-usability.md` (17 kabul kriteri — 14 zorunlu/orta + 3 nice-to-have, tamami CONFIRMED, 1 nice-to-have (KK-17: son aramalar gecmisi) implement edilmedi). Backlog #19 ile paralel implement edildi (2x web-frontend-developer + 1x backend-developer), top-bar DOM sirasi onceden koordine edildi. Code-review'da bulunan bir bulgu (KK-10'un ayri bir poller ile var olmayan `/health` endpoint'ine gittigi, dolayisiyla sessizce hic calismadigi) tespit edilip mevcut saglik poller'ina (`/k8s-explorer/health`) baglanan bir custom event'e cevrildi — hem hatayi giderdi hem gereksiz ikinci poller'i kaldirdi.
 
 ---
 

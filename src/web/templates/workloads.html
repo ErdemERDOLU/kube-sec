@@ -107,8 +107,8 @@
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <textarea id="yamlEditArea" class="form-control border-0 shadow-sm" rows="20" 
-                  style="font-family:'Fira Code', 'Monaco', 'Consolas', monospace; font-size:0.9em; min-height:400px; background:#f8f9fa;"></textarea>
+        <textarea id="yamlEditArea" class="form-control border-0 shadow-sm" rows="20"
+                  style="font-family:'Fira Code', 'Monaco', 'Consolas', monospace; font-size:0.9em; min-height:400px; background:#f8f9fa; color:inherit;"></textarea>
       </div>
       <div class="modal-footer bg-light">
         <button type="button" class="btn btn-primary rounded-pill" id="saveYamlBtn">
@@ -1202,7 +1202,46 @@ document.addEventListener('DOMContentLoaded', function() {
   if (deploymentsNextBtn) deploymentsNextBtn.addEventListener('click', function() {
     if (deploymentsCurrentPage < deploymentsTotalPages) fetchAndRenderDeploymentsTable(deploymentsCurrentPage + 1);
   });
+
+  // Backlog #20 Faz 1 — Sayfa yüklenince global namespace seçicisini sayfa-içi filtrelere uygula
+  (function applyInitialGlobalNamespace() {
+    var globalSel = document.getElementById('globalNamespaceSelector');
+    if (globalSel && globalSel.value) {
+      _applyWorkloadsNamespace(globalSel.value);
+    }
+  })();
 });
+
+// Backlog #20 Faz 1 — Global namespace değişiminde sayfa-içi filtreleri ve aktif sekmeyi güncelle
+window.addEventListener('globalNamespaceChanged', function (e) {
+  var ns = (e && e.detail && e.detail.namespace !== undefined) ? e.detail.namespace : '';
+  _applyWorkloadsNamespace(ns);
+  // Aktif sekmeyi tespit et ve yenile
+  var activeTabBtn = document.querySelector('#workload-tabs .nav-link.active, #workload-tabs [data-bs-toggle="tab"].active');
+  var tabId = activeTabBtn
+    ? (activeTabBtn.getAttribute('data-bs-target') || '').replace('#', '')
+    : '';
+  if (tabId && typeof handleTabChange === 'function') {
+    handleTabChange(tabId);
+  } else if (typeof fetchAndRenderPodsTable === 'function') {
+    fetchAndRenderPodsTable(1);
+  }
+});
+
+function _applyWorkloadsNamespace(ns) {
+  var filterIds = [
+    'podsNamespaceFilter',
+    'deploymentsNamespaceFilter',
+    'statefulsetNamespaceFilter',
+    'replicasetsNamespaceFilter',
+    'jobsNamespaceFilter',
+    'cronjobsNamespaceFilter',
+  ];
+  filterIds.forEach(function (id) {
+    var el = document.getElementById(id);
+    if (el) el.value = ns;
+  });
+}
 
 // Cache tazelik gostergesi (#11)
 // meta: { updated_at, age_seconds, stale, last_error }
@@ -2208,7 +2247,7 @@ function restartDaemonSet(name, namespace) {
     try {
       const r = await fetch('/k8s-explorer/restart-daemonset', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-        body: JSON.stringify({ name, namespace })
+        body: JSON.stringify({ name, namespace, confirm_name: name })
       });
       if (r.ok) {
         showToast('{{ t("workloads.action_success") }}', 'success');
@@ -2343,7 +2382,7 @@ function restartStatefulSet(name, namespace) {
     try {
       const r = await fetch('/k8s-explorer/restart-statefulset', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-        body: JSON.stringify({ name, namespace })
+        body: JSON.stringify({ name, namespace, confirm_name: name })
       });
       if (r.ok) {
         showToast('{{ t("workloads.action_success") }}', 'success');
@@ -2416,7 +2455,7 @@ function restartDeployment(name, namespace) {
     try {
       const r = await fetch('/k8s-explorer/restart-deployment', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-        body: JSON.stringify({ name, namespace })
+        body: JSON.stringify({ name, namespace, confirm_name: name })
       });
       if (r.ok) {
         showToast('{{ t("workloads.action_success") }}', 'success');
@@ -2676,7 +2715,7 @@ function restartPod(name, namespace) {
     try {
       const r = await fetch('/k8s-explorer/restart-pod', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-        body: JSON.stringify({ name, namespace })
+        body: JSON.stringify({ name, namespace, confirm_name: name })
       });
       if (r.ok) {
         showToast('{{ t("workloads.action_success") }}', 'success');
@@ -2740,7 +2779,7 @@ function deleteReplicaSet(name, namespace) {
     try {
       const r = await fetch('/k8s-explorer/delete-replicasets', {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-        body: JSON.stringify({ items: [{ namespace, name }] })
+        body: JSON.stringify({ items: [{ namespace, name }], confirm_names: [name] })
       });
       let txt = '';
       try { txt = await r.text(); } catch(e) { txt = '' + e; }

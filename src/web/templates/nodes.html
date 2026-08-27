@@ -388,6 +388,7 @@
   .nodes-table th:nth-child(2) { width: 30%; }
   .nodes-table th:nth-child(3) { width: 35%; }
 }
+
 </style>
 
 <script>
@@ -614,10 +615,10 @@ async function nodeAction(nodeName, action) {
       const resp = await fetch(endpoint, { 
         method, 
         headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ node: nodeName }) 
+        body: JSON.stringify({ node: nodeName, confirm_name: nodeName })
       });
       const data = await resp.json();
-      
+
       let logStr = '';
       if (data.logs && Array.isArray(data.logs)) {
         logStr = data.logs.join('\n');
@@ -638,7 +639,7 @@ async function nodeAction(nodeName, action) {
     const resp = await fetch(endpoint, { 
       method, 
       headers: { 'Content-Type': 'application/json' }, 
-      body: JSON.stringify({ node: nodeName }) 
+      body: JSON.stringify({ node: nodeName, confirm_name: nodeName })
     });
     const result = await resp.text();
     

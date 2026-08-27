@@ -11,3 +11,4 @@ from web.blueprints.explorer import storage     # noqa: F401, E402
 from web.blueprints.explorer import config      # noqa: F401, E402
 from web.blueprints.explorer import cluster     # noqa: F401, E402
 from web.blueprints.explorer import scaling     # noqa: F401, E402
+from web.blueprints.explorer import search      # noqa: F401, E402

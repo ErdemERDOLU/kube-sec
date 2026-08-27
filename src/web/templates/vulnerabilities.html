@@ -355,6 +355,31 @@
 
 {% block scripts %}
 <script>
+    // Backlog #20 Faz 1 — Kategori B (server-side render): global namespace entegrasyonu
+    (function () {
+        'use strict';
+        // Sayfa yüklenince: URL'de ?namespace= yoksa ama sessionStorage'da değer varsa yönlendir
+        document.addEventListener('DOMContentLoaded', function () {
+            var urlParams = new URLSearchParams(window.location.search);
+            if (!urlParams.has('namespace')) {
+                var storedNs = '';
+                try { storedNs = sessionStorage.getItem('globalNamespace') || ''; } catch (e) {}
+                if (storedNs) {
+                    window.location.href = window.location.pathname
+                        + '?namespace=' + encodeURIComponent(storedNs);
+                }
+            }
+        });
+
+        // Global namespace değiştiğinde sayfayı ?namespace=X ile yenile
+        window.addEventListener('globalNamespaceChanged', function (e) {
+            var ns = (e && e.detail && e.detail.namespace !== undefined) ? e.detail.namespace : 'all';
+            var targetNs = ns || 'all';
+            window.location.href = window.location.pathname
+                + '?namespace=' + encodeURIComponent(targetNs);
+        });
+    })();
+
     // Jinja2 context'ten zafiyet ve imaj verisini JS degiskenlerine gomme
     // Namespace filtresi server-side uygulandiginden VULN_DATA zaten filtrelenmis gelir.
     const VULN_DATA = {{ vulnerabilities | default({}) | tojson }};

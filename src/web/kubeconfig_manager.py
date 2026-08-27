@@ -14,7 +14,17 @@ from kubernetes import client, config
 KUBECONFIG_STORE = {}
 KUBECONFIG_ACTIVE_KEY = 'active_kubeconfig'
 KUBECONFIG_UPLOAD_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'kubeconfigs')
-os.makedirs(KUBECONFIG_UPLOAD_DIR, exist_ok=True)
+# AC-4: Dizin yalnızca uygulama süreci sahibi tarafından erişilebilir olacak şekilde oluşturulur.
+# Not: os.makedirs ile mode parametresi kullanıldığında işletim sistemi umask değeri uygulanır;
+# bazı sistemlerde umask beklenmedik sonuçlar üretebilir. Bu nedenle AC-5 kapsamında
+# oluşturma sonrası os.chmod ile izin açıkça set edilir.
+# Windows notu (AC-12): os.chmod Windows'ta POSIX 0o700 semantiğini tam olarak desteklemez;
+# Windows ortamında dosya sistemi ACL'leri farklı çalışır. Bu kod POSIX (Linux/macOS) için tasarlanmıştır.
+os.makedirs(KUBECONFIG_UPLOAD_DIR, mode=0o700, exist_ok=True)
+# AC-5: Mevcut kurulumlardan kalan geniş izinleri (örn. 0o755) kapat.
+# os.makedirs exist_ok=True durumunda dizin zaten mevcutsa mode parametresi etkisizdir;
+# bu nedenle os.chmod ile açıkça düzeltme gerekir.
+os.chmod(KUBECONFIG_UPLOAD_DIR, 0o700)
 
 # Global (thread-safe) aktif kubeconfig adı; arka plan thread'leri session'a erişemezse bunu kullanır
 KUBECONFIG_ACTIVE_GLOBAL = None  # Seçilen kubeconfig adı

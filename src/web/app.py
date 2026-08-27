@@ -45,7 +45,36 @@ elif getattr(sys, 'frozen', False):
         app.secret_key = _generated_key
     app.logger.warning("APP_SECRET_KEY not set; using key from ~/.kubesec/secret_key")
 else:
-    app.secret_key = 'dev-secret-do-not-use-in-production'
+    if os.environ.get('FLASK_ENV') == 'development':
+        app.secret_key = 'dev-secret-do-not-use-in-production'
+        app.logger.warning(
+            "FLASK_ENV=development: sabit gelistirme anahtari kullaniliyor. "
+            "Production icin APP_SECRET_KEY env var'ini set edin."
+        )
+    else:
+        app.secret_key = secrets.token_hex(32)
+        app.logger.warning(
+            "APP_SECRET_KEY env var'i set edilmemis; rastgele anahtar uretildi. "
+            "Oturumlar uygulama yeniden baslatildiginda gecersiz olacaktir. "
+            "Kalici oturumlar icin APP_SECRET_KEY env var'ini set edin."
+        )
+
+# ---------------------------------------------------------------------------
+# Cookie Guvenlik Bayraklari
+# ---------------------------------------------------------------------------
+# SESSION_COOKIE_HTTPONLY: JS'den cookie erisimini engeller (XSS korumasi).
+# Flask varsayilani zaten True; acikca set edilerek kasitli oldugu belirtilir.
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+# SESSION_COOKIE_SAMESITE: Cross-origin isteklerde cookie gonderimini kisitlar.
+# 'Lax' = ayni site + top-level navigasyonlarda cookie gonderilir; CSRF riskini azaltir.
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+# SESSION_COOKIE_SECURE: Yalnizca HTTPS uzerinde cookie gonder.
+# HTTP-only ortamda (varsayilan) True yapmak cookie'nin hic gonderilmemesine yol acar.
+# KUBESEC_SECURE_COOKIES=1 ile HTTPS reverse proxy arkasindan calistirildiginda True yapilmali.
+app.config['SESSION_COOKIE_SECURE'] = (
+    os.environ.get('KUBESEC_SECURE_COOKIES', '').lower() in ('1', 'true', 'yes', 'on')
+)
+
 CORS(app, origins=CORS_ORIGINS, supports_credentials=True)
 
 # ---------------------------------------------------------------------------

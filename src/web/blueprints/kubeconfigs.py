@@ -30,6 +30,49 @@ from web.audit_log import record_audit_event, _short_session_id
 bp_kubeconfigs = Blueprint('kubeconfigs', __name__)
 
 
+def _sanitize_kubeconfig_name(name: str) -> tuple:
+    """Kullanıcıdan gelen kubeconfig dosya adını sanitize eder ve path traversal kontrolü yapar.
+
+    İki aşamalı savunma derinliği (defense in depth):
+
+    1. Karakter filtresi: Yalnızca alfanumerik, tire, alt çizgi ve nokta karakterlerine izin
+       verir. Bu filtre ``/`` ve ``\\`` path separator'larını, ``%`` (URL-encode prefix) ile
+       diğer özel karakterleri kaldırır.
+    2. realpath doğrulaması: Sonuç yolun ``KUBECONFIG_UPLOAD_DIR`` altında kaldığını
+       ``os.path.commonpath`` ile doğrular. Bu, ``safe_name`` filtresinin ``..`` (iki ardışık
+       nokta) gibi kenar durumlarına karşı ek bir güvenlik katmanı sağlar.
+
+    DRY prensibi — bu fonksiyon hem POST (add) hem DELETE route'larında kullanılır (AC-8).
+
+    :param name: Kullanıcıdan gelen ham dosya adı.
+    :returns: ``(safe_name, full_path)`` tuple'ı — her ikisi de güvenli ve doğrulanmış.
+    :raises ValueError: Ad sanitize sonrası boş ise veya path traversal tespit edilirse.
+        Hata mesajları kasıtlı olarak genel tutulmuştur; sunucu tarafı dosya yolu içermez (AC-10).
+
+    .. note:: Windows'ta ``os.path.realpath`` sembolik bağ çözümlemesi POSIX'ten farklı
+              davranabilir ve ``os.chmod`` 0o600/0o700 semantiğini tam desteklemeyebilir.
+              Bu fonksiyon POSIX (Linux/macOS) semantiği ile tasarlanmıştır (AC-12).
+    """
+    # Adım 1 — Karakter filtresi (safe_name): yalnızca alfanumerik, '-', '_', '.' geçer
+    safe_name = ''.join([c for c in name if c.isalnum() or c in ('-', '_', '.')])
+    if not safe_name:
+        raise ValueError("Geçersiz kubeconfig adı")
+
+    # Adım 2 — Path traversal doğrulaması: sonuç yol upload dizini içinde olmalı (AC-2)
+    path = os.path.join(KUBECONFIG_UPLOAD_DIR, safe_name)
+    real_upload_dir = os.path.realpath(KUBECONFIG_UPLOAD_DIR)
+    real_path = os.path.realpath(path)
+    try:
+        common = os.path.commonpath([real_path, real_upload_dir])
+    except ValueError:
+        # Windows'ta farklı sürücüler arasında commonpath ValueError fırlatır
+        raise ValueError("Dosya adı güvenlik kontrolünden geçemedi")
+    if common != real_upload_dir:
+        raise ValueError("Dosya adı güvenlik kontrolünden geçemedi")
+
+    return safe_name, path
+
+
 @bp_kubeconfigs.route('/kubeconfigs', methods=['GET'])
 def kubeconfigs_list():
     """Kubeconfig listesini döndür.
@@ -61,10 +104,24 @@ def kubeconfigs_add():
         content = data.get('content')  # raw kubeconfig YAML
         if not name or not content:
             return jsonify({'error': 'name ve content zorunlu'}), 400
-        safe_name = ''.join([c for c in name if c.isalnum() or c in ('-', '_', '.')]) or f'cfg_{int(time.time())}'
-        path = os.path.join(KUBECONFIG_UPLOAD_DIR, safe_name)
+        # AC-8/AC-11: DRY yardımcı fonksiyon; POST route'unda da realpath doğrulaması yapılır.
+        # Boş safe_name durumunda (tüm karakterler filtrelendi) zaman damgalı ad üretilir (UX uyumluluğu).
+        # Realpath güvenlik hatası durumunda ise 400 döndürülür (path traversal girişimi).
+        try:
+            safe_name, path = _sanitize_kubeconfig_name(name)
+        except ValueError as _ve:
+            if not ''.join([c for c in name if c.isalnum() or c in ('-', '_', '.')]):
+                # Tüm karakterler filtrelendi → zaman damgalı fallback ad kullan
+                safe_name = f'cfg_{int(time.time())}'
+                path = os.path.join(KUBECONFIG_UPLOAD_DIR, safe_name)
+            else:
+                # Realpath doğrulaması başarısız → güvenlik reddi
+                return jsonify({'error': 'Geçersiz kubeconfig adı'}), 400
         with open(path, 'w') as f:
             f.write(content)
+        # AC-3: Kubeconfig dosyası yalnızca süreç sahibi tarafından okunabilir/yazılabilir olmalı.
+        # Windows notu (AC-12): Windows'ta 0o600 POSIX semantiği tam uygulanmayabilir.
+        os.chmod(path, 0o600)
         record_audit_event(
             action='add',
             resource_type='Kubeconfig',
@@ -175,22 +232,29 @@ def kubeconfigs_delete():
     """
     try:
         data = request.get_json(force=True) or {}
-        name = data.get('name')
+        name = data.get('name') or ''
         if not name:
             return jsonify({'error': 'name zorunlu'}), 400
-        path = os.path.join(KUBECONFIG_UPLOAD_DIR, name)
+        # AC-1/AC-2/AC-7: safe_name filtresi + realpath doğrulaması — path traversal koruması.
+        # Ham 'name' değeri doğrudan os.path.join/os.remove'a geçirilmez.
+        # AC-10: Hata mesajı sunucu dosya sistemi yolunu içermez.
+        try:
+            safe_name, path = _sanitize_kubeconfig_name(name)
+        except ValueError:
+            return jsonify({'error': 'Geçersiz kubeconfig adı'}), 400
         if os.path.exists(path):
             os.remove(path)
-            if session.get(KUBECONFIG_ACTIVE_KEY) == name:
+            if session.get(KUBECONFIG_ACTIVE_KEY) == safe_name:
                 session.pop(KUBECONFIG_ACTIVE_KEY, None)
                 # Modül referansıyla güncelle
                 with _kcm._KUBECONFIG_LOCK:
-                    if _kcm.KUBECONFIG_ACTIVE_GLOBAL == name:
+                    if _kcm.KUBECONFIG_ACTIVE_GLOBAL == safe_name:
                         _kcm.KUBECONFIG_ACTIVE_GLOBAL = None
+            # AC-9: Audit log'a sanitize edilmiş ad yazılır (ham 'name' değil; log injection önlemi).
             record_audit_event(
                 action='delete',
                 resource_type='Kubeconfig',
-                resource_name=name,
+                resource_name=safe_name,
                 namespace=None,
                 session_id=_short_session_id(request.cookies.get('session')),
             )

@@ -683,6 +683,121 @@ def mutating_webhooks_summary():
         return jsonify({'mutating_webhooks': [], 'error': str(e)})
 
 
+@bp_explorer.route('/k8s-explorer/create-priority-class', methods=['POST'])
+def create_priority_class():
+    """Yeni bir PriorityClass oluşturur (cluster-scoped).
+
+    Method: POST
+    Path:   /k8s-explorer/create-priority-class
+
+    Body (JSON):
+        name               (str):  PriorityClass adı (zorunlu).
+        value              (int):  Öncelik değeri (zorunlu).
+        global_default     (bool): Global varsayılan mı? (opsiyonel, varsayılan: false).
+        preemption_policy  (str):  "PreemptLowerPriority" veya "Never" (opsiyonel).
+        description        (str):  Açıklama (opsiyonel).
+
+    Yanıt (201):
+        {"status": "ok"}
+
+    Hatalar:
+        400: name veya value eksik.
+        ApiException HTTP kodu: Kubernetes API hatası.
+        500: Beklenmedik sunucu hatası.
+    """
+    try:
+        data = request.get_json() or {}
+        name = data.get('name')
+        value = data.get('value')
+        if not name:
+            return jsonify({'error': 'name is required'}), 400
+        if value is None:
+            return jsonify({'error': 'value is required'}), 400
+        try:
+            value = int(value)
+        except (ValueError, TypeError):
+            return jsonify({'error': 'value must be an integer'}), 400
+        global_default = bool(data.get('global_default', False))
+        preemption_policy = data.get('preemption_policy') or None
+        description = data.get('description') or None
+        configure_kube_client()
+        scheduling_v1 = client.SchedulingV1Api()
+        scheduling_v1.create_priority_class(
+            client.V1PriorityClass(
+                metadata=client.V1ObjectMeta(name=name),
+                value=value,
+                global_default=global_default,
+                preemption_policy=preemption_policy,
+                description=description
+            )
+        )
+        record_audit_event(
+            action='create',
+            resource_type='PriorityClass',
+            resource_name=name,
+            namespace=None,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
+        return jsonify({'status': 'ok'}), 201
+    except ApiException as e:
+        try:
+            return jsonify({'error': e.body}), e.status
+        except Exception:
+            return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@bp_explorer.route('/k8s-explorer/create-runtime-class', methods=['POST'])
+def create_runtime_class():
+    """Yeni bir RuntimeClass oluşturur (cluster-scoped).
+
+    Method: POST
+    Path:   /k8s-explorer/create-runtime-class
+
+    Body (JSON):
+        name    (str): RuntimeClass adı (zorunlu).
+        handler (str): Container runtime handler adı — örn. "runc", "kata" (zorunlu).
+
+    Yanıt (201):
+        {"status": "ok"}
+
+    Hatalar:
+        400: name veya handler eksik.
+        ApiException HTTP kodu: Kubernetes API hatası.
+        500: Beklenmedik sunucu hatası.
+    """
+    try:
+        data = request.get_json() or {}
+        name = data.get('name')
+        handler = data.get('handler')
+        if not name or not handler:
+            return jsonify({'error': 'name and handler are required'}), 400
+        configure_kube_client()
+        node_v1 = client.NodeV1Api()
+        node_v1.create_runtime_class(
+            client.V1RuntimeClass(
+                metadata=client.V1ObjectMeta(name=name),
+                handler=handler
+            )
+        )
+        record_audit_event(
+            action='create',
+            resource_type='RuntimeClass',
+            resource_name=name,
+            namespace=None,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
+        return jsonify({'status': 'ok'}), 201
+    except ApiException as e:
+        try:
+            return jsonify({'error': e.body}), e.status
+        except Exception:
+            return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 # Validating Webhooks summary (cluster-scoped; optional namespace filter by service namespace)
 @bp_explorer.route('/k8s-explorer/validating-webhooks-summary')
 def validating_webhooks_summary():

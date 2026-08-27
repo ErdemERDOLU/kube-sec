@@ -2,7 +2,8 @@
 
 İçerik: configmaps-summary, configmap, update-configmap,
 secrets-summary, secret, update-secret, delete-secret,
-resource-quotas-summary, limit-ranges-summary.
+resource-quotas-summary, limit-ranges-summary,
+delete-resource-quota, delete-limit-range.
 """
 
 import json
@@ -403,3 +404,464 @@ def limit_ranges_summary():
         return jsonify({'limit_ranges': result})
     except Exception as e:
         return jsonify({'limit_ranges': [], 'error': str(e)})
+
+
+@bp_explorer.route('/k8s-explorer/create-configmap', methods=['POST'])
+def create_configmap():
+    """Yeni bir ConfigMap oluşturur.
+
+    Method: POST
+    Path:   /k8s-explorer/create-configmap
+
+    Body (JSON):
+        name      (str):       Oluşturulacak ConfigMap adı (zorunlu).
+        namespace (str):       Hedef namespace (zorunlu).
+        data      (dict):      Key-value çiftleri (opsiyonel, boş ConfigMap oluşturulabilir).
+
+    Yanıt (201):
+        {"status": "ok"}
+
+    Hatalar:
+        400: name veya namespace eksik.
+        ApiException HTTP kodu: Kubernetes API hatası.
+        500: Beklenmedik sunucu hatası.
+    """
+    try:
+        payload = request.get_json() or {}
+        name = payload.get('name')
+        namespace = payload.get('namespace')
+        if not name or not namespace:
+            return jsonify({'error': 'name and namespace required'}), 400
+        configure_kube_client()
+        v1 = client.CoreV1Api()
+        cm_data = payload.get('data') or {}
+        v1.create_namespaced_config_map(
+            namespace,
+            client.V1ConfigMap(
+                metadata=client.V1ObjectMeta(name=name, namespace=namespace),
+                data=cm_data
+            )
+        )
+        record_audit_event(
+            action='create',
+            resource_type='ConfigMap',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
+        return jsonify({'status': 'ok'}), 201
+    except ApiException as ae:
+        parsed_body = None
+        try:
+            if getattr(ae, 'body', None):
+                parsed_body = json.loads(ae.body)
+        except Exception:
+            parsed_body = getattr(ae, 'body', None)
+        status_code = getattr(ae, 'status', 500)
+        return jsonify({'error': str(ae), 'status': status_code, 'body': parsed_body}), status_code
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@bp_explorer.route('/k8s-explorer/create-secret', methods=['POST'])
+def create_secret():
+    """Yeni bir Secret oluşturur.
+
+    Method: POST
+    Path:   /k8s-explorer/create-secret
+
+    Body (JSON):
+        name      (str):       Oluşturulacak Secret adı (zorunlu).
+        namespace (str):       Hedef namespace (zorunlu).
+        type      (str):       Secret türü (varsayılan: "Opaque").
+        data      (dict):      Key-value çiftleri — değerler frontend tarafından
+                               base64'e çevrilmiş olarak gelir (opsiyonel).
+
+    Yanıt (201):
+        {"status": "ok"}
+
+    Hatalar:
+        400: name veya namespace eksik.
+        ApiException HTTP kodu: Kubernetes API hatası.
+        500: Beklenmedik sunucu hatası.
+    """
+    try:
+        payload = request.get_json() or {}
+        name = payload.get('name')
+        namespace = payload.get('namespace')
+        if not name or not namespace:
+            return jsonify({'error': 'name and namespace required'}), 400
+        configure_kube_client()
+        v1 = client.CoreV1Api()
+        secret_type = payload.get('type') or 'Opaque'
+        secret_data = payload.get('data') or {}
+        v1.create_namespaced_secret(
+            namespace,
+            client.V1Secret(
+                metadata=client.V1ObjectMeta(name=name, namespace=namespace),
+                type=secret_type,
+                data=secret_data
+            )
+        )
+        record_audit_event(
+            action='create',
+            resource_type='Secret',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
+        return jsonify({'status': 'ok'}), 201
+    except ApiException as ae:
+        parsed_body = None
+        try:
+            if getattr(ae, 'body', None):
+                parsed_body = json.loads(ae.body)
+        except Exception:
+            parsed_body = getattr(ae, 'body', None)
+        status_code = getattr(ae, 'status', 500)
+        return jsonify({'error': str(ae), 'status': status_code, 'body': parsed_body}), status_code
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@bp_explorer.route('/k8s-explorer/create-resource-quota', methods=['POST'])
+def create_resource_quota():
+    """Yeni bir ResourceQuota oluşturur.
+
+    Method: POST
+    Path:   /k8s-explorer/create-resource-quota
+
+    Body (JSON):
+        name      (str):  Oluşturulacak ResourceQuota adı (zorunlu).
+        namespace (str):  Hedef namespace (zorunlu).
+        hard      (dict): Hard limit sözlüğü — örn. {"requests.cpu": "1", "pods": "10"}.
+                          En az bir alan zorunludur; boş sözlük ise 400 döner.
+
+    Yanıt (201):
+        {"status": "ok"}
+
+    Hatalar:
+        400: name/namespace eksik veya hard sözlüğü boş.
+        ApiException HTTP kodu: Kubernetes API hatası.
+        500: Beklenmedik sunucu hatası.
+    """
+    try:
+        payload = request.get_json() or {}
+        name = payload.get('name')
+        namespace = payload.get('namespace')
+        hard = payload.get('hard') or {}
+        if not name or not namespace:
+            return jsonify({'error': 'name and namespace required'}), 400
+        if not hard:
+            return jsonify({'error': 'en az bir hard limit alani gereklidir'}), 400
+        configure_kube_client()
+        v1 = client.CoreV1Api()
+        v1.create_namespaced_resource_quota(
+            namespace,
+            client.V1ResourceQuota(
+                metadata=client.V1ObjectMeta(name=name, namespace=namespace),
+                spec=client.V1ResourceQuotaSpec(hard=hard)
+            )
+        )
+        record_audit_event(
+            action='create',
+            resource_type='ResourceQuota',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
+        return jsonify({'status': 'ok'}), 201
+    except ApiException as ae:
+        parsed_body = None
+        try:
+            if getattr(ae, 'body', None):
+                parsed_body = json.loads(ae.body)
+        except Exception:
+            parsed_body = getattr(ae, 'body', None)
+        status_code = getattr(ae, 'status', 500)
+        return jsonify({'error': str(ae), 'status': status_code, 'body': parsed_body}), status_code
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@bp_explorer.route('/k8s-explorer/create-limit-range', methods=['POST'])
+def create_limit_range():
+    """Yeni bir LimitRange oluşturur (MVP: tek Container limit item).
+
+    Method: POST
+    Path:   /k8s-explorer/create-limit-range
+
+    Body (JSON):
+        name                 (str): Oluşturulacak LimitRange adı (zorunlu).
+        namespace            (str): Hedef namespace (zorunlu).
+        default_cpu          (str): Default CPU limiti (opsiyonel).
+        default_memory       (str): Default bellek limiti (opsiyonel).
+        default_request_cpu  (str): Default CPU request (opsiyonel).
+        default_request_memory (str): Default bellek request (opsiyonel).
+        max_cpu              (str): Maksimum CPU (opsiyonel).
+        max_memory           (str): Maksimum bellek (opsiyonel).
+        min_cpu              (str): Minimum CPU (opsiyonel).
+        min_memory           (str): Minimum bellek (opsiyonel).
+
+    En az bir limit alanı doldurulmalı; aksi halde 400 döner.
+
+    Yanıt (201):
+        {"status": "ok"}
+
+    Hatalar:
+        400: name/namespace eksik veya hiçbir limit alanı doldurulmamış.
+        ApiException HTTP kodu: Kubernetes API hatası.
+        500: Beklenmedik sunucu hatası.
+    """
+    try:
+        payload = request.get_json() or {}
+        name = payload.get('name')
+        namespace = payload.get('namespace')
+        if not name or not namespace:
+            return jsonify({'error': 'name and namespace required'}), 400
+
+        # Doldurulmuş alanlardan default/max/min sözlüklerini oluştur
+        default = {}
+        if payload.get('default_cpu'):
+            default['cpu'] = payload['default_cpu']
+        if payload.get('default_memory'):
+            default['memory'] = payload['default_memory']
+
+        default_request = {}
+        if payload.get('default_request_cpu'):
+            default_request['cpu'] = payload['default_request_cpu']
+        if payload.get('default_request_memory'):
+            default_request['memory'] = payload['default_request_memory']
+
+        max_limit = {}
+        if payload.get('max_cpu'):
+            max_limit['cpu'] = payload['max_cpu']
+        if payload.get('max_memory'):
+            max_limit['memory'] = payload['max_memory']
+
+        min_limit = {}
+        if payload.get('min_cpu'):
+            min_limit['cpu'] = payload['min_cpu']
+        if payload.get('min_memory'):
+            min_limit['memory'] = payload['min_memory']
+
+        if not any([default, default_request, max_limit, min_limit]):
+            return jsonify({'error': 'en az bir limit alani gereklidir'}), 400
+
+        item = client.V1LimitRangeItem(
+            type='Container',
+            default=default or None,
+            default_request=default_request or None,
+            max=max_limit or None,
+            min=min_limit or None,
+        )
+        configure_kube_client()
+        v1 = client.CoreV1Api()
+        v1.create_namespaced_limit_range(
+            namespace,
+            client.V1LimitRange(
+                metadata=client.V1ObjectMeta(name=name, namespace=namespace),
+                spec=client.V1LimitRangeSpec(limits=[item])
+            )
+        )
+        record_audit_event(
+            action='create',
+            resource_type='LimitRange',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
+        return jsonify({'status': 'ok'}), 201
+    except ApiException as ae:
+        parsed_body = None
+        try:
+            if getattr(ae, 'body', None):
+                parsed_body = json.loads(ae.body)
+        except Exception:
+            parsed_body = getattr(ae, 'body', None)
+        status_code = getattr(ae, 'status', 500)
+        return jsonify({'error': str(ae), 'status': status_code, 'body': parsed_body}), status_code
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@bp_explorer.route('/k8s-explorer/delete-resource-quota', methods=['POST'])
+def delete_resource_quota():
+    """ResourceQuota siler.
+
+    Method: POST
+    Path:   /k8s-explorer/delete-resource-quota
+
+    Body (JSON):
+        name         (str): Silinecek ResourceQuota adı.
+        namespace    (str): ResourceQuota'nın namespace'i.
+        confirm_name (str): Sunucu tarafı onay — name ile eşleşmeli.
+
+    Yanıt (200):
+        {"status": "ok"}
+
+    Hatalar:
+        400: name/namespace eksik ya da confirm_name doğrulaması başarısız.
+        ApiException HTTP kodu: Kubernetes API hatası.
+        500: Beklenmedik sunucu hatası.
+    """
+    try:
+        payload = request.get_json() or {}
+        name = payload.get('name')
+        namespace = payload.get('namespace')
+        if not name or not namespace:
+            return jsonify({'error': 'name and namespace required'}), 400
+        err = require_confirm_name(payload)
+        if err:
+            return err
+        configure_kube_client()
+        v1 = client.CoreV1Api()
+        v1.delete_namespaced_resource_quota(name, namespace)
+        record_audit_event(
+            action='delete',
+            resource_type='ResourceQuota',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
+        return jsonify({'status': 'ok'})
+    except ApiException as ae:
+        parsed_body = None
+        try:
+            if getattr(ae, 'body', None):
+                parsed_body = json.loads(ae.body)
+        except Exception:
+            parsed_body = getattr(ae, 'body', None)
+        status_code = getattr(ae, 'status', 500)
+        return jsonify({'error': str(ae), 'status': status_code, 'body': parsed_body}), status_code
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@bp_explorer.route('/k8s-explorer/delete-limit-range', methods=['POST'])
+def delete_limit_range():
+    """LimitRange siler.
+
+    Method: POST
+    Path:   /k8s-explorer/delete-limit-range
+
+    Body (JSON):
+        name         (str): Silinecek LimitRange adı.
+        namespace    (str): LimitRange'in namespace'i.
+        confirm_name (str): Sunucu tarafı onay — name ile eşleşmeli.
+
+    Yanıt (200):
+        {"status": "ok"}
+
+    Hatalar:
+        400: name/namespace eksik ya da confirm_name doğrulaması başarısız.
+        ApiException HTTP kodu: Kubernetes API hatası.
+        500: Beklenmedik sunucu hatası.
+    """
+    try:
+        payload = request.get_json() or {}
+        name = payload.get('name')
+        namespace = payload.get('namespace')
+        if not name or not namespace:
+            return jsonify({'error': 'name and namespace required'}), 400
+        err = require_confirm_name(payload)
+        if err:
+            return err
+        configure_kube_client()
+        v1 = client.CoreV1Api()
+        v1.delete_namespaced_limit_range(name, namespace)
+        record_audit_event(
+            action='delete',
+            resource_type='LimitRange',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
+        return jsonify({'status': 'ok'})
+    except ApiException as ae:
+        parsed_body = None
+        try:
+            if getattr(ae, 'body', None):
+                parsed_body = json.loads(ae.body)
+        except Exception:
+            parsed_body = getattr(ae, 'body', None)
+        status_code = getattr(ae, 'status', 500)
+        return jsonify({'error': str(ae), 'status': status_code, 'body': parsed_body}), status_code
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
+@bp_explorer.route('/k8s-explorer/create-lease', methods=['POST'])
+def create_lease():
+    """Yeni bir Lease oluşturur.
+
+    Method: POST
+    Path:   /k8s-explorer/create-lease
+
+    Body (JSON):
+        name                   (str): Oluşturulacak Lease adı (zorunlu).
+        namespace              (str): Hedef namespace (zorunlu).
+        lease_duration_seconds (int): Lease süresi saniye cinsinden (zorunlu).
+        holder_identity        (str): Lease sahibi kimliği (opsiyonel; boş string ise None olarak işlenir).
+
+    Yanıt (201):
+        {"status": "ok"}
+
+    Hatalar:
+        400: name, namespace veya lease_duration_seconds eksik.
+        ApiException HTTP kodu: Kubernetes API hatası.
+        500: Beklenmedik sunucu hatası.
+    """
+    try:
+        payload = request.get_json() or {}
+        name = payload.get('name')
+        namespace = payload.get('namespace')
+        lease_duration_seconds = payload.get('lease_duration_seconds')
+        if not name or not namespace:
+            return jsonify({'error': 'name and namespace required'}), 400
+        if lease_duration_seconds is None:
+            return jsonify({'error': 'lease_duration_seconds required'}), 400
+        try:
+            lease_duration_seconds = int(lease_duration_seconds)
+        except (ValueError, TypeError):
+            return jsonify({'error': 'lease_duration_seconds must be an integer'}), 400
+        # holder_identity boş string gelebilir — opsiyonel alan, None olarak ilet
+        holder_identity = payload.get('holder_identity') or None
+        configure_kube_client()
+        coord_v1 = client.CoordinationV1Api()
+        coord_v1.create_namespaced_lease(
+            namespace,
+            client.V1Lease(
+                metadata=client.V1ObjectMeta(name=name, namespace=namespace),
+                spec=client.V1LeaseSpec(
+                    holder_identity=holder_identity,
+                    lease_duration_seconds=lease_duration_seconds
+                )
+            )
+        )
+        record_audit_event(
+            action='create',
+            resource_type='Lease',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
+        return jsonify({'status': 'ok'}), 201
+    except ApiException as ae:
+        parsed_body = None
+        try:
+            if getattr(ae, 'body', None):
+                parsed_body = json.loads(ae.body)
+        except Exception:
+            parsed_body = getattr(ae, 'body', None)
+        status_code = getattr(ae, 'status', 500)
+        return jsonify({'error': str(ae), 'status': status_code, 'body': parsed_body}), status_code
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500

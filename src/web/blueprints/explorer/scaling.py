@@ -326,3 +326,169 @@ def delete_pdb():
             return jsonify({'error': str(e)}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@bp_explorer.route('/k8s-explorer/create-hpa', methods=['POST'])
+def create_hpa():
+    """Yeni bir HorizontalPodAutoscaler oluşturur (autoscaling/v2, tek CPU metriği).
+
+    Method: POST
+    Path:   /k8s-explorer/create-hpa
+
+    Body (JSON):
+        name               (str): HPA adı (zorunlu).
+        namespace          (str): Hedef namespace (zorunlu).
+        target_kind        (str): Hedef kaynak türü — Deployment, StatefulSet veya ReplicaSet (zorunlu).
+        target_name        (str): Hedef kaynak adı (zorunlu).
+        min_replicas       (int): Minimum replika sayısı (zorunlu, >= 1).
+        max_replicas       (int): Maksimum replika sayısı (zorunlu, >= min_replicas).
+        cpu_target_percent (int): Hedef CPU kullanım yüzdesi (zorunlu, 1-100).
+
+    Yanıt (201):
+        {"status": "ok"}
+
+    Hatalar:
+        400: Zorunlu alan eksik veya min_replicas > max_replicas.
+        ApiException HTTP kodu: Kubernetes API hatası.
+        500: Beklenmedik sunucu hatası.
+    """
+    try:
+        data = request.get_json() or {}
+        name = data.get('name')
+        namespace = data.get('namespace')
+        target_kind = data.get('target_kind')
+        target_name = data.get('target_name')
+        min_replicas = data.get('min_replicas')
+        max_replicas = data.get('max_replicas')
+        cpu_target_percent = data.get('cpu_target_percent')
+        if not name or not namespace or not target_kind or not target_name:
+            return jsonify({'error': 'name, namespace, target_kind and target_name are required'}), 400
+        if min_replicas is None or max_replicas is None or cpu_target_percent is None:
+            return jsonify({'error': 'min_replicas, max_replicas and cpu_target_percent are required'}), 400
+        try:
+            min_replicas = int(min_replicas)
+            max_replicas = int(max_replicas)
+            cpu_target_percent = int(cpu_target_percent)
+        except (ValueError, TypeError):
+            return jsonify({'error': 'min_replicas, max_replicas and cpu_target_percent must be integers'}), 400
+        if min_replicas > max_replicas:
+            return jsonify({'error': 'min_replicas, max_replicas degerinden buyuk olamaz'}), 400
+        configure_kube_client()
+        autoscaling_v2 = client.AutoscalingV2Api()
+        body = client.V2HorizontalPodAutoscaler(
+            metadata=client.V1ObjectMeta(name=name, namespace=namespace),
+            spec=client.V2HorizontalPodAutoscalerSpec(
+                scale_target_ref=client.V2CrossVersionObjectReference(
+                    api_version='apps/v1',
+                    kind=target_kind,
+                    name=target_name
+                ),
+                min_replicas=min_replicas,
+                max_replicas=max_replicas,
+                metrics=[
+                    client.V2MetricSpec(
+                        type='Resource',
+                        resource=client.V2ResourceMetricSource(
+                            name='cpu',
+                            target=client.V2MetricTarget(
+                                type='Utilization',
+                                average_utilization=cpu_target_percent
+                            )
+                        )
+                    )
+                ]
+            )
+        )
+        autoscaling_v2.create_namespaced_horizontal_pod_autoscaler(namespace, body)
+        record_audit_event(
+            action='create',
+            resource_type='HPA',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
+        return jsonify({'status': 'ok'}), 201
+    except ApiException as e:
+        try:
+            return jsonify({'error': e.body}), e.status
+        except Exception:
+            return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@bp_explorer.route('/k8s-explorer/create-pdb', methods=['POST'])
+def create_pdb():
+    """Yeni bir PodDisruptionBudget oluşturur.
+
+    Method: POST
+    Path:   /k8s-explorer/create-pdb
+
+    Body (JSON):
+        name         (str):  PDB adı (zorunlu).
+        namespace    (str):  Hedef namespace (zorunlu).
+        match_labels (dict): Selector etiketleri — en az 1 çift zorunlu.
+        policy       (str):  "minAvailable" veya "maxUnavailable" (zorunlu).
+                             Seçime göre yalnızca ilgili spec alanı doldurulur.
+        value        (str):  Sayı ("1") veya yüzde ("50%") (zorunlu).
+
+    Yanıt (201):
+        {"status": "ok"}
+
+    Hatalar:
+        400: Zorunlu alan eksik veya match_labels boş.
+        ApiException HTTP kodu: Kubernetes API hatası.
+        500: Beklenmedik sunucu hatası.
+    """
+    try:
+        data = request.get_json() or {}
+        name = data.get('name')
+        namespace = data.get('namespace')
+        match_labels = data.get('match_labels') or {}
+        policy = data.get('policy')
+        value = data.get('value')
+        if not name or not namespace:
+            return jsonify({'error': 'name and namespace are required'}), 400
+        if not match_labels:
+            return jsonify({'error': 'en az bir match_labels cifti gereklidir'}), 400
+        if not policy or value is None or value == '':
+            return jsonify({'error': 'policy and value are required'}), 400
+        # Değeri sayı ise int, yüzde ise string ("50%") olarak gönder
+        str_value = str(value).strip()
+        try:
+            parsed_value = int(str_value) if str_value.isdigit() else str_value
+        except Exception:
+            parsed_value = str_value
+        # policy'e göre SADECE ilgili alan doldurulur, diğeri DAHIL EDİLMEZ
+        min_available = None
+        max_unavailable = None
+        if policy == 'minAvailable':
+            min_available = parsed_value
+        else:
+            max_unavailable = parsed_value
+        configure_kube_client()
+        policy_v1 = client.PolicyV1Api()
+        body = client.V1PodDisruptionBudget(
+            metadata=client.V1ObjectMeta(name=name, namespace=namespace),
+            spec=client.V1PodDisruptionBudgetSpec(
+                selector=client.V1LabelSelector(match_labels=match_labels),
+                min_available=min_available,
+                max_unavailable=max_unavailable
+            )
+        )
+        policy_v1.create_namespaced_pod_disruption_budget(namespace, body)
+        record_audit_event(
+            action='create',
+            resource_type='PDB',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
+        return jsonify({'status': 'ok'}), 201
+    except ApiException as e:
+        try:
+            return jsonify({'error': e.body}), e.status
+        except Exception:
+            return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

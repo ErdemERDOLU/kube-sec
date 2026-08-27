@@ -472,7 +472,7 @@
     <button class="btn btn-outline-primary" onclick="refreshAllData()">
       <i class="bi bi-arrow-clockwise me-2"></i>{{ t('config.btn_refresh_all') }}
     </button>
-    <button class="btn btn-primary" style="background: var(--primary-gradient); border: none;">
+    <button id="btnCreateResource" class="btn btn-primary" style="background: var(--primary-gradient); border: none;">
       <i class="bi bi-plus-circle me-2"></i>{{ t('config.btn_add_new') }}
     </button>
   </div>
@@ -1933,9 +1933,10 @@ async function fetchAndRenderResourceQuotasTable() {
             <button class="btn btn-sm btn-outline-primary me-1" aria-label="{{ t('a11y.btn_view') }}">
               <i class="bi bi-eye"></i>
             </button>
-            <button class="btn btn-sm btn-outline-secondary" aria-label="{{ t('a11y.btn_edit') }}">
+            <button class="btn btn-sm btn-outline-secondary me-1" aria-label="{{ t('a11y.btn_edit') }}">
               <i class="bi bi-pencil"></i>
             </button>
+            <button class="btn btn-sm btn-outline-danger btn-delete-resource-quota" data-name="${quota.name}" data-namespace="${quota.namespace}" aria-label="{{ t('a11y.btn_delete') }}"><i class="bi bi-trash"></i></button>
           </td>
         </tr>
       `;
@@ -1943,6 +1944,26 @@ async function fetchAndRenderResourceQuotasTable() {
 
     tableHtml += '</tbody></table></div>';
     container.innerHTML = tableHtml;
+
+    container.querySelectorAll('.btn-delete-resource-quota').forEach(btn => btn.addEventListener('click', () => {
+      const name = btn.getAttribute('data-name');
+      const namespace = btn.getAttribute('data-namespace');
+      openConfirmModal({
+        title: '{{ t("config.confirm_title_rq_delete") }}',
+        message: `"${name}" (${namespace}) ` + '{{ t("config.confirm_delete_rq_msg") }}',
+        confirmText: '{{ t("config.confirm_yes_delete") }}',
+        confirmBtnClass: 'btn-danger',
+        onConfirm: async () => {
+          try {
+            const resp = await fetch('/k8s-explorer/delete-resource-quota', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, body: JSON.stringify({ name, namespace, confirm_name: name }) });
+            const j = await resp.json();
+            if (j.error) { showToast('{{ t("config.toast_rq_delete_error") }} ' + j.error, 'error'); return; }
+            showToast('{{ t("config.toast_rq_deleted") }}', 'success');
+            fetchAndRenderResourceQuotasTable();
+          } catch (e) { showToast('{{ t("config.toast_rq_delete_error") }} ' + e.message, 'error'); }
+        }
+      });
+    }));
 
   } catch (error) {
     container.innerHTML = '<div class="alert alert-danger">{{ t("config.error_resource_quotas") }}: ' + error.message + '</div>';
@@ -1985,9 +2006,10 @@ async function fetchAndRenderLimitRangesTable() {
             <button class="btn btn-sm btn-outline-primary me-1" aria-label="{{ t('a11y.btn_view') }}">
               <i class="bi bi-eye"></i>
             </button>
-            <button class="btn btn-sm btn-outline-secondary" aria-label="{{ t('a11y.btn_edit') }}">
+            <button class="btn btn-sm btn-outline-secondary me-1" aria-label="{{ t('a11y.btn_edit') }}">
               <i class="bi bi-pencil"></i>
             </button>
+            <button class="btn btn-sm btn-outline-danger btn-delete-limit-range" data-name="${lr.name}" data-namespace="${lr.namespace}" aria-label="{{ t('a11y.btn_delete') }}"><i class="bi bi-trash"></i></button>
           </td>
         </tr>
       `;
@@ -1995,7 +2017,27 @@ async function fetchAndRenderLimitRangesTable() {
 
     tableHtml += '</tbody></table></div>';
     container.innerHTML = tableHtml;
-    
+
+    container.querySelectorAll('.btn-delete-limit-range').forEach(btn => btn.addEventListener('click', () => {
+      const name = btn.getAttribute('data-name');
+      const namespace = btn.getAttribute('data-namespace');
+      openConfirmModal({
+        title: '{{ t("config.confirm_title_lr_delete") }}',
+        message: `"${name}" (${namespace}) ` + '{{ t("config.confirm_delete_lr_msg") }}',
+        confirmText: '{{ t("config.confirm_yes_delete") }}',
+        confirmBtnClass: 'btn-danger',
+        onConfirm: async () => {
+          try {
+            const resp = await fetch('/k8s-explorer/delete-limit-range', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, body: JSON.stringify({ name, namespace, confirm_name: name }) });
+            const j = await resp.json();
+            if (j.error) { showToast('{{ t("config.toast_lr_delete_error") }} ' + j.error, 'error'); return; }
+            showToast('{{ t("config.toast_lr_deleted") }}', 'success');
+            fetchAndRenderLimitRangesTable();
+          } catch (e) { showToast('{{ t("config.toast_lr_delete_error") }} ' + e.message, 'error'); }
+        }
+      });
+    }));
+
   } catch (error) {
     container.innerHTML = '<div class="alert alert-danger">{{ t("config.error_limit_ranges") }}: ' + error.message + '</div>';
   }
@@ -3423,6 +3465,1213 @@ document.addEventListener('click', function(event) {
     </div>
   </div>
 </div>
+
+
+<!-- =======================================================================
+  CREATE RESOURCE MODALS — "Yeni Ekle" butonu (AC-1 through AC-20)
+  9 kaynak türü: ConfigMap, Secret, HPA, PDB, ResourceQuota,
+  LimitRange, PriorityClass, RuntimeClass, Lease
+  ======================================================================= -->
+
+<!-- 1. ConfigMap Create Modal (AC-2) -->
+<div class="modal fade" id="createConfigMapModal" tabindex="-1"
+     aria-labelledby="createConfigMapModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createConfigMapModalLabel">
+          <i class="bi bi-file-text me-2"></i>{{ t('config.modal_create_title') | replace('{resource}', 'ConfigMap') }}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                aria-label="{{ t('base.btn_close') }}"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="cmCrName" class="form-label fw-semibold">
+            {{ t('config.create_name_label') }} <span class="text-danger">*</span>
+          </label>
+          <input type="text" id="cmCrName" class="form-control" placeholder="my-configmap" autocomplete="off">
+          <div id="cmCrNameErr" class="invalid-feedback"></div>
+        </div>
+        <div class="mb-3">
+          <label for="cmCrNs" class="form-label fw-semibold">
+            {{ t('config.create_namespace_label') }} <span class="text-danger">*</span>
+          </label>
+          <select id="cmCrNs" class="form-select">
+            <option value="">-- seçiniz --</option>
+          </select>
+          <div id="cmCrNsErr" class="invalid-feedback"></div>
+        </div>
+        <div class="mb-2">
+          <label class="form-label fw-semibold">Data (key-value)</label>
+        </div>
+        <div id="cmCrDataEditor">
+          <div class="row mb-2 create-kv-row">
+            <div class="col-5">
+              <input type="text" class="form-control form-control-sm create-kv-key"
+                     placeholder="{{ t('config.kv_key_label') }}" aria-label="{{ t('config.kv_key_label') }}">
+            </div>
+            <div class="col-6">
+              <textarea class="form-control form-control-sm create-kv-value" rows="1"
+                        placeholder="{{ t('config.kv_value_label') }}" aria-label="{{ t('config.kv_value_label') }}"
+                        style="font-family:monospace;resize:vertical;"></textarea>
+            </div>
+            <div class="col-1 d-flex align-items-start pt-1">
+              <button type="button" class="btn btn-outline-danger btn-sm remove-create-kv-row"
+                      aria-label="{{ t('a11y.btn_remove_row') }}">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn btn-outline-success btn-sm" id="cmCrAddRow">
+          <i class="bi bi-plus-circle me-1"></i>{{ t('config.kv_add_pair') }}
+        </button>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('config.btn_cancel') }}</button>
+        <button type="button" class="btn btn-primary" id="cmCrSubmit">
+          <i class="bi bi-plus-circle me-1"></i>{{ t('config.btn_create') }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 2. Secret Create Modal (AC-4) -->
+<div class="modal fade" id="createSecretModal" tabindex="-1"
+     aria-labelledby="createSecretModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createSecretModalLabel">
+          <i class="bi bi-shield-lock me-2"></i>{{ t('config.modal_create_title') | replace('{resource}', 'Secret') }}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                aria-label="{{ t('base.btn_close') }}"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label for="scCrName" class="form-label fw-semibold">
+            {{ t('config.create_name_label') }} <span class="text-danger">*</span>
+          </label>
+          <input type="text" id="scCrName" class="form-control" placeholder="my-secret" autocomplete="off">
+          <div id="scCrNameErr" class="invalid-feedback"></div>
+        </div>
+        <div class="mb-3">
+          <label for="scCrNs" class="form-label fw-semibold">
+            {{ t('config.create_namespace_label') }} <span class="text-danger">*</span>
+          </label>
+          <select id="scCrNs" class="form-select">
+            <option value="">-- seçiniz --</option>
+          </select>
+          <div id="scCrNsErr" class="invalid-feedback"></div>
+        </div>
+        <div class="mb-3">
+          <label for="scCrType" class="form-label fw-semibold">
+            {{ t('config.create_type_label') }} <span class="text-danger">*</span>
+          </label>
+          <select id="scCrType" class="form-select">
+            <option value="Opaque" selected>Opaque</option>
+            <option value="kubernetes.io/tls">kubernetes.io/tls</option>
+            <option value="kubernetes.io/dockerconfigjson">kubernetes.io/dockerconfigjson</option>
+          </select>
+        </div>
+        <div class="mb-2">
+          <label class="form-label fw-semibold">Data (key-value)</label>
+          <small class="text-muted ms-2">Değerler gönderim sırasında base64 ile kodlanır.</small>
+        </div>
+        <div id="scCrDataEditor">
+          <div class="row mb-2 create-kv-row">
+            <div class="col-5">
+              <input type="text" class="form-control form-control-sm create-kv-key"
+                     placeholder="{{ t('config.kv_key_label') }}" aria-label="{{ t('config.kv_key_label') }}">
+            </div>
+            <div class="col-6">
+              <textarea class="form-control form-control-sm create-kv-value" rows="1"
+                        placeholder="{{ t('config.kv_value_label') }}" aria-label="{{ t('config.kv_value_label') }}"
+                        style="font-family:monospace;resize:vertical;"></textarea>
+            </div>
+            <div class="col-1 d-flex align-items-start pt-1">
+              <button type="button" class="btn btn-outline-danger btn-sm remove-create-kv-row"
+                      aria-label="{{ t('a11y.btn_remove_row') }}">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn btn-outline-success btn-sm" id="scCrAddRow">
+          <i class="bi bi-plus-circle me-1"></i>{{ t('config.kv_add_pair') }}
+        </button>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('config.btn_cancel') }}</button>
+        <button type="button" class="btn btn-primary" id="scCrSubmit">
+          <i class="bi bi-plus-circle me-1"></i>{{ t('config.btn_create') }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 3. HPA Create Modal (AC-6) -->
+<div class="modal fade" id="createHPAModal" tabindex="-1"
+     aria-labelledby="createHPAModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createHPAModalLabel">
+          <i class="bi bi-arrows-expand me-2"></i>{{ t('config.modal_create_title') | replace('{resource}', 'HPA') }}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                aria-label="{{ t('base.btn_close') }}"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="hpaCrName" class="form-label fw-semibold">
+              {{ t('config.create_name_label') }} <span class="text-danger">*</span>
+            </label>
+            <input type="text" id="hpaCrName" class="form-control" placeholder="my-hpa" autocomplete="off">
+            <div id="hpaCrNameErr" class="invalid-feedback"></div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="hpaCrNs" class="form-label fw-semibold">
+              {{ t('config.create_namespace_label') }} <span class="text-danger">*</span>
+            </label>
+            <select id="hpaCrNs" class="form-select">
+              <option value="">-- seçiniz --</option>
+            </select>
+            <div id="hpaCrNsErr" class="invalid-feedback"></div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="hpaCrTargetKind" class="form-label fw-semibold">
+              {{ t('config.create_hpa_target_kind') }} <span class="text-danger">*</span>
+            </label>
+            <select id="hpaCrTargetKind" class="form-select">
+              <option value="Deployment" selected>Deployment</option>
+              <option value="StatefulSet">StatefulSet</option>
+              <option value="ReplicaSet">ReplicaSet</option>
+            </select>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="hpaCrTargetName" class="form-label fw-semibold">
+              {{ t('config.create_hpa_target_name') }} <span class="text-danger">*</span>
+            </label>
+            <input type="text" id="hpaCrTargetName" class="form-control"
+                   placeholder="my-deployment" autocomplete="off">
+            <div id="hpaCrTargetNameErr" class="invalid-feedback"></div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <label for="hpaCrMinReplicas" class="form-label fw-semibold">
+              {{ t('config.create_hpa_min_replicas') }} <span class="text-danger">*</span>
+            </label>
+            <input type="number" id="hpaCrMinReplicas" class="form-control" value="1" min="1">
+            <div id="hpaCrMinErr" class="invalid-feedback"></div>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label for="hpaCrMaxReplicas" class="form-label fw-semibold">
+              {{ t('config.create_hpa_max_replicas') }} <span class="text-danger">*</span>
+            </label>
+            <input type="number" id="hpaCrMaxReplicas" class="form-control" value="10" min="1">
+            <div id="hpaCrMaxErr" class="invalid-feedback"></div>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label for="hpaCrCpuTarget" class="form-label fw-semibold">
+              {{ t('config.create_hpa_cpu_target') }} <span class="text-danger">*</span>
+            </label>
+            <input type="number" id="hpaCrCpuTarget" class="form-control" value="50" min="1" max="100">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('config.btn_cancel') }}</button>
+        <button type="button" class="btn btn-primary" id="hpaCrSubmit">
+          <i class="bi bi-plus-circle me-1"></i>{{ t('config.btn_create') }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 4. PDB Create Modal (AC-8) -->
+<div class="modal fade" id="createPDBModal" tabindex="-1"
+     aria-labelledby="createPDBModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createPDBModalLabel">
+          <i class="bi bi-shield-check me-2"></i>{{ t('config.modal_create_title') | replace('{resource}', 'PDB') }}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                aria-label="{{ t('base.btn_close') }}"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="pdbCrName" class="form-label fw-semibold">
+              {{ t('config.create_name_label') }} <span class="text-danger">*</span>
+            </label>
+            <input type="text" id="pdbCrName" class="form-control" placeholder="my-pdb" autocomplete="off">
+            <div id="pdbCrNameErr" class="invalid-feedback"></div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="pdbCrNs" class="form-label fw-semibold">
+              {{ t('config.create_namespace_label') }} <span class="text-danger">*</span>
+            </label>
+            <select id="pdbCrNs" class="form-select">
+              <option value="">-- seçiniz --</option>
+            </select>
+            <div id="pdbCrNsErr" class="invalid-feedback"></div>
+          </div>
+        </div>
+        <div class="mb-2">
+          <label class="form-label fw-semibold">
+            {{ t('config.create_pdb_selector_labels') }} <span class="text-danger">*</span>
+          </label>
+        </div>
+        <div id="pdbCrLabelsEditor">
+          <div class="row mb-2 create-kv-row">
+            <div class="col-5">
+              <input type="text" class="form-control form-control-sm create-kv-key"
+                     placeholder="app" aria-label="{{ t('config.kv_key_label') }}">
+            </div>
+            <div class="col-6">
+              <textarea class="form-control form-control-sm create-kv-value" rows="1"
+                        placeholder="my-app" aria-label="{{ t('config.kv_value_label') }}"
+                        style="font-family:monospace;resize:vertical;"></textarea>
+            </div>
+            <div class="col-1 d-flex align-items-start pt-1">
+              <button type="button" class="btn btn-outline-danger btn-sm remove-create-kv-row"
+                      aria-label="{{ t('a11y.btn_remove_row') }}">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn btn-outline-success btn-sm mb-3" id="pdbCrAddLabel">
+          <i class="bi bi-plus-circle me-1"></i>{{ t('config.kv_add_pair') }}
+        </button>
+        <div id="pdbCrLabelErr" class="text-danger small mb-2" style="display:none;">
+          {{ t('config.validation_selector_required') }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">
+            {{ t('config.create_pdb_policy') }} <span class="text-danger">*</span>
+          </label>
+          <div class="d-flex gap-4">
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="pdbCrPolicy"
+                     id="pdbCrPolicyMin" value="minAvailable">
+              <label class="form-check-label" for="pdbCrPolicyMin">
+                {{ t('config.create_pdb_policy_min') }}
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="pdbCrPolicy"
+                     id="pdbCrPolicyMax" value="maxUnavailable" checked>
+              <label class="form-check-label" for="pdbCrPolicyMax">
+                {{ t('config.create_pdb_policy_max') }}
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label for="pdbCrValue" class="form-label fw-semibold">
+            {{ t('config.create_pdb_value') }} <span class="text-danger">*</span>
+          </label>
+          <input type="text" id="pdbCrValue" class="form-control" placeholder="1">
+          <small class="text-muted">{{ t('config.note_pdb_range') }}</small>
+          <div id="pdbCrValueErr" class="invalid-feedback"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('config.btn_cancel') }}</button>
+        <button type="button" class="btn btn-primary" id="pdbCrSubmit">
+          <i class="bi bi-plus-circle me-1"></i>{{ t('config.btn_create') }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 5. ResourceQuota Create Modal (AC-10) -->
+<div class="modal fade" id="createResourceQuotaModal" tabindex="-1"
+     aria-labelledby="createResourceQuotaModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createResourceQuotaModalLabel">
+          <i class="bi bi-speedometer2 me-2"></i>{{ t('config.modal_create_title') | replace('{resource}', 'ResourceQuota') }}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                aria-label="{{ t('base.btn_close') }}"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="quotaCrName" class="form-label fw-semibold">
+              {{ t('config.create_name_label') }} <span class="text-danger">*</span>
+            </label>
+            <input type="text" id="quotaCrName" class="form-control" placeholder="my-quota" autocomplete="off">
+            <div id="quotaCrNameErr" class="invalid-feedback"></div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="quotaCrNs" class="form-label fw-semibold">
+              {{ t('config.create_namespace_label') }} <span class="text-danger">*</span>
+            </label>
+            <select id="quotaCrNs" class="form-select">
+              <option value="">-- seçiniz --</option>
+            </select>
+            <div id="quotaCrNsErr" class="invalid-feedback"></div>
+          </div>
+        </div>
+        <p class="text-muted small mb-2">{{ t('config.validation_quota_min_one') }}</p>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="quotaCrReqCpu" class="form-label fw-semibold">{{ t('config.create_quota_requests_cpu') }}</label>
+            <input type="text" id="quotaCrReqCpu" class="form-control" placeholder="1">
+            <small class="text-muted">örn: 500m, 1</small>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="quotaCrReqMem" class="form-label fw-semibold">{{ t('config.create_quota_requests_memory') }}</label>
+            <input type="text" id="quotaCrReqMem" class="form-control" placeholder="1Gi">
+            <small class="text-muted">örn: 512Mi, 1Gi</small>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="quotaCrLimCpu" class="form-label fw-semibold">{{ t('config.create_quota_limits_cpu') }}</label>
+            <input type="text" id="quotaCrLimCpu" class="form-control" placeholder="2">
+            <small class="text-muted">örn: 500m, 2</small>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="quotaCrLimMem" class="form-label fw-semibold">{{ t('config.create_quota_limits_memory') }}</label>
+            <input type="text" id="quotaCrLimMem" class="form-control" placeholder="2Gi">
+            <small class="text-muted">örn: 1Gi, 2Gi</small>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="quotaCrPods" class="form-label fw-semibold">{{ t('config.create_quota_pods') }}</label>
+            <input type="text" id="quotaCrPods" class="form-control" placeholder="10">
+          </div>
+        </div>
+        <div id="quotaCrHardErr" class="text-danger small" style="display:none;">
+          {{ t('config.validation_quota_min_one') }}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('config.btn_cancel') }}</button>
+        <button type="button" class="btn btn-primary" id="quotaCrSubmit">
+          <i class="bi bi-plus-circle me-1"></i>{{ t('config.btn_create') }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 6. LimitRange Create Modal (AC-12) -->
+<div class="modal fade" id="createLimitRangeModal" tabindex="-1"
+     aria-labelledby="createLimitRangeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createLimitRangeModalLabel">
+          <i class="bi bi-bar-chart me-2"></i>{{ t('config.modal_create_title') | replace('{resource}', 'LimitRange') }}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                aria-label="{{ t('base.btn_close') }}"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-5 mb-3">
+            <label for="lrCrName" class="form-label fw-semibold">
+              {{ t('config.create_name_label') }} <span class="text-danger">*</span>
+            </label>
+            <input type="text" id="lrCrName" class="form-control" placeholder="my-limit-range" autocomplete="off">
+            <div id="lrCrNameErr" class="invalid-feedback"></div>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label for="lrCrNs" class="form-label fw-semibold">
+              {{ t('config.create_namespace_label') }} <span class="text-danger">*</span>
+            </label>
+            <select id="lrCrNs" class="form-select">
+              <option value="">-- seçiniz --</option>
+            </select>
+            <div id="lrCrNsErr" class="invalid-feedback"></div>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label for="lrCrType" class="form-label fw-semibold">{{ t('config.create_lr_type') }}</label>
+            <input type="text" id="lrCrType" class="form-control bg-light" value="Container"
+                   readonly aria-readonly="true">
+          </div>
+        </div>
+        <p class="text-muted small mb-3">{{ t('config.validation_lr_min_one') }}</p>
+        <h6 class="fw-semibold text-muted border-bottom pb-1 mb-3">Varsayılan Değerler / Default Request</h6>
+        <div class="row">
+          <div class="col-md-3 mb-3">
+            <label for="lrCrDefCpu" class="form-label">{{ t('config.create_lr_default_cpu') }}</label>
+            <input type="text" id="lrCrDefCpu" class="form-control" placeholder="500m">
+            <small class="text-muted">örn: 500m, 1Gi</small>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label for="lrCrDefMem" class="form-label">{{ t('config.create_lr_default_memory') }}</label>
+            <input type="text" id="lrCrDefMem" class="form-control" placeholder="128Mi">
+            <small class="text-muted">örn: 128Mi, 1Gi</small>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label for="lrCrDefReqCpu" class="form-label">{{ t('config.create_lr_default_req_cpu') }}</label>
+            <input type="text" id="lrCrDefReqCpu" class="form-control" placeholder="500m">
+            <small class="text-muted">örn: 500m, 1Gi</small>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label for="lrCrDefReqMem" class="form-label">{{ t('config.create_lr_default_req_memory') }}</label>
+            <input type="text" id="lrCrDefReqMem" class="form-control" placeholder="128Mi">
+            <small class="text-muted">örn: 128Mi, 1Gi</small>
+          </div>
+        </div>
+        <h6 class="fw-semibold text-muted border-bottom pb-1 mb-3">Max / Min</h6>
+        <div class="row">
+          <div class="col-md-3 mb-3">
+            <label for="lrCrMaxCpu" class="form-label">{{ t('config.create_lr_max_cpu') }}</label>
+            <input type="text" id="lrCrMaxCpu" class="form-control" placeholder="1">
+            <small class="text-muted">örn: 500m, 2</small>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label for="lrCrMaxMem" class="form-label">{{ t('config.create_lr_max_memory') }}</label>
+            <input type="text" id="lrCrMaxMem" class="form-control" placeholder="512Mi">
+            <small class="text-muted">örn: 128Mi, 1Gi</small>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label for="lrCrMinCpu" class="form-label">{{ t('config.create_lr_min_cpu') }}</label>
+            <input type="text" id="lrCrMinCpu" class="form-control" placeholder="100m">
+            <small class="text-muted">örn: 100m, 500m</small>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label for="lrCrMinMem" class="form-label">{{ t('config.create_lr_min_memory') }}</label>
+            <input type="text" id="lrCrMinMem" class="form-control" placeholder="64Mi">
+            <small class="text-muted">örn: 64Mi, 128Mi</small>
+          </div>
+        </div>
+        <div id="lrCrLimitErr" class="text-danger small" style="display:none;">
+          {{ t('config.validation_lr_min_one') }}
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('config.btn_cancel') }}</button>
+        <button type="button" class="btn btn-primary" id="lrCrSubmit">
+          <i class="bi bi-plus-circle me-1"></i>{{ t('config.btn_create') }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 7. PriorityClass Create Modal (AC-14) -->
+<div class="modal fade" id="createPriorityClassModal" tabindex="-1"
+     aria-labelledby="createPriorityClassModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createPriorityClassModalLabel">
+          <i class="bi bi-sort-numeric-down me-2"></i>{{ t('config.modal_create_title') | replace('{resource}', 'PriorityClass') }}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                aria-label="{{ t('base.btn_close') }}"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info py-2 small mb-3">
+          <i class="bi bi-info-circle me-1"></i>{{ t('config.note_priority_class_scope') }}
+        </div>
+        <div class="row">
+          <div class="col-md-8 mb-3">
+            <label for="pcCrName" class="form-label fw-semibold">
+              {{ t('config.create_name_label') }} <span class="text-danger">*</span>
+            </label>
+            <input type="text" id="pcCrName" class="form-control"
+                   placeholder="my-priority-class" autocomplete="off">
+            <div id="pcCrNameErr" class="invalid-feedback"></div>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label for="pcCrValue" class="form-label fw-semibold">
+              {{ t('config.create_pc_value') }} <span class="text-danger">*</span>
+            </label>
+            <input type="number" id="pcCrValue" class="form-control" value="1000000">
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="pcCrPreemption" class="form-label fw-semibold">
+              {{ t('config.create_pc_preemption') }}
+            </label>
+            <select id="pcCrPreemption" class="form-select">
+              <option value="PreemptLowerPriority" selected>PreemptLowerPriority</option>
+              <option value="Never">Never</option>
+            </select>
+          </div>
+          <div class="col-md-6 mb-3 d-flex align-items-center pt-4">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="pcCrGlobalDefault">
+              <label class="form-check-label fw-semibold" for="pcCrGlobalDefault">
+                {{ t('config.create_pc_global_default') }}
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label for="pcCrDescription" class="form-label fw-semibold">
+            {{ t('config.create_pc_description') }}
+          </label>
+          <textarea id="pcCrDescription" class="form-control" rows="3"
+                    placeholder="Bu öncelik sınıfının açıklaması..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('config.btn_cancel') }}</button>
+        <button type="button" class="btn btn-primary" id="pcCrSubmit">
+          <i class="bi bi-plus-circle me-1"></i>{{ t('config.btn_create') }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 8. RuntimeClass Create Modal (AC-16) -->
+<div class="modal fade" id="createRuntimeClassModal" tabindex="-1"
+     aria-labelledby="createRuntimeClassModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createRuntimeClassModalLabel">
+          <i class="bi bi-cpu me-2"></i>{{ t('config.modal_create_title') | replace('{resource}', 'RuntimeClass') }}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                aria-label="{{ t('base.btn_close') }}"></button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-info py-2 small mb-3">
+          <i class="bi bi-info-circle me-1"></i>{{ t('config.note_runtime_class_scope') }}
+        </div>
+        <div class="mb-3">
+          <label for="rcCrName" class="form-label fw-semibold">
+            {{ t('config.create_name_label') }} <span class="text-danger">*</span>
+          </label>
+          <input type="text" id="rcCrName" class="form-control"
+                 placeholder="my-runtime-class" autocomplete="off">
+          <div id="rcCrNameErr" class="invalid-feedback"></div>
+        </div>
+        <div class="mb-3">
+          <label for="rcCrHandler" class="form-label fw-semibold">
+            {{ t('config.create_rc_handler') }} <span class="text-danger">*</span>
+          </label>
+          <input type="text" id="rcCrHandler" class="form-control" placeholder="runc" autocomplete="off">
+          <div id="rcCrHandlerErr" class="invalid-feedback"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('config.btn_cancel') }}</button>
+        <button type="button" class="btn btn-primary" id="rcCrSubmit">
+          <i class="bi bi-plus-circle me-1"></i>{{ t('config.btn_create') }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 9. Lease Create Modal (AC-18) -->
+<div class="modal fade" id="createLeaseModal" tabindex="-1"
+     aria-labelledby="createLeaseModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createLeaseModalLabel">
+          <i class="bi bi-clock-history me-2"></i>{{ t('config.modal_create_title') | replace('{resource}', 'Lease') }}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                aria-label="{{ t('base.btn_close') }}"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="leaseCrName" class="form-label fw-semibold">
+              {{ t('config.create_name_label') }} <span class="text-danger">*</span>
+            </label>
+            <input type="text" id="leaseCrName" class="form-control"
+                   placeholder="my-lease" autocomplete="off">
+            <div id="leaseCrNameErr" class="invalid-feedback"></div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="leaseCrNs" class="form-label fw-semibold">
+              {{ t('config.create_namespace_label') }} <span class="text-danger">*</span>
+            </label>
+            <select id="leaseCrNs" class="form-select">
+              <option value="">-- seçiniz --</option>
+            </select>
+            <div id="leaseCrNsErr" class="invalid-feedback"></div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-8 mb-3">
+            <label for="leaseCrHolder" class="form-label fw-semibold">
+              {{ t('config.create_lease_holder') }}
+            </label>
+            <input type="text" id="leaseCrHolder" class="form-control" placeholder="">
+          </div>
+          <div class="col-md-4 mb-3">
+            <label for="leaseCrDuration" class="form-label fw-semibold">
+              {{ t('config.create_lease_duration') }} <span class="text-danger">*</span>
+            </label>
+            <input type="number" id="leaseCrDuration" class="form-control" value="15" min="1">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('config.btn_cancel') }}</button>
+        <button type="button" class="btn btn-primary" id="leaseCrSubmit">
+          <i class="bi bi-plus-circle me-1"></i>{{ t('config.btn_create') }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// =======================================================================
+// CREATE RESOURCE JS — "Yeni Ekle" buton mantığı (AC-1 through AC-20)
+// =======================================================================
+document.addEventListener('DOMContentLoaded', function() {
+
+  // ── Yardımcı fonksiyonlar ──────────────────────────────────────────────
+  var CR_RFC1123 = /^[a-z0-9]([a-z0-9-]{0,251}[a-z0-9])?$/;
+
+  function crValidateName(val) {
+    if (!val) return '{{ t("config.validation_name_required") }}';
+    if (!CR_RFC1123.test(val)) return '{{ t("config.validation_name_format") }}';
+    return null;
+  }
+
+  function crSetErr(inputEl, errEl, msg) {
+    if (!inputEl) return;
+    if (msg) {
+      inputEl.classList.add('is-invalid');
+      if (errEl) errEl.textContent = msg;
+    } else {
+      inputEl.classList.remove('is-invalid');
+      if (errEl) errEl.textContent = '';
+    }
+  }
+
+  function crFillNs(selectEl) {
+    if (!selectEl) return;
+    fetch('/k8s-explorer/namespaces')
+      .then(function(r) { return r.json(); })
+      .then(function(j) {
+        var nsList = j.namespaces || [];
+        var opts = ['<option value="">-- seçiniz --</option>'];
+        if (nsList.includes('default')) opts.push('<option value="default" selected>default</option>');
+        nsList.filter(function(n) { return n !== 'default'; })
+          .sort(function(a, b) { return a.localeCompare(b); })
+          .forEach(function(n) { opts.push('<option value="' + n + '">' + n + '</option>'); });
+        selectEl.innerHTML = opts.join('');
+      })
+      .catch(function() {});
+  }
+
+  function crReadKv(editorEl, encodeB64) {
+    var obj = {};
+    if (!editorEl) return obj;
+    editorEl.querySelectorAll('.create-kv-row').forEach(function(row) {
+      var keyEl = row.querySelector('.create-kv-key');
+      var valEl = row.querySelector('.create-kv-value');
+      var key = keyEl ? keyEl.value.trim() : '';
+      var val = valEl ? valEl.value : '';
+      if (key) {
+        obj[key] = encodeB64 ? btoa(unescape(encodeURIComponent(val))) : val;
+      }
+    });
+    return obj;
+  }
+
+  function crKvHasEntry(editorEl) {
+    if (!editorEl) return false;
+    return Array.from(editorEl.querySelectorAll('.create-kv-row')).some(function(row) {
+      var k = row.querySelector('.create-kv-key');
+      return k && k.value.trim();
+    });
+  }
+
+  var CR_KV_KEY_PH = '{{ t("config.kv_key_label") }}';
+  var CR_KV_VAL_PH = '{{ t("config.kv_value_label") }}';
+  var CR_RM_LBL    = '{{ t("a11y.btn_remove_row") }}';
+
+  function crMakeKvRow(keyPh, valPh) {
+    var row = document.createElement('div');
+    row.className = 'row mb-2 create-kv-row';
+    row.innerHTML =
+      '<div class="col-5"><input type="text" class="form-control form-control-sm create-kv-key"' +
+        ' placeholder="' + keyPh + '" aria-label="' + keyPh + '"></div>' +
+      '<div class="col-6"><textarea class="form-control form-control-sm create-kv-value" rows="1"' +
+        ' placeholder="' + valPh + '" aria-label="' + valPh + '"' +
+        ' style="font-family:monospace;resize:vertical;"></textarea></div>' +
+      '<div class="col-1 d-flex align-items-start pt-1">' +
+        '<button type="button" class="btn btn-outline-danger btn-sm remove-create-kv-row"' +
+          ' aria-label="' + CR_RM_LBL + '"><i class="bi bi-trash"></i></button></div>';
+    return row;
+  }
+
+  function crAttachKv(addBtn, editor, keyPh, valPh) {
+    if (!addBtn || !editor) return;
+    addBtn.addEventListener('click', function() {
+      editor.appendChild(crMakeKvRow(keyPh, valPh));
+    });
+    editor.addEventListener('click', function(e) {
+      var rm = e.target.closest('.remove-create-kv-row');
+      if (rm) { var r = rm.closest('.create-kv-row'); if (r) r.remove(); }
+    });
+  }
+
+  function crResetKv(editor, keyPh, valPh) {
+    if (!editor) return;
+    editor.innerHTML = '';
+    editor.appendChild(crMakeKvRow(keyPh, valPh));
+  }
+
+  function crClearModal(modalEl) {
+    if (!modalEl) return;
+    modalEl.querySelectorAll('.is-invalid').forEach(function(el) {
+      el.classList.remove('is-invalid');
+    });
+    modalEl.querySelectorAll('.invalid-feedback').forEach(function(el) {
+      el.textContent = '';
+    });
+  }
+
+  // Başarılı POST + tablo yenileme + modal kapatma
+  async function crDoPost(submitBtn, modalId, endpoint, payload, successMsg, refreshFn) {
+    submitBtn.disabled = true;
+    var modalEl = document.getElementById(modalId);
+    var succeeded = false;
+    try {
+      var resp = await fetch(endpoint, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken()},
+        body: JSON.stringify(payload)
+      });
+      var j = await resp.json();
+      if (!resp.ok) throw new Error(j.error || resp.statusText);
+      succeeded = true;
+      showToast(successMsg, 'success');
+      var bsModal = bootstrap.Modal.getInstance(modalEl);
+      if (bsModal) bsModal.hide();
+    } catch(e) {
+      showToast('{{ t("config.toast_create_error") }}: ' + e.message, 'error');
+    } finally {
+      submitBtn.disabled = false;
+    }
+    if (succeeded && refreshFn && modalEl) {
+      modalEl.addEventListener('hidden.bs.modal', refreshFn, {once: true});
+    }
+  }
+
+  // ── Tab → Modal haritası ve buton durumu ──────────────────────────────
+  var CR_TAB_MODAL = {
+    'configmaps':       'createConfigMapModal',
+    'secrets':          'createSecretModal',
+    'hpa':              'createHPAModal',
+    'pdb':              'createPDBModal',
+    'resource-quotas':  'createResourceQuotaModal',
+    'limit-ranges':     'createLimitRangeModal',
+    'priority-classes': 'createPriorityClassModal',
+    'runtime-classes':  'createRuntimeClassModal',
+    'leases':           'createLeaseModal',
+    'webhooks':         null
+  };
+
+  function crGetTabId() {
+    var el = document.querySelector('#configTab .nav-link.active');
+    return el ? (el.getAttribute('data-bs-target') || '').replace('#', '') : 'configmaps';
+  }
+
+  function crUpdateBtn(tabId) {
+    var btn = document.getElementById('btnCreateResource');
+    if (!btn) return;
+    if (tabId === 'webhooks') {
+      btn.disabled = true;
+      btn.setAttribute('title', '{{ t("config.webhook_create_disabled") }}');
+    } else {
+      btn.disabled = false;
+      btn.removeAttribute('title');
+    }
+  }
+
+  // Buton tıklama: aktif tab'a göre modal aç
+  var crBtn = document.getElementById('btnCreateResource');
+  if (crBtn) {
+    crBtn.addEventListener('click', function() {
+      var tabId   = crGetTabId();
+      var modalId = CR_TAB_MODAL[tabId];
+      if (!modalId) return;
+      var modalEl = document.getElementById(modalId);
+      if (!modalEl) return;
+      bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    });
+  }
+
+  // Tab değişiminde buton durumunu güncelle (kendi listener'ı)
+  document.querySelectorAll('#configTab [data-bs-toggle="tab"]').forEach(function(tabBtn) {
+    tabBtn.addEventListener('shown.bs.tab', function(e) {
+      crUpdateBtn((e.target.getAttribute('data-bs-target') || '').replace('#', ''));
+    });
+  });
+  crUpdateBtn(crGetTabId());
+
+  // ── Namespace dropdown: modal açılınca doldur ─────────────────────────
+  [
+    ['createConfigMapModal',     'cmCrNs'],
+    ['createSecretModal',        'scCrNs'],
+    ['createHPAModal',           'hpaCrNs'],
+    ['createPDBModal',           'pdbCrNs'],
+    ['createResourceQuotaModal', 'quotaCrNs'],
+    ['createLimitRangeModal',    'lrCrNs'],
+    ['createLeaseModal',         'leaseCrNs']
+  ].forEach(function(pair) {
+    var el = document.getElementById(pair[0]);
+    if (el) {
+      el.addEventListener('show.bs.modal', function() {
+        crFillNs(document.getElementById(pair[1]));
+      });
+    }
+  });
+
+  // ── KV editor'ları başlat ─────────────────────────────────────────────
+  crAttachKv(document.getElementById('cmCrAddRow'),
+             document.getElementById('cmCrDataEditor'), CR_KV_KEY_PH, CR_KV_VAL_PH);
+  crAttachKv(document.getElementById('scCrAddRow'),
+             document.getElementById('scCrDataEditor'), CR_KV_KEY_PH, CR_KV_VAL_PH);
+  crAttachKv(document.getElementById('pdbCrAddLabel'),
+             document.getElementById('pdbCrLabelsEditor'), 'app', 'my-app');
+
+  // ── Modal kapatılınca formu sıfırla ───────────────────────────────────
+  function crOnHide(modalId, fn) {
+    var el = document.getElementById(modalId);
+    if (el) el.addEventListener('hidden.bs.modal', fn);
+  }
+
+  crOnHide('createConfigMapModal', function() {
+    var m = document.getElementById('createConfigMapModal'); if (!m) return;
+    m.querySelector('#cmCrName').value = '';
+    crResetKv(m.querySelector('#cmCrDataEditor'), CR_KV_KEY_PH, CR_KV_VAL_PH);
+    crClearModal(m);
+  });
+  crOnHide('createSecretModal', function() {
+    var m = document.getElementById('createSecretModal'); if (!m) return;
+    m.querySelector('#scCrName').value = '';
+    m.querySelector('#scCrType').value = 'Opaque';
+    crResetKv(m.querySelector('#scCrDataEditor'), CR_KV_KEY_PH, CR_KV_VAL_PH);
+    crClearModal(m);
+  });
+  crOnHide('createHPAModal', function() {
+    var m = document.getElementById('createHPAModal'); if (!m) return;
+    m.querySelector('#hpaCrName').value = '';
+    m.querySelector('#hpaCrTargetName').value = '';
+    m.querySelector('#hpaCrTargetKind').value = 'Deployment';
+    m.querySelector('#hpaCrMinReplicas').value = '1';
+    m.querySelector('#hpaCrMaxReplicas').value = '10';
+    m.querySelector('#hpaCrCpuTarget').value = '50';
+    crClearModal(m);
+  });
+  crOnHide('createPDBModal', function() {
+    var m = document.getElementById('createPDBModal'); if (!m) return;
+    m.querySelector('#pdbCrName').value = '';
+    m.querySelector('#pdbCrValue').value = '';
+    m.querySelector('#pdbCrPolicyMax').checked = true;
+    var le = m.querySelector('#pdbCrLabelErr'); if (le) le.style.display = 'none';
+    crResetKv(m.querySelector('#pdbCrLabelsEditor'), 'app', 'my-app');
+    crClearModal(m);
+  });
+  crOnHide('createResourceQuotaModal', function() {
+    var m = document.getElementById('createResourceQuotaModal'); if (!m) return;
+    m.querySelector('#quotaCrName').value = '';
+    ['quotaCrReqCpu','quotaCrReqMem','quotaCrLimCpu','quotaCrLimMem','quotaCrPods'].forEach(function(id) {
+      var el = m.querySelector('#' + id); if (el) el.value = '';
+    });
+    var he = m.querySelector('#quotaCrHardErr'); if (he) he.style.display = 'none';
+    crClearModal(m);
+  });
+  crOnHide('createLimitRangeModal', function() {
+    var m = document.getElementById('createLimitRangeModal'); if (!m) return;
+    m.querySelector('#lrCrName').value = '';
+    ['lrCrDefCpu','lrCrDefMem','lrCrDefReqCpu','lrCrDefReqMem',
+     'lrCrMaxCpu','lrCrMaxMem','lrCrMinCpu','lrCrMinMem'].forEach(function(id) {
+      var el = m.querySelector('#' + id); if (el) el.value = '';
+    });
+    var le = m.querySelector('#lrCrLimitErr'); if (le) le.style.display = 'none';
+    crClearModal(m);
+  });
+  crOnHide('createPriorityClassModal', function() {
+    var m = document.getElementById('createPriorityClassModal'); if (!m) return;
+    m.querySelector('#pcCrName').value = '';
+    m.querySelector('#pcCrValue').value = '1000000';
+    m.querySelector('#pcCrGlobalDefault').checked = false;
+    m.querySelector('#pcCrPreemption').value = 'PreemptLowerPriority';
+    m.querySelector('#pcCrDescription').value = '';
+    crClearModal(m);
+  });
+  crOnHide('createRuntimeClassModal', function() {
+    var m = document.getElementById('createRuntimeClassModal'); if (!m) return;
+    m.querySelector('#rcCrName').value = '';
+    m.querySelector('#rcCrHandler').value = '';
+    crClearModal(m);
+  });
+  crOnHide('createLeaseModal', function() {
+    var m = document.getElementById('createLeaseModal'); if (!m) return;
+    m.querySelector('#leaseCrName').value = '';
+    m.querySelector('#leaseCrHolder').value = '';
+    m.querySelector('#leaseCrDuration').value = '15';
+    crClearModal(m);
+  });
+
+  // ── Submit Handler'ları ───────────────────────────────────────────────
+
+  // 1. ConfigMap
+  var cmSub = document.getElementById('cmCrSubmit');
+  if (cmSub) cmSub.addEventListener('click', function() {
+    var m       = document.getElementById('createConfigMapModal');
+    var nameEl  = m.querySelector('#cmCrName');
+    var nsEl    = m.querySelector('#cmCrNs');
+    var nameErr = crValidateName(nameEl.value.trim());
+    crSetErr(nameEl, m.querySelector('#cmCrNameErr'), nameErr);
+    var nsErr = nsEl.value ? null : '{{ t("config.validation_namespace_required") }}';
+    crSetErr(nsEl, m.querySelector('#cmCrNsErr'), nsErr);
+    if (nameErr || nsErr) return;
+    crDoPost(this, 'createConfigMapModal', '/k8s-explorer/create-configmap', {
+      name: nameEl.value.trim(), namespace: nsEl.value,
+      data: crReadKv(m.querySelector('#cmCrDataEditor'), false)
+    }, '{{ t("config.toast_create_success") | replace("{resource}", "ConfigMap") }}',
+    fetchAndRenderConfigMapsTable);
+  });
+
+  // 2. Secret
+  var scSub = document.getElementById('scCrSubmit');
+  if (scSub) scSub.addEventListener('click', function() {
+    var m       = document.getElementById('createSecretModal');
+    var nameEl  = m.querySelector('#scCrName');
+    var nsEl    = m.querySelector('#scCrNs');
+    var nameErr = crValidateName(nameEl.value.trim());
+    crSetErr(nameEl, m.querySelector('#scCrNameErr'), nameErr);
+    var nsErr = nsEl.value ? null : '{{ t("config.validation_namespace_required") }}';
+    crSetErr(nsEl, m.querySelector('#scCrNsErr'), nsErr);
+    if (nameErr || nsErr) return;
+    crDoPost(this, 'createSecretModal', '/k8s-explorer/create-secret', {
+      name: nameEl.value.trim(), namespace: nsEl.value,
+      type: m.querySelector('#scCrType').value,
+      data: crReadKv(m.querySelector('#scCrDataEditor'), true)
+    }, '{{ t("config.toast_create_success") | replace("{resource}", "Secret") }}',
+    fetchAndRenderSecretsTable);
+  });
+
+  // 3. HPA
+  var hpaSub = document.getElementById('hpaCrSubmit');
+  if (hpaSub) hpaSub.addEventListener('click', function() {
+    var m        = document.getElementById('createHPAModal');
+    var nameEl   = m.querySelector('#hpaCrName');
+    var nsEl     = m.querySelector('#hpaCrNs');
+    var tNameEl  = m.querySelector('#hpaCrTargetName');
+    var minEl    = m.querySelector('#hpaCrMinReplicas');
+    var maxEl    = m.querySelector('#hpaCrMaxReplicas');
+    var valid    = true;
+    var nameErr  = crValidateName(nameEl.value.trim());
+    crSetErr(nameEl, m.querySelector('#hpaCrNameErr'), nameErr);
+    if (nameErr) valid = false;
+    var nsErr = nsEl.value ? null : '{{ t("config.validation_namespace_required") }}';
+    crSetErr(nsEl, m.querySelector('#hpaCrNsErr'), nsErr);
+    if (nsErr) valid = false;
+    if (!tNameEl.value.trim()) {
+      crSetErr(tNameEl, m.querySelector('#hpaCrTargetNameErr'), '{{ t("config.validation_name_required") }}');
+      valid = false;
+    } else { crSetErr(tNameEl, m.querySelector('#hpaCrTargetNameErr'), null); }
+    var minVal = parseInt(minEl.value) || 1;
+    var maxVal = parseInt(maxEl.value) || 1;
+    if (minVal > maxVal) {
+      crSetErr(minEl, m.querySelector('#hpaCrMinErr'), '{{ t("config.validation_min_gt_max") }}');
+      valid = false;
+    } else { crSetErr(minEl, m.querySelector('#hpaCrMinErr'), null); }
+    if (!valid) return;
+    crDoPost(this, 'createHPAModal', '/k8s-explorer/create-hpa', {
+      name: nameEl.value.trim(), namespace: nsEl.value,
+      target_kind: m.querySelector('#hpaCrTargetKind').value,
+      target_name: tNameEl.value.trim(),
+      min_replicas: minVal, max_replicas: maxVal,
+      cpu_target_percent: parseInt(m.querySelector('#hpaCrCpuTarget').value) || 50
+    }, '{{ t("config.toast_create_success") | replace("{resource}", "HPA") }}',
+    fetchAndRenderHPATable);
+  });
+
+  // 4. PDB
+  var pdbSub = document.getElementById('pdbCrSubmit');
+  if (pdbSub) pdbSub.addEventListener('click', function() {
+    var m       = document.getElementById('createPDBModal');
+    var nameEl  = m.querySelector('#pdbCrName');
+    var nsEl    = m.querySelector('#pdbCrNs');
+    var valEl   = m.querySelector('#pdbCrValue');
+    var valid   = true;
+    var nameErr = crValidateName(nameEl.value.trim());
+    crSetErr(nameEl, m.querySelector('#pdbCrNameErr'), nameErr);
+    if (nameErr) valid = false;
+    var nsErr = nsEl.value ? null : '{{ t("config.validation_namespace_required") }}';
+    crSetErr(nsEl, m.querySelector('#pdbCrNsErr'), nsErr);
+    if (nsErr) valid = false;
+    var hasLabels = crKvHasEntry(m.querySelector('#pdbCrLabelsEditor'));
+    var lblErr = m.querySelector('#pdbCrLabelErr');
+    if (!hasLabels) { if (lblErr) lblErr.style.display = ''; valid = false; }
+    else            { if (lblErr) lblErr.style.display = 'none'; }
+    var pdbVal = valEl.value.trim();
+    if (!pdbVal || !/^\d+%?$/.test(pdbVal)) {
+      crSetErr(valEl, m.querySelector('#pdbCrValueErr'), '{{ t("config.note_pdb_range") }}');
+      valid = false;
+    } else { crSetErr(valEl, m.querySelector('#pdbCrValueErr'), null); }
+    if (!valid) return;
+    var policy = (m.querySelector('input[name="pdbCrPolicy"]:checked') || {}).value || 'maxUnavailable';
+    crDoPost(this, 'createPDBModal', '/k8s-explorer/create-pdb', {
+      name: nameEl.value.trim(), namespace: nsEl.value,
+      match_labels: crReadKv(m.querySelector('#pdbCrLabelsEditor'), false),
+      policy: policy, value: pdbVal
+    }, '{{ t("config.toast_create_success") | replace("{resource}", "PDB") }}',
+    fetchAndRenderPDBTable);
+  });
+
+  // 5. ResourceQuota
+  var quotaSub = document.getElementById('quotaCrSubmit');
+  if (quotaSub) quotaSub.addEventListener('click', function() {
+    var m       = document.getElementById('createResourceQuotaModal');
+    var nameEl  = m.querySelector('#quotaCrName');
+    var nsEl    = m.querySelector('#quotaCrNs');
+    var valid   = true;
+    var nameErr = crValidateName(nameEl.value.trim());
+    crSetErr(nameEl, m.querySelector('#quotaCrNameErr'), nameErr);
+    if (nameErr) valid = false;
+    var nsErr = nsEl.value ? null : '{{ t("config.validation_namespace_required") }}';
+    crSetErr(nsEl, m.querySelector('#quotaCrNsErr'), nsErr);
+    if (nsErr) valid = false;
+    var fieldMap = {
+      'quotaCrReqCpu':'requests.cpu','quotaCrReqMem':'requests.memory',
+      'quotaCrLimCpu':'limits.cpu','quotaCrLimMem':'limits.memory','quotaCrPods':'pods'
+    };
+    var hard = {};
+    Object.keys(fieldMap).forEach(function(id) {
+      var el = m.querySelector('#' + id);
+      if (el && el.value.trim()) hard[fieldMap[id]] = el.value.trim();
+    });
+    var hardErrEl = m.querySelector('#quotaCrHardErr');
+    if (Object.keys(hard).length === 0) {
+      if (hardErrEl) hardErrEl.style.display = ''; valid = false;
+    } else { if (hardErrEl) hardErrEl.style.display = 'none'; }
+    if (!valid) return;
+    crDoPost(this, 'createResourceQuotaModal', '/k8s-explorer/create-resource-quota', {
+      name: nameEl.value.trim(), namespace: nsEl.value, hard: hard
+    }, '{{ t("config.toast_create_success") | replace("{resource}", "ResourceQuota") }}',
+    fetchAndRenderResourceQuotasTable);
+  });
+
+  // 6. LimitRange
+  var lrSub = document.getElementById('lrCrSubmit');
+  if (lrSub) lrSub.addEventListener('click', function() {
+    var m       = document.getElementById('createLimitRangeModal');
+    var nameEl  = m.querySelector('#lrCrName');
+    var nsEl    = m.querySelector('#lrCrNs');
+    var valid   = true;
+    var nameErr = crValidateName(nameEl.value.trim());
+    crSetErr(nameEl, m.querySelector('#lrCrNameErr'), nameErr);
+    if (nameErr) valid = false;
+    var nsErr = nsEl.value ? null : '{{ t("config.validation_namespace_required") }}';
+    crSetErr(nsEl, m.querySelector('#lrCrNsErr'), nsErr);
+    if (nsErr) valid = false;
+    var lrMap = {
+      'lrCrDefCpu':'default_cpu','lrCrDefMem':'default_memory',
+      'lrCrDefReqCpu':'default_request_cpu','lrCrDefReqMem':'default_request_memory',
+      'lrCrMaxCpu':'max_cpu','lrCrMaxMem':'max_memory',
+      'lrCrMinCpu':'min_cpu','lrCrMinMem':'min_memory'
+    };
+    var lrPayload = {};
+    Object.keys(lrMap).forEach(function(id) {
+      var el = m.querySelector('#' + id);
+      if (el && el.value.trim()) lrPayload[lrMap[id]] = el.value.trim();
+    });
+    var limErrEl = m.querySelector('#lrCrLimitErr');
+    if (Object.keys(lrPayload).length === 0) {
+      if (limErrEl) limErrEl.style.display = ''; valid = false;
+    } else { if (limErrEl) limErrEl.style.display = 'none'; }
+    if (!valid) return;
+    var body = Object.assign({name: nameEl.value.trim(), namespace: nsEl.value}, lrPayload);
+    crDoPost(this, 'createLimitRangeModal', '/k8s-explorer/create-limit-range', body,
+      '{{ t("config.toast_create_success") | replace("{resource}", "LimitRange") }}',
+      fetchAndRenderLimitRangesTable);
+  });
+
+  // 7. PriorityClass
+  var pcSub = document.getElementById('pcCrSubmit');
+  if (pcSub) pcSub.addEventListener('click', function() {
+    var m       = document.getElementById('createPriorityClassModal');
+    var nameEl  = m.querySelector('#pcCrName');
+    var nameErr = crValidateName(nameEl.value.trim());
+    crSetErr(nameEl, m.querySelector('#pcCrNameErr'), nameErr);
+    if (nameErr) return;
+    crDoPost(this, 'createPriorityClassModal', '/k8s-explorer/create-priority-class', {
+      name: nameEl.value.trim(),
+      value: parseInt(m.querySelector('#pcCrValue').value) || 1000000,
+      global_default: m.querySelector('#pcCrGlobalDefault').checked,
+      preemption_policy: m.querySelector('#pcCrPreemption').value,
+      description: m.querySelector('#pcCrDescription').value.trim()
+    }, '{{ t("config.toast_create_success") | replace("{resource}", "PriorityClass") }}',
+    fetchAndRenderPriorityClassesTable);
+  });
+
+  // 8. RuntimeClass
+  var rcSub = document.getElementById('rcCrSubmit');
+  if (rcSub) rcSub.addEventListener('click', function() {
+    var m          = document.getElementById('createRuntimeClassModal');
+    var nameEl     = m.querySelector('#rcCrName');
+    var handlerEl  = m.querySelector('#rcCrHandler');
+    var valid      = true;
+    var nameErr    = crValidateName(nameEl.value.trim());
+    crSetErr(nameEl, m.querySelector('#rcCrNameErr'), nameErr);
+    if (nameErr) valid = false;
+    if (!handlerEl.value.trim()) {
+      crSetErr(handlerEl, m.querySelector('#rcCrHandlerErr'), '{{ t("config.validation_name_required") }}');
+      valid = false;
+    } else { crSetErr(handlerEl, m.querySelector('#rcCrHandlerErr'), null); }
+    if (!valid) return;
+    crDoPost(this, 'createRuntimeClassModal', '/k8s-explorer/create-runtime-class', {
+      name: nameEl.value.trim(), handler: handlerEl.value.trim()
+    }, '{{ t("config.toast_create_success") | replace("{resource}", "RuntimeClass") }}',
+    fetchAndRenderRuntimeClassesTable);
+  });
+
+  // 9. Lease
+  var leaseSub = document.getElementById('leaseCrSubmit');
+  if (leaseSub) leaseSub.addEventListener('click', function() {
+    var m       = document.getElementById('createLeaseModal');
+    var nameEl  = m.querySelector('#leaseCrName');
+    var nsEl    = m.querySelector('#leaseCrNs');
+    var valid   = true;
+    var nameErr = crValidateName(nameEl.value.trim());
+    crSetErr(nameEl, m.querySelector('#leaseCrNameErr'), nameErr);
+    if (nameErr) valid = false;
+    var nsErr = nsEl.value ? null : '{{ t("config.validation_namespace_required") }}';
+    crSetErr(nsEl, m.querySelector('#leaseCrNsErr'), nsErr);
+    if (nsErr) valid = false;
+    if (!valid) return;
+    crDoPost(this, 'createLeaseModal', '/k8s-explorer/create-lease', {
+      name: nameEl.value.trim(), namespace: nsEl.value,
+      holder_identity: m.querySelector('#leaseCrHolder').value.trim(),
+      lease_duration_seconds: parseInt(m.querySelector('#leaseCrDuration').value) || 15
+    }, '{{ t("config.toast_create_success") | replace("{resource}", "Lease") }}',
+    fetchAndRenderLeasesTable);
+  });
+
+}); // end DOMContentLoaded — CREATE RESOURCE
+</script>
 
 {% endblock %}
 </html>

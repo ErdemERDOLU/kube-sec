@@ -143,9 +143,10 @@
   /* Enhanced table styling with better visual hierarchy */
   .table-responsive {
     border-radius: 1rem;
-    overflow: hidden;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
     position: relative;
+    max-height: 70vh;
+    overflow-y: auto;
   }
 
   .table-responsive::before {
@@ -567,6 +568,26 @@
                       <span class="loading-text">{{ t('config.loading_configmaps') }}</span>
                     </div>
                   </div>
+                  <!-- ConfigMap sayfalama kontrolleri (AC-4) — gorünürlük JS ile yönetilir -->
+                  <div id="configmaps-pagination"
+                       class="justify-content-between align-items-center px-3 py-2 border-top"
+                       style="display:none;"
+                       role="navigation"
+                       aria-label="{{ t('pagination.page_indicator') }}">
+                    <span class="text-muted small" id="configmaps-pagination-info"></span>
+                    <div class="btn-group" role="group">
+                      <button class="btn btn-outline-primary btn-sm" id="configmaps-prev-page" disabled
+                              aria-label="{{ t('pagination.previous') }}">
+                        <i class="bi bi-chevron-left me-1"></i>{{ t('pagination.previous') }}
+                      </button>
+                      <span class="btn btn-outline-secondary btn-sm disabled" id="configmaps-page-indicator"
+                            aria-live="polite"></span>
+                      <button class="btn btn-outline-primary btn-sm" id="configmaps-next-page"
+                              aria-label="{{ t('pagination.next') }}">
+                        {{ t('pagination.next') }}<i class="bi bi-chevron-right ms-1"></i>
+                      </button>
+                    </div>
+                  </div>
                 </div>
         </div>
       </div>
@@ -598,10 +619,30 @@
               </div>
             </div>
             <div id="secrets-table-container">
-               Enhanced loading state for secrets 
+               Enhanced loading state for secrets
               <div class="loading-state">
                 <div class="loading-spinner"></div>
                 <span class="loading-text">{{ t('config.loading_secrets') }}</span>
+              </div>
+            </div>
+            <!-- Secret sayfalama kontrolleri (AC-5) — gorünürlük JS ile yönetilir -->
+            <div id="secrets-pagination"
+                 class="justify-content-between align-items-center px-3 py-2 border-top"
+                 style="display:none;"
+                 role="navigation"
+                 aria-label="{{ t('pagination.page_indicator') }}">
+              <span class="text-muted small" id="secrets-pagination-info"></span>
+              <div class="btn-group" role="group">
+                <button class="btn btn-outline-primary btn-sm" id="secrets-prev-page" disabled
+                        aria-label="{{ t('pagination.previous') }}">
+                  <i class="bi bi-chevron-left me-1"></i>{{ t('pagination.previous') }}
+                </button>
+                <span class="btn btn-outline-secondary btn-sm disabled" id="secrets-page-indicator"
+                      aria-live="polite"></span>
+                <button class="btn btn-outline-primary btn-sm" id="secrets-next-page"
+                        aria-label="{{ t('pagination.next') }}">
+                  {{ t('pagination.next') }}<i class="bi bi-chevron-right ms-1"></i>
+                </button>
               </div>
             </div>
           </div>
@@ -1199,6 +1240,16 @@ let allConfigData = {
   limit_ranges: []
 };
 
+// ConfigMap sayfalama state degiskenleri (AC-4)
+let configmapsCurrentPage = 1;
+let configmapsTotalPages = 1;
+const CONFIGMAPS_PER_PAGE = 50;
+
+// Secret sayfalama state degiskenleri (AC-5)
+let secretsCurrentPage = 1;
+let secretsTotalPages = 1;
+const SECRETS_PER_PAGE = 50;
+
 document.addEventListener('DOMContentLoaded', function() {
   loadOverviewData();
   // fetch namespaces for config page filter
@@ -1219,14 +1270,14 @@ document.addEventListener('DOMContentLoaded', function() {
       sel.addEventListener('change', () => {
         const v = sel.value;
         document.getElementById('clearConfigNsFilter').classList.toggle('d-none', v === 'all');
-        // if currently on configmaps tab, refresh it
+        // if currently on configmaps tab, refresh it — namespace degisince sayfa 1'e sifirla (AC-7)
         const activeTab = getActiveTabId();
-        if (activeTab === 'configmaps') fetchAndRenderConfigMapsTable();
+        if (activeTab === 'configmaps') fetchAndRenderConfigMapsTable(1);
       });
       document.getElementById('clearConfigNsFilter').addEventListener('click', () => {
         document.getElementById('configNamespaceSelect').value = 'all';
         document.getElementById('clearConfigNsFilter').classList.add('d-none');
-        fetchAndRenderConfigMapsTable();
+        fetchAndRenderConfigMapsTable(1);
       });
       // populate secrets namespace select as well (if present)
       const secretsSel = document.getElementById('secretsNamespaceSelect');
@@ -1243,13 +1294,14 @@ document.addEventListener('DOMContentLoaded', function() {
         secretsSel.addEventListener('change', () => {
           const v = secretsSel.value;
           document.getElementById('clearSecretsNsFilter').classList.toggle('d-none', v === 'all');
+          // namespace degisince sayfa 1'e sifirla (AC-7)
           const activeTab = getActiveTabId();
-          if (activeTab === 'secrets') fetchAndRenderSecretsTable();
+          if (activeTab === 'secrets') fetchAndRenderSecretsTable(1);
         });
         document.getElementById('clearSecretsNsFilter').addEventListener('click', () => {
           document.getElementById('secretsNamespaceSelect').value = 'all';
           document.getElementById('clearSecretsNsFilter').classList.add('d-none');
-          fetchAndRenderSecretsTable();
+          fetchAndRenderSecretsTable(1);
         });
       }
       // populate HPA namespace select
@@ -1403,6 +1455,26 @@ document.addEventListener('DOMContentLoaded', function() {
     // ignore
   }
 
+  // Sayfalama buton listener'lari — ConfigMaps (AC-4)
+  const configmapsPrevBtn = document.getElementById('configmaps-prev-page');
+  const configmapsNextBtn = document.getElementById('configmaps-next-page');
+  if (configmapsPrevBtn) configmapsPrevBtn.addEventListener('click', function() {
+    if (configmapsCurrentPage > 1) fetchAndRenderConfigMapsTable(configmapsCurrentPage - 1);
+  });
+  if (configmapsNextBtn) configmapsNextBtn.addEventListener('click', function() {
+    if (configmapsCurrentPage < configmapsTotalPages) fetchAndRenderConfigMapsTable(configmapsCurrentPage + 1);
+  });
+
+  // Sayfalama buton listener'lari — Secrets (AC-5)
+  const secretsPrevBtn = document.getElementById('secrets-prev-page');
+  const secretsNextBtn = document.getElementById('secrets-next-page');
+  if (secretsPrevBtn) secretsPrevBtn.addEventListener('click', function() {
+    if (secretsCurrentPage > 1) fetchAndRenderSecretsTable(secretsCurrentPage - 1);
+  });
+  if (secretsNextBtn) secretsNextBtn.addEventListener('click', function() {
+    if (secretsCurrentPage < secretsTotalPages) fetchAndRenderSecretsTable(secretsCurrentPage + 1);
+  });
+
   // Delegated handlers for configmap view/edit buttons - works even after the table is re-rendered
   document.addEventListener('click', function(e) {
     try {
@@ -1552,15 +1624,26 @@ function handleTabChange(tabId) {
   }
 }
 
-async function fetchAndRenderConfigMapsTable() {
+// fetchAndRenderConfigMapsTable — ConfigMaps sekmesi icin sayfalamali veri cekme ve render (AC-4)
+// page: hangi sayfanin yuklenmesi isteniyor (1-tabanli). Sayi degilse mevcuttan devam eder.
+async function fetchAndRenderConfigMapsTable(page) {
+  // Arguman gecerli bir sayfa numarasi degilse mevcut sayfayi kullan
+  if (typeof page !== 'number' || isNaN(page) || page < 1) page = configmapsCurrentPage;
+  configmapsCurrentPage = page;
+
   const container = document.getElementById('configmaps-table-container');
   container.innerHTML = `<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">${(window.i18n && window.i18n['loading'] && (window.i18n['loading'][window.locale]||window.i18n['loading']['tr'])) || 'Yükleniyor...'}</span></div>`;
-  
+
   try {
   const ns = document.getElementById('configNamespaceSelect') ? document.getElementById('configNamespaceSelect').value : 'all';
-  const response = await fetch('/k8s-explorer/configmaps-summary' + (ns ? ('?namespace=' + encodeURIComponent(ns)) : ''));
+  // Sayfalama URL'si; 'all' veya bos ise namespace parametresi gonderilmez (AC-9)
+  let url = `/k8s-explorer/configmaps-summary?page=${page}&per_page=${CONFIGMAPS_PER_PAGE}`;
+  if (ns && ns !== 'all') url += `&namespace=${encodeURIComponent(ns)}`;
+  const response = await fetch(url);
     const data = await response.json();
-    const configmaps = data.configmaps || [];
+    const configmaps = data.items || [];
+    const total = data.total !== undefined ? data.total : configmaps.length;
+    const totalPages = data.total_pages !== undefined ? data.total_pages : 1;
     
     let tableHtml = `
       <div class="table-responsive">
@@ -1602,6 +1685,8 @@ async function fetchAndRenderConfigMapsTable() {
     
     tableHtml += '</tbody></table></div>';
     container.innerHTML = tableHtml;
+    // Sayfalama UI'ini guncelle (AC-4)
+    updateConfigMapsPagination(page, totalPages, total, CONFIGMAPS_PER_PAGE);
     // Attach click handlers to newly rendered buttons (use delegation-safe attachment)
     container.querySelectorAll('.btn-view-configmap').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -1661,15 +1746,61 @@ async function fetchAndRenderConfigMapsTable() {
   }
 }
 
-async function fetchAndRenderSecretsTable() {
+// ConfigMap sayfalama UI'ini guncelle — AC-4
+// page/totalPages/total/perPage degerlerini alir; total_pages<=1 ise kontrolleri gizler.
+function updateConfigMapsPagination(page, totalPages, total, perPage) {
+  configmapsCurrentPage = page;
+  configmapsTotalPages = totalPages;
+  const paginationDiv = document.getElementById('configmaps-pagination');
+  const prevBtn       = document.getElementById('configmaps-prev-page');
+  const nextBtn       = document.getElementById('configmaps-next-page');
+  const pageIndicator = document.getElementById('configmaps-page-indicator');
+  const infoSpan      = document.getElementById('configmaps-pagination-info');
+  if (!paginationDiv) return;
+  // Tek sayfa veya sayfalama bilgisi yoksa gizle (AC-4)
+  if (!totalPages || totalPages <= 1) {
+    paginationDiv.style.display = 'none';
+    return;
+  }
+  paginationDiv.style.display = 'flex';
+  // Sayfa gostergesi: "Sayfa 2 / 7"
+  const pageText = '{{ t("pagination.page_indicator") }}'
+    .replace('{page}', page)
+    .replace('{total_pages}', totalPages);
+  if (pageIndicator) pageIndicator.textContent = pageText;
+  // Kayit aralik bilgisi: "347 kayittan 51-100 arasi"
+  const start = (page - 1) * perPage + 1;
+  const end   = Math.min(page * perPage, total);
+  const infoText = '{{ t("pagination.showing_info") }}'
+    .replace('{total}', total)
+    .replace('{start}', start)
+    .replace('{end}', end);
+  if (infoSpan) infoSpan.textContent = infoText;
+  // Buton disabled durumlari (AC-4)
+  if (prevBtn) prevBtn.disabled = (page <= 1);
+  if (nextBtn) nextBtn.disabled = (page >= totalPages);
+}
+
+// fetchAndRenderSecretsTable — Secrets sekmesi icin sayfalamali veri cekme ve render (AC-5)
+// page: hangi sayfanin yuklenmesi isteniyor (1-tabanli). Sayi degilse mevcuttan devam eder.
+async function fetchAndRenderSecretsTable(page) {
+  // Arguman gecerli bir sayfa numarasi degilse mevcut sayfayi kullan
+  if (typeof page !== 'number' || isNaN(page) || page < 1) page = secretsCurrentPage;
+  secretsCurrentPage = page;
+
   const container = document.getElementById('secrets-table-container');
   container.innerHTML = `<div class="d-flex align-items-center justify-content-center py-5"><div class="loading-spinner me-2"></div><span class="text-muted">${(window.i18n && window.i18n['loading'] && (window.i18n['loading'][window.locale]||window.i18n['loading']['tr'])) || 'Yükleniyor...'}</span></div>`;
-  
+
   try {
   const ns = document.getElementById('secretsNamespaceSelect') ? document.getElementById('secretsNamespaceSelect').value : 'all';
-  const response = await fetch('/k8s-explorer/secrets-summary' + (ns ? ('?namespace=' + encodeURIComponent(ns)) : ''));
+  // Sayfalama URL'si; 'all' veya bos ise namespace parametresi gonderilmez (AC-9)
+  let url = `/k8s-explorer/secrets-summary?page=${page}&per_page=${SECRETS_PER_PAGE}`;
+  if (ns && ns !== 'all') url += `&namespace=${encodeURIComponent(ns)}`;
+  const response = await fetch(url);
     const data = await response.json();
-    const secrets = data.secrets || [];
+    const secrets = data.items || [];
+    const total = data.total !== undefined ? data.total : secrets.length;
+    const totalPages = data.total_pages !== undefined ? data.total_pages : 1;
     
     let tableHtml = `
       <div class="table-responsive">
@@ -1715,14 +1846,51 @@ async function fetchAndRenderSecretsTable() {
     
     tableHtml += '</tbody></table></div>';
     container.innerHTML = tableHtml;
+    // Sayfalama UI'ini guncelle (AC-5)
+    updateSecretsPagination(page, totalPages, total, SECRETS_PER_PAGE);
   // view/edit ayrıca global delegated listener üzerinden de tetiklenir (bkz. document click handler); delete-secret'in TEK binding'i budur
   container.querySelectorAll('.btn-view-secret').forEach(btn => btn.addEventListener('click', () => { const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.showSecret && window.showSecret(name, namespace); } catch(e){console.error(e);} }));
   container.querySelectorAll('.btn-edit-secret').forEach(btn => btn.addEventListener('click', () => { const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.editSecret && window.editSecret(name, namespace); } catch(e){console.error(e);} }));
   container.querySelectorAll('.btn-delete-secret').forEach(btn => btn.addEventListener('click', () => { const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.deleteSecret && window.deleteSecret(name, namespace); } catch(e){console.error(e);} }));
-    
+
   } catch (error) {
     container.innerHTML = '<div class="alert alert-danger">{{ t("config.error_secrets") }}: ' + error.message + '</div>';
   }
+}
+
+// Secret sayfalama UI'ini guncelle — AC-5
+// page/totalPages/total/perPage degerlerini alir; total_pages<=1 ise kontrolleri gizler.
+function updateSecretsPagination(page, totalPages, total, perPage) {
+  secretsCurrentPage = page;
+  secretsTotalPages = totalPages;
+  const paginationDiv = document.getElementById('secrets-pagination');
+  const prevBtn       = document.getElementById('secrets-prev-page');
+  const nextBtn       = document.getElementById('secrets-next-page');
+  const pageIndicator = document.getElementById('secrets-page-indicator');
+  const infoSpan      = document.getElementById('secrets-pagination-info');
+  if (!paginationDiv) return;
+  // Tek sayfa veya sayfalama bilgisi yoksa gizle (AC-5)
+  if (!totalPages || totalPages <= 1) {
+    paginationDiv.style.display = 'none';
+    return;
+  }
+  paginationDiv.style.display = 'flex';
+  // Sayfa gostergesi: "Sayfa 2 / 7"
+  const pageText = '{{ t("pagination.page_indicator") }}'
+    .replace('{page}', page)
+    .replace('{total_pages}', totalPages);
+  if (pageIndicator) pageIndicator.textContent = pageText;
+  // Kayit aralik bilgisi: "347 kayittan 51-100 arasi"
+  const start = (page - 1) * perPage + 1;
+  const end   = Math.min(page * perPage, total);
+  const infoText = '{{ t("pagination.showing_info") }}'
+    .replace('{total}', total)
+    .replace('{start}', start)
+    .replace('{end}', end);
+  if (infoSpan) infoSpan.textContent = infoText;
+  // Buton disabled durumlari (AC-5)
+  if (prevBtn) prevBtn.disabled = (page <= 1);
+  if (nextBtn) nextBtn.disabled = (page >= totalPages);
 }
 
 async function fetchAndRenderResourceQuotasTable() {

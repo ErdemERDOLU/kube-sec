@@ -147,10 +147,31 @@ def update_configmap():
 
 @bp_explorer.route('/k8s-explorer/secrets-summary')
 def secrets_summary():
+    """Secret listesini döndürür.
+
+    Query parametreleri:
+        namespace (str, opsiyonel): Belirtilirse yalnızca o namespace filtrelenir
+                                    ('all' veya parametre yoksa tüm namespace'ler).
+                                    Mevcut filtre korunur — AC-3.
+        page      (int, opsiyonel): Sayfa numarası (1-tabanlı). Gönderilmezse
+                                    tüm liste eski formatta döner (geriye dönük uyumluluk).
+        per_page  (int, opsiyonel): Sayfa başına kayıt (varsayılan: 50, max: 500).
+
+    Not: Namespace filtresi önce uygulanır, sayfalama sonra gelir (AC-3).
+
+    Yanıt (sayfalama KAPALI — page parametresi yok):
+        {"secrets": [...]}
+
+    Yanıt (sayfalama AÇIK — page parametresi var):
+        {"items": [...], "page": N, "per_page": M, "total": T, "total_pages": P}
+
+    Hatalar:
+        400: Geçersiz sayfalama parametresi.
+    """
     try:
-        namespace = request.args.get('namespace')
         configure_kube_client()
         v1 = client.CoreV1Api()
+        namespace = request.args.get('namespace')
         if namespace and namespace != 'all':
             secrets = v1.list_namespaced_secret(namespace).items
         else:
@@ -167,6 +188,14 @@ def secrets_summary():
                 'data_count': data_count,
                 'creation_timestamp': creation_timestamp.isoformat() if creation_timestamp else None
             })
+        # Sayfalama desteği — AC-1 (sayfalama), AC-2 (geriye dönük uyumluluk), AC-10 (doğrulama)
+        try:
+            paginated, is_paginated = paginate_list(result, request.args)
+        except ValueError as ve:
+            return jsonify({'error': str(ve)}), 400
+        if is_paginated:
+            return jsonify(paginated)
+        # page parametresi yoksa eski format (geriye dönük uyumluluk — loadOverviewData() etkilenmez)
         return jsonify({'secrets': result})
     except Exception as e:
         return jsonify({'secrets': [], 'error': str(e)})

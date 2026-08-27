@@ -200,7 +200,7 @@ async function deleteK8sObj(type, namespace, name) {
   const resp = await fetch(`/k8s-explorer/delete`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-    body: JSON.stringify({ type, namespace, name })
+    body: JSON.stringify({ type, namespace, name, confirm_name: name })
   });
   if (resp.ok) {
     const deletedMsg = _t('explorer.alert_deleted', 'silindi!');

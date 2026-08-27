@@ -15,6 +15,7 @@ from kubernetes.client.rest import ApiException
 
 from web.kubeconfig_manager import configure_kube_client
 from web.audit_log import record_audit_event, _short_session_id
+from web.confirmation import require_confirm_name
 
 from web.blueprints.explorer import bp_explorer
 from web.blueprints.explorer._pagination import paginate_list
@@ -249,6 +250,9 @@ def delete_secret():
         namespace = payload.get('namespace')
         if not name or not namespace:
             return jsonify({'error': 'name and namespace required'}), 400
+        err = require_confirm_name(payload)
+        if err:
+            return err
         configure_kube_client()
         v1 = client.CoreV1Api()
         v1.delete_namespaced_secret(name, namespace)

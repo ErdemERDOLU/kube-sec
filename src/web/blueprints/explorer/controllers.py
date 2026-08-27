@@ -15,6 +15,7 @@ from web.background import (
 )
 from web.kubeconfig_manager import configure_kube_client
 from web.audit_log import record_audit_event, _short_session_id
+from web.confirmation import require_confirm_name, require_confirm_names
 
 from web.blueprints.explorer import bp_explorer
 from web.blueprints.explorer._pagination import paginate_list
@@ -190,6 +191,9 @@ def restart_deployment():
         name = data.get('name')
         if not namespace or not name:
             return jsonify({'error': 'namespace ve name zorunlu'}), 400
+        err = require_confirm_name(data)
+        if err:
+            return err
 
         configure_kube_client()
 
@@ -426,6 +430,9 @@ def restart_statefulset():
         name = data.get('name')
         if not namespace or not name:
             return jsonify({'error': 'namespace ve name zorunlu'}), 400
+        err = require_confirm_name(data)
+        if err:
+            return err
         configure_kube_client()
         apps_v1 = client.AppsV1Api()
         # Patch StatefulSet's pod template annotation to trigger restart
@@ -636,6 +643,9 @@ def restart_daemonset():
         name = data.get('name')
         if not namespace or not name:
             return jsonify({'error': 'namespace ve name zorunlu'}), 400
+        err = require_confirm_name(data)
+        if err:
+            return err
         configure_kube_client()
         apps_v1 = client.AppsV1Api()
         # Patch DaemonSet's pod template annotation to trigger restart
@@ -700,6 +710,9 @@ def delete_replicasets():
         items = data.get('items') if isinstance(data, dict) else None
         if not items or not isinstance(items, list):
             return jsonify({'error': 'items listesi zorunlu'}), 400
+        err = require_confirm_names(data, items)
+        if err:
+            return err
         configure_kube_client()
         apps_v1 = client.AppsV1Api()
         deleted = []

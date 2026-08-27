@@ -1876,7 +1876,7 @@ async function fetchAndRenderHPATable() {
         confirmBtnClass: 'btn-danger',
         onConfirm: async () => {
           try {
-            const resp = await fetch('/k8s-explorer/delete-hpa', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, body: JSON.stringify({ name, namespace }) });
+            const resp = await fetch('/k8s-explorer/delete-hpa', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, body: JSON.stringify({ name, namespace, confirm_name: name }) });
             const j = await resp.json();
             if (j.error) { showToast('{{ t("config.toast_delete_error") }} ' + j.error, 'error'); return; }
             showToast('{{ t("config.toast_hpa_deleted") }}', 'success');
@@ -1963,7 +1963,7 @@ async function fetchAndRenderPDBTable() {
         confirmBtnClass: 'btn-danger',
         onConfirm: async () => {
           try {
-      const resp = await fetch('/k8s-explorer/delete-pdb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, body: JSON.stringify({ name, namespace }) });
+      const resp = await fetch('/k8s-explorer/delete-pdb', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, body: JSON.stringify({ name, namespace, confirm_name: name }) });
             const j = await resp.json();
             if (j.error) { showToast('{{ t("config.toast_delete_error") }} ' + j.error, 'error'); return; }
       showToast('{{ t("config.toast_pdb_deleted") }}', 'success');
@@ -2177,7 +2177,7 @@ async function fetchAndRenderPriorityClassesTable() {
         confirmBtnClass: 'btn-danger',
         onConfirm: async () => {
           try {
-            const resp = await fetch('/k8s-explorer/delete-priority-class', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, body: JSON.stringify({ name }) });
+            const resp = await fetch('/k8s-explorer/delete-priority-class', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, body: JSON.stringify({ name, confirm_name: name }) });
             const j = await resp.json();
             if (j.error) { showToast('{{ t("config.toast_delete_error") }} ' + j.error, 'error'); return; }
             showToast('{{ t("config.toast_priority_class_deleted") }}', 'success');
@@ -2546,7 +2546,7 @@ function deleteRuntimeClass(name) {
     confirmBtnClass: 'btn-danger',
     onConfirm: async () => {
       try {
-        const resp = await fetch('/k8s-explorer/delete-runtime-class', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, body: JSON.stringify({ name }) });
+        const resp = await fetch('/k8s-explorer/delete-runtime-class', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() }, body: JSON.stringify({ name, confirm_name: name }) });
         const j = await resp.json();
         if (j.error) { showToast('{{ t("config.toast_delete_error") }} ' + j.error, 'error'); return; }
         showToast('{{ t("config.toast_runtime_class_deleted") }}', 'success');
@@ -3088,7 +3088,8 @@ window.deleteSecret = function(name, namespace) {
     },
     body: JSON.stringify({
       name: name,
-      namespace: namespace
+      namespace: namespace,
+      confirm_name: name
     })
   })
   .then(response => response.json())

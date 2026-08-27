@@ -256,6 +256,7 @@
     const typeMap={pvc:'pvc',pv:'pv',storageclass:'storageclass'};
     const payload={ type:typeMap[kind], name:name };
     if(namespace) payload.namespace = namespace;
+    payload.confirm_name = name;
     return fetch('/k8s-explorer/delete',{method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCsrfToken()}, body: JSON.stringify(payload)})
       .then(r=>r.json())
       .then(j=>{

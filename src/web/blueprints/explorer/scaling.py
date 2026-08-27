@@ -10,6 +10,7 @@ from kubernetes.client.rest import ApiException
 
 from web.kubeconfig_manager import configure_kube_client
 from web.audit_log import record_audit_event, _short_session_id
+from web.confirmation import require_confirm_name
 
 from web.blueprints.explorer import bp_explorer
 
@@ -131,6 +132,9 @@ def delete_hpa():
         namespace = data.get('namespace')
         if not name or not namespace:
             return jsonify({'error': 'name and namespace are required'}), 400
+        err = require_confirm_name(data)
+        if err:
+            return err
         configure_kube_client()
         autoscaling_v1 = client.AutoscalingV1Api()
         autoscaling_v1.delete_namespaced_horizontal_pod_autoscaler(name=name, namespace=namespace)
@@ -301,6 +305,9 @@ def delete_pdb():
         namespace = data.get('namespace')
         if not name or not namespace:
             return jsonify({'error': 'name and namespace are required'}), 400
+        err = require_confirm_name(data)
+        if err:
+            return err
         configure_kube_client()
         policy_v1 = client.PolicyV1Api()
         policy_v1.delete_namespaced_pod_disruption_budget(name=name, namespace=namespace)

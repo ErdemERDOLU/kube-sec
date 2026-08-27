@@ -25,6 +25,7 @@ from web.kubeconfig_manager import (
     get_active_kubeconfig_path,
 )
 from web.audit_log import record_audit_event, _short_session_id
+from web.confirmation import require_confirm_name
 
 from web.blueprints.explorer import bp_explorer
 
@@ -412,7 +413,14 @@ def k8s_explorer_delete():
         if not obj_type or not name:
             return jsonify({'error': 'type ve name zorunlu'}), 400
 
-        namespaced_kinds = {'pod','service','deployment','deployments','replicaset','replicasets','daemonset','daemonsets','statefulset','statefulsets','endpoint','endpoints','pvc','persistentvolumeclaim','persistentvolumeclaims','serviceaccount','sa','role','rolebinding'}
+        # confirm_name: body veya query string'den oku
+        # (DELETE metodu bazi HTTP istemcilerinde body gondermeyebilir)
+        confirm_name_val = (request.args.get('confirm_name') or data.get('confirm_name') or '')
+        err = require_confirm_name({'name': name, 'confirm_name': confirm_name_val})
+        if err:
+            return err
+
+        namespaced_kinds ={'pod','service','deployment','deployments','replicaset','replicasets','daemonset','daemonsets','statefulset','statefulsets','endpoint','endpoints','pvc','persistentvolumeclaim','persistentvolumeclaims','serviceaccount','sa','role','rolebinding'}
         cluster_scoped = {'pv','persistentvolume','persistentvolumes','storageclass','storageclasses','storage-class','sc','clusterrole','clusterrolebinding','node'}
         if obj_type in namespaced_kinds and not namespace:
             return jsonify({'error': 'namespaced kaynak için namespace zorunlu'}), 400

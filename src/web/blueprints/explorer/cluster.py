@@ -13,6 +13,7 @@ from kubernetes.client.rest import ApiException
 
 from web.kubeconfig_manager import configure_kube_client
 from web.audit_log import record_audit_event, _short_session_id
+from web.confirmation import require_confirm_name
 
 from web.blueprints.explorer import bp_explorer
 
@@ -48,6 +49,9 @@ def k8s_explorer_node_uncordon():
         node_name = data.get('node')
         if not node_name:
             return 'Node adı zorunlu', 400
+        err = require_confirm_name(data, name_field='node')
+        if err:
+            return err
         configure_kube_client()
         kube_client = type('KubeClient', (), {})()
         kube_client.core_v1 = client.CoreV1Api()
@@ -74,6 +78,9 @@ def k8s_explorer_node_cordon():
         node_name = data.get('node')
         if not node_name:
             return 'Node adı zorunlu', 400
+        err = require_confirm_name(data, name_field='node')
+        if err:
+            return err
         configure_kube_client()
         kube_client = type('KubeClient', (), {})()
         kube_client.core_v1 = client.CoreV1Api()
@@ -100,6 +107,9 @@ def k8s_explorer_node_drain():
         node_name = data.get('node')
         if not node_name:
             return 'Node adı zorunlu', 400
+        err = require_confirm_name(data, name_field='node')
+        if err:
+            return err
         configure_kube_client()
         kube_client = type('KubeClient', (), {})()
         kube_client.core_v1 = client.CoreV1Api()
@@ -376,6 +386,9 @@ def delete_priority_class():
         name = data.get('name')
         if not name:
             return jsonify({'error': 'name is required'}), 400
+        err = require_confirm_name(data)
+        if err:
+            return err
         configure_kube_client()
         scheduling_v1 = client.SchedulingV1Api()
         scheduling_v1.delete_priority_class(name=name)
@@ -567,6 +580,9 @@ def delete_runtime_class():
         name = data.get('name')
         if not name:
             return jsonify({'error': 'name is required'}), 400
+        err = require_confirm_name(data)
+        if err:
+            return err
         configure_kube_client()
         co = client.CustomObjectsApi()
         co.delete_cluster_custom_object(group="node.k8s.io", version="v1", plural="runtimeclasses", name=name)

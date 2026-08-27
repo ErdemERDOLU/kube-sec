@@ -278,6 +278,60 @@ def delete_secret():
         return jsonify({'error': str(e)}), 500
 
 
+@bp_explorer.route('/k8s-explorer/delete-configmap', methods=['POST'])
+def delete_configmap():
+    """ConfigMap siler.
+
+    Method: POST
+    Path:   /k8s-explorer/delete-configmap
+
+    Body (JSON):
+        name         (str): Silinecek ConfigMap adı.
+        namespace    (str): ConfigMap'in namespace'i.
+        confirm_name (str): Sunucu tarafı onay — name ile eşleşmeli.
+
+    Yanıt (200):
+        {"status": "ok"}
+
+    Hatalar:
+        400: name/namespace eksik ya da confirm_name doğrulaması başarısız.
+        ApiException HTTP kodu: Kubernetes API hatası.
+        500: Beklenmedik sunucu hatası.
+    """
+    try:
+        payload = request.get_json() or {}
+        name = payload.get('name')
+        namespace = payload.get('namespace')
+        if not name or not namespace:
+            return jsonify({'error': 'name and namespace required'}), 400
+        err = require_confirm_name(payload)
+        if err:
+            return err
+        configure_kube_client()
+        v1 = client.CoreV1Api()
+        v1.delete_namespaced_config_map(name, namespace)
+        record_audit_event(
+            action='delete',
+            resource_type='ConfigMap',
+            resource_name=name,
+            namespace=namespace,
+            session_id=_short_session_id(request.cookies.get('session')),
+        )
+        return jsonify({'status': 'ok'})
+    except ApiException as ae:
+        parsed_body = None
+        try:
+            if getattr(ae, 'body', None):
+                parsed_body = json.loads(ae.body)
+        except Exception:
+            parsed_body = getattr(ae, 'body', None)
+        status_code = getattr(ae, 'status', 500)
+        return jsonify({'error': str(ae), 'status': status_code, 'body': parsed_body}), status_code
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+
 @bp_explorer.route('/k8s-explorer/resource-quotas-summary')
 def resource_quotas_summary():
     try:

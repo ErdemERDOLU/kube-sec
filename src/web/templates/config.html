@@ -817,9 +817,6 @@ window.__config_clickProxy = window.__config_clickProxy || function(action, name
     if (action === 'edit-secret' && window.editSecret) {
       try { window.editSecret(name, namespace); } catch (e) { console.error('editSecret error from proxy', e); }
     }
-    if (action === 'delete-secret' && window.deleteSecret) {
-      try { window.deleteSecret(name, namespace); } catch (e) { console.error('deleteSecret error from proxy', e); }
-    }
   } catch (e) { console.debug('config click proxy top error', e); }
 };
 
@@ -1447,15 +1444,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return;
       }
-      const deleteSecretBtn = e.target.closest && e.target.closest('.btn-delete-secret');
-      if (deleteSecretBtn) {
-        const name = deleteSecretBtn.getAttribute('data-name');
-        const namespace = deleteSecretBtn.getAttribute('data-namespace');
-        if (window.deleteSecret) {
-          try { console.debug('invoking deleteSecret', name, namespace); window.__showDebugMessage && window.__showDebugMessage('delete-secret: ' + name + ' / ' + namespace); window.deleteSecret(name, namespace); } catch (err) { console.error('deleteSecret handler error', err); }
-        }
-        return;
-      }
     } catch (err) { console.debug('delegated configmap click handler error', err); }
   });
 });
@@ -1601,8 +1589,11 @@ async function fetchAndRenderConfigMapsTable() {
                 <button type="button" class="btn btn-sm btn-outline-primary me-1 btn-view-configmap" data-name="${cm.name}" data-namespace="${cm.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('view', '${cm.name}', '${cm.namespace}')" aria-label="{{ t('a11y.btn_view') }}">
                   <i class="bi bi-eye"></i>
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary btn-edit-configmap" data-name="${cm.name}" data-namespace="${cm.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('edit', '${cm.name}', '${cm.namespace}')" aria-label="{{ t('a11y.btn_edit') }}">
+                <button type="button" class="btn btn-sm btn-outline-secondary me-1 btn-edit-configmap" data-name="${cm.name}" data-namespace="${cm.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('edit', '${cm.name}', '${cm.namespace}')" aria-label="{{ t('a11y.btn_edit') }}">
                   <i class="bi bi-pencil"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-configmap" data-name="${cm.name}" data-namespace="${cm.namespace}" aria-label="{{ t('a11y.btn_delete') }}">
+                  <i class="bi bi-trash"></i>
                 </button>
           </td>
         </tr>
@@ -1626,7 +1617,45 @@ async function fetchAndRenderConfigMapsTable() {
         try { window.editConfigMap(name, namespace); } catch (err) { console.error('editConfigMap handler error', err); }
       });
     });
-    
+    container.querySelectorAll('.btn-delete-configmap').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const name = btn.getAttribute('data-name');
+        const namespace = btn.getAttribute('data-namespace');
+        const requestKey = `delete-configmap-${name}-${namespace}`;
+        if (isRequestActive(requestKey)) {
+          console.debug('deleteConfigMap already in progress, ignoring');
+          return;
+        }
+        openConfirmModal({
+          title: '{{ t("config.confirm_title_configmap_delete") }}',
+          message: `"${name}" (${namespace}) ` + '{{ t("config.confirm_delete_configmap_msg") }}',
+          confirmText: '{{ t("config.confirm_yes_delete") }}',
+          confirmBtnClass: 'btn-danger',
+          onConfirm: async () => {
+            setRequestActive(requestKey);
+            try {
+              const resp = await fetch('/k8s-explorer/delete-configmap', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                body: JSON.stringify({ name, namespace, confirm_name: name })
+              });
+              const j = await resp.json();
+              setRequestInactive(requestKey);
+              if (j.error) {
+                showToast('{{ t("config.toast_configmap_delete_error") }} ' + j.error, 'error');
+              } else {
+                showToast('{{ t("config.toast_configmap_deleted") }}', 'success');
+                fetchAndRenderConfigMapsTable();
+              }
+            } catch (e) {
+              setRequestInactive(requestKey);
+              showToast('{{ t("config.toast_configmap_delete_error") }} ' + e.message, 'error');
+            }
+          }
+        });
+      });
+    });
+
   } catch (error) {
     container.innerHTML = '<div class="alert alert-danger">{{ t("config.error_configmaps") }}: ' + error.message + '</div>';
   }
@@ -1676,7 +1705,7 @@ async function fetchAndRenderSecretsTable() {
                 <button type="button" class="btn btn-sm btn-outline-secondary me-1 btn-edit-secret" data-name="${secret.name}" data-namespace="${secret.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('edit-secret', '${secret.name}', '${secret.namespace}')" aria-label="{{ t('a11y.btn_edit') }}">
                   <i class="bi bi-pencil"></i>
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-secret" data-name="${secret.name}" data-namespace="${secret.namespace}" onclick="window.__config_clickProxy && window.__config_clickProxy('delete-secret', '${secret.name}', '${secret.namespace}')" aria-label="{{ t('a11y.btn_delete') }}">
+                <button type="button" class="btn btn-sm btn-outline-danger btn-delete-secret" data-name="${secret.name}" data-namespace="${secret.namespace}" aria-label="{{ t('a11y.btn_delete') }}">
                   <i class="bi bi-trash"></i>
                 </button>
               </td>
@@ -1686,7 +1715,7 @@ async function fetchAndRenderSecretsTable() {
     
     tableHtml += '</tbody></table></div>';
     container.innerHTML = tableHtml;
-  // Attach click handlers to newly rendered buttons (delegation exists globally; also attach direct handlers for redundancy)
+  // view/edit ayrıca global delegated listener üzerinden de tetiklenir (bkz. document click handler); delete-secret'in TEK binding'i budur
   container.querySelectorAll('.btn-view-secret').forEach(btn => btn.addEventListener('click', () => { const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.showSecret && window.showSecret(name, namespace); } catch(e){console.error(e);} }));
   container.querySelectorAll('.btn-edit-secret').forEach(btn => btn.addEventListener('click', () => { const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.editSecret && window.editSecret(name, namespace); } catch(e){console.error(e);} }));
   container.querySelectorAll('.btn-delete-secret').forEach(btn => btn.addEventListener('click', () => { const name = btn.getAttribute('data-name'); const namespace = btn.getAttribute('data-namespace'); try { window.deleteSecret && window.deleteSecret(name, namespace); } catch(e){console.error(e);} }));
@@ -3067,49 +3096,49 @@ window.editSecret = function(name, namespace) {
 
 window.deleteSecret = function(name, namespace) {
   console.debug('deleteSecret called:', name, namespace);
-  
+
   const requestKey = `delete-secret-${name}-${namespace}`;
   if (isRequestActive(requestKey)) {
     console.debug('deleteSecret already in progress, ignoring');
     return;
   }
-  
-  if (!confirm(`"${name}" / "${namespace}": {{ t('config.confirm_delete_secret_msg') }}`)) {
-    return;
-  }
-  
-  setRequestActive(requestKey);
-  
-  fetch('/k8s-explorer/delete-secret', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRFToken': getCsrfToken(),
-    },
-    body: JSON.stringify({
-      name: name,
-      namespace: namespace,
-      confirm_name: name
-    })
-  })
-  .then(response => response.json())
-  .then(result => {
-    setRequestInactive(requestKey);
-    
-    if (result.error) {
-      showToast('{{ t("config.toast_secret_delete_error") }} ' + result.error, 'error');
-    } else {
-      showToast('{{ t("config.toast_secret_deleted") }}', 'success');
-      // Refresh the table
-      if (typeof fetchAndRenderSecretsTable === 'function') {
-        fetchAndRenderSecretsTable();
+
+  openConfirmModal({
+    title: '{{ t("config.confirm_title_secret_delete") }}',
+    message: `"${name}" (${namespace}) ` + '{{ t("config.confirm_delete_secret_msg") }}',
+    confirmText: '{{ t("config.confirm_yes_delete") }}',
+    confirmBtnClass: 'btn-danger',
+    onConfirm: async () => {
+      setRequestActive(requestKey);
+      try {
+        const response = await fetch('/k8s-explorer/delete-secret', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken(),
+          },
+          body: JSON.stringify({
+            name: name,
+            namespace: namespace,
+            confirm_name: name
+          })
+        });
+        const result = await response.json();
+        setRequestInactive(requestKey);
+        if (result.error) {
+          showToast('{{ t("config.toast_secret_delete_error") }} ' + result.error, 'error');
+        } else {
+          showToast('{{ t("config.toast_secret_deleted") }}', 'success');
+          if (typeof fetchAndRenderSecretsTable === 'function') {
+            fetchAndRenderSecretsTable();
+          }
+        }
+      } catch (error) {
+        setRequestInactive(requestKey);
+        console.error('Error deleting Secret:', error);
+        showToast('{{ t("config.toast_secret_delete_error") }} ' + error.message, 'error');
       }
     }
-  })
-  .catch(error => {
-    setRequestInactive(requestKey);
-    console.error('Error deleting Secret:', error);
-    showToast('{{ t("config.toast_secret_delete_error") }} ' + error.message, 'error');
   });
 };
 
@@ -3148,14 +3177,6 @@ document.addEventListener('click', function(event) {
     const namespace = event.target.getAttribute('data-namespace');
     if (name && namespace) {
       window.editSecret(name, namespace);
-    }
-  }
-    if (event.target.matches('[data-action="delete-secret"]')) {
-    event.stopPropagation();
-    const name = event.target.getAttribute('data-name');
-    const namespace = event.target.getAttribute('data-namespace');
-    if (name && namespace) {
-      window.deleteSecret(name, namespace);
     }
   }
 });

@@ -315,6 +315,8 @@ I18N = {
     'explorer.loading_default': {'tr': 'Yükleniyor...', 'en': 'Loading...'},
     'explorer.error_yaml_fetch': {'tr': 'YAML alınamadı', 'en': 'Could not fetch YAML'},
     'explorer.error_log_fetch': {'tr': 'Log alınamadı', 'en': 'Could not fetch logs'},
+    'explorer.related_deployments': {'tr': "İlişkili Deployment'lar", 'en': 'Related Deployments'},
+    'explorer.no_related_deployment': {'tr': 'Bu service için eşleşen deployment bulunamadı.', 'en': 'No matching deployment found for this service.'},
 
     # ── Access Control (access_control.html) ────────────────────────────────
     'access.title': {'tr': 'Access Control', 'en': 'Access Control'},

@@ -378,13 +378,34 @@ async function showIngresses() {
   }
 }
 
+// FE-3: Breadcrumb tabanlı geri navigasyon yardımcı fonksiyonu.
+// Mevcut (son) adımı breadcrumb'dan çıkarır ve bir önceki adımın
+// show* fonksiyonunu çağırır. Breadcrumb boşsa showNamespaceSelector'a döner.
+function navigateBack() {
+  k8sBreadcrumb.pop();
+  const prev = k8sBreadcrumb[k8sBreadcrumb.length - 1];
+  if (!prev) {
+    showNamespaceSelector();
+    return;
+  }
+  switch (prev.type) {
+    case 'namespace':   showNamespaceChildren(prev.namespace); break;
+    case 'ingresses':   showIngresses(); break;
+    case 'ingress':     showIngressDetail(prev.namespace, prev.name); break;
+    case 'service':     showServiceDetail(prev.namespace, prev.name); break;
+    case 'deployment':  showDeploymentDetail(prev.namespace, prev.name); break;
+    default:            showNamespaceSelector();
+  }
+}
+
 async function showIngressDetail(namespace, name) {
   let root = document.getElementById('k8s-explorer-root');
   root.innerHTML = '';
   // Breadcrumb güncelle
   const last = k8sBreadcrumb[k8sBreadcrumb.length - 1];
   if (!last || last.type !== 'ingress' || last.name !== name || last.namespace !== namespace) {
-    k8sBreadcrumb = k8sBreadcrumb.filter(s => s.type !== 'service' && s.type !== 'deployment');
+    // FE-5: filter satırı kaldırıldı — renderBreadcrumb'daki slice davranışı zaten
+    // breadcrumb'a tıklandığında önceki adımları doğru kesiyor; ekstra filter gereksiz.
     k8sBreadcrumb.push({ type: 'ingress', label: `Ingress: ${name} (${namespace})`, name, namespace });
   }
   renderBreadcrumb(root);
@@ -407,7 +428,7 @@ async function showIngressDetail(namespace, name) {
             <p class="text-muted mb-0">Namespace: <span class="fw-semibold">${namespace}</span></p>
           </div>
         </div>
-        <button class="btn btn-outline-secondary" onclick="showIngresses()">
+        <button class="btn btn-outline-secondary" onclick="navigateBack()">
           <i class="fas fa-arrow-left me-2"></i>${_t('explorer.btn_back', 'Geri')}
         </button>
       </div>
@@ -495,27 +516,92 @@ async function showIngressDetail(namespace, name) {
 }
 
 async function showServiceDetail(namespace, serviceName) {
-  k8sBreadcrumb.push({name: serviceName, type: 'service'});
+  // FE-1: Tam breadcrumb objesi push — namespace ve label dahil; sibling
+  // fonksiyonlarla (showIngressDetail, showDeploymentDetail) aynı format.
+  // Tekrar eklemeyi önlemek için duplicate kontrolü yapılır.
+  const lastBC = k8sBreadcrumb[k8sBreadcrumb.length - 1];
+  if (!lastBC || lastBC.type !== 'service' || lastBC.name !== serviceName || lastBC.namespace !== namespace) {
+    k8sBreadcrumb.push({ type: 'service', label: `Service: ${serviceName} (${namespace})`, name: serviceName, namespace });
+  }
   let root = document.getElementById('k8s-explorer-root');
+  root.innerHTML = '';
   renderBreadcrumb(root);
-  // Try to find matching deployments for this service and navigate there immediately
+  showLoading(root, _t('explorer.loading_default', 'Yükleniyor...'));
+
+  // FE-2: Oto-redirect KALDIRILDI. Her zaman service detay sayfası gösterilir.
+  // FE-6: Service detayları (tip, portlar, selector) ve eşleşen deployment'lar
+  //       paralel olarak alınır.
+  let svcDetails = null;
+  let deployments = [];
   try {
-    const svcResp = await fetch(`/k8s-explorer/service?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(serviceName)}`);
-    if (svcResp.ok) {
-      const svcData = await svcResp.json();
-      if (svcData.deployments && svcData.deployments.length > 0) {
-        // navigate to the first matched deployment
-        const depName = svcData.deployments[0].name;
-        // Update breadcrumb to include deployment
-        k8sBreadcrumb.push({ type: 'deployment', label: `Deployment: ${depName} (${namespace})`, name: depName, namespace });
-        renderBreadcrumb(root);
-        showDeploymentDetail(namespace, depName);
-        return;
-      }
+    const [detailResp, depResp] = await Promise.all([
+      fetch(`/k8s-explorer/service-details?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(serviceName)}`),
+      fetch(`/k8s-explorer/service?namespace=${encodeURIComponent(namespace)}&name=${encodeURIComponent(serviceName)}`)
+    ]);
+    if (detailResp.ok) {
+      const detailData = await detailResp.json();
+      if (detailData && detailData.service) svcDetails = detailData.service;
+    }
+    if (depResp.ok) {
+      const depData = await depResp.json();
+      if (depData && Array.isArray(depData.deployments)) deployments = depData.deployments;
     }
   } catch (e) {
-    // if lookup fails, fall back to showing service detail
-    console.warn('Could not resolve service -> deployment:', e);
+    console.warn('[explorer] Service detail/deployment fetch error:', e);
+  }
+
+  // FE-6: Service tipi, port eşleştirmeleri, selector label'ları gösterilir.
+  const svcType      = svcDetails && svcDetails.spec ? (svcDetails.spec.type       || '—') : '—';
+  const svcClusterIP = svcDetails && svcDetails.spec ? (svcDetails.spec.cluster_ip || '—') : '—';
+  const svcPorts     = svcDetails && svcDetails.spec && Array.isArray(svcDetails.spec.ports) ? svcDetails.spec.ports : [];
+  const svcSelector  = svcDetails && svcDetails.spec && svcDetails.spec.selector ? svcDetails.spec.selector : {};
+
+  const portsHtml = svcPorts.length > 0
+    ? svcPorts.map(p => `<span class="badge bg-secondary me-1">${p.port}${p.targetPort ? '→' + p.targetPort : ''}/${p.protocol || 'TCP'}</span>`).join('')
+    : '<span class="text-muted">—</span>';
+
+  const selectorEntries = Object.entries(svcSelector);
+  const selectorHtml = selectorEntries.length > 0
+    ? selectorEntries.map(([k, v]) => `<span class="badge bg-light text-dark border me-1">${k}=${v}</span>`).join('')
+    : '<span class="text-muted">—</span>';
+
+  // FE-2: "İlişkili Deployment'lar" bölümü — tıklanınca showDeploymentDetail çağrılır.
+  let deploymentsHtml = '';
+  if (deployments.length > 0) {
+    const depCards = deployments.map(dep => `
+      <div class="k8s-resource-card p-3 mb-2 svc-dep-link-card" data-dep-name="${dep.name}" style="cursor:pointer;">
+        <div class="d-flex align-items-center">
+          <i class="fas fa-cubes text-warning me-3"></i>
+          <span class="fw-semibold">${dep.name}</span>
+          <span class="badge bg-light text-dark border ms-2">${dep.match_type || ''}</span>
+          <i class="fas fa-chevron-right ms-auto text-muted"></i>
+        </div>
+      </div>
+    `).join('');
+    deploymentsHtml = `
+      <div class="row mt-3">
+        <div class="col-12">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-light">
+              <h5 class="mb-0"><i class="fas fa-cubes me-2 text-warning"></i>${_t('explorer.related_deployments', "İlişkili Deployment'lar")}</h5>
+            </div>
+            <div class="card-body">
+              ${depCards}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  } else {
+    deploymentsHtml = `
+      <div class="row mt-3">
+        <div class="col-12">
+          <div class="alert alert-secondary mb-0">
+            <i class="fas fa-info-circle me-2"></i>${_t('explorer.no_related_deployment', 'Bu service için eşleşen deployment bulunamadı.')}
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   root.innerHTML = `
@@ -523,11 +609,34 @@ async function showServiceDetail(namespace, serviceName) {
       <div class="col-12">
         <div class="card border-0 shadow-sm mb-4">
           <div class="card-body">
-            <div class="d-flex align-items-center mb-3">
-              <i class="fas fa-network-wired fa-2x text-primary me-3"></i>
-              <div>
-                <h4 class="mb-1">Service: ${serviceName}</h4>
-                <p class="text-muted mb-0">Namespace: ${namespace}</p>
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <div class="d-flex align-items-center">
+                <i class="fas fa-network-wired fa-2x text-primary me-3"></i>
+                <div>
+                  <h4 class="mb-1">Service: ${serviceName}</h4>
+                  <p class="text-muted mb-0">Namespace: ${namespace}</p>
+                </div>
+              </div>
+              <button class="btn btn-outline-secondary" onclick="navigateBack()">
+                <i class="fas fa-arrow-left me-2"></i>${_t('explorer.btn_back', 'Geri')}
+              </button>
+            </div>
+            <div class="row g-3 mb-3">
+              <div class="col-auto">
+                <small class="text-muted d-block">Tip</small>
+                <span class="fw-semibold">${svcType}</span>
+              </div>
+              <div class="col-auto">
+                <small class="text-muted d-block">Cluster IP</small>
+                <span class="fw-semibold">${svcClusterIP}</span>
+              </div>
+              <div class="col-12">
+                <small class="text-muted d-block">Portlar</small>
+                <div class="mt-1">${portsHtml}</div>
+              </div>
+              <div class="col-12">
+                <small class="text-muted d-block">Selector</small>
+                <div class="mt-1">${selectorHtml}</div>
               </div>
             </div>
             <div class="d-flex gap-2">
@@ -542,7 +651,8 @@ async function showServiceDetail(namespace, serviceName) {
         </div>
       </div>
     </div>
-    <div class="row">
+    ${deploymentsHtml}
+    <div class="row mt-3">
       <div class="col-12">
         <div class="card border-0 shadow-sm">
           <div class="card-header bg-light">
@@ -562,17 +672,26 @@ async function showServiceDetail(namespace, serviceName) {
       </div>
     </div>
   `;
-  
+
+  // Deployment kart tıklamalarını event listener ile bağla
+  root.querySelectorAll('.svc-dep-link-card').forEach(card => {
+    const depName = card.dataset.depName;
+    card.onclick = () => showDeploymentDetail(namespace, depName);
+  });
+
+  renderBreadcrumb(root);
+
+  // Pod'ları asenkron yükle (mevcut mantık korundu)
   try {
     const response = await fetch(`/api/k8s/service/${namespace}/${serviceName}/pods`);
-    
+
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
-    
+
     const data = await response.json();
     console.log('[v0] Service pods response:', data);
-    
+
     let pods = [];
     if (Array.isArray(data)) {
       pods = data;
@@ -584,7 +703,7 @@ async function showServiceDetail(namespace, serviceName) {
       console.warn('[v0] Unexpected pods data format:', data);
       pods = [];
     }
-    
+
     const container = document.getElementById('service-pods-container');
     if (pods.length === 0) {
       container.innerHTML = `
@@ -595,10 +714,10 @@ async function showServiceDetail(namespace, serviceName) {
       `;
       return;
     }
-    
+
     container.innerHTML = '<div class="row" id="pods-grid"></div>';
     const podsGrid = document.getElementById('pods-grid');
-    
+
     pods.forEach(pod => {
       const actions = [
         {
@@ -620,11 +739,11 @@ async function showServiceDetail(namespace, serviceName) {
           onclick: `showYamlModal('pod', '${pod.namespace || namespace}', '${pod.name}', true)`
         }
       ];
-      
+
       const podCard = createResourceCard(pod, 'pod', actions);
       podsGrid.appendChild(podCard);
     });
-    
+
   } catch (error) {
     console.error('[v0] Error loading service pods:', error);
     document.getElementById('service-pods-container').innerHTML = `
@@ -664,7 +783,7 @@ async function showDeploymentDetail(namespace, name) {
             <p class="text-muted mb-0">Namespace: <span class="fw-semibold">${namespace}</span></p>
           </div>
         </div>
-        <button class="btn btn-outline-secondary" onclick="showIngresses()">
+        <button class="btn btn-outline-secondary" onclick="navigateBack()">
           <i class="fas fa-arrow-left me-2"></i>${_t('explorer.btn_back', 'Geri')}
         </button>
       </div>

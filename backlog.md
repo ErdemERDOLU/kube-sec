@@ -105,7 +105,7 @@
 
 ---
 
-## [Oncelik: Orta] 5. Guvenlik: Debug Endpoint'inin Uretimd Devre Disi Birakilmasi
+## [Oncelik: Orta] 5. Guvenlik: Debug Endpoint'inin Uretimd Devre Disi Birakilmasi — TAMAMLANDI
 
 **Kategori:** Guvenlik
 **Mevcut durum:**

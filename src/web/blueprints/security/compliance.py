@@ -9,6 +9,8 @@ Kubeconfig erişimi her istek başında configure_kube_client() ile yapılır;
 kalıcı/paylaşımlı ApiClient cache'lenmez (AC-9).
 """
 
+from __future__ import annotations
+
 import time
 
 from datetime import datetime, timezone

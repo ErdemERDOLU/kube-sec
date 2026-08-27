@@ -5,6 +5,8 @@
 Backlog #20, Faz 2: Global Kaynak Arama.
 """
 
+from __future__ import annotations
+
 from flask import jsonify, request
 from kubernetes import client
 from kubernetes.client.rest import ApiException

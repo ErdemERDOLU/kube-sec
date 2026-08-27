@@ -526,7 +526,7 @@ Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagit
 
 ---
 
-## [Oncelik: Orta] 26. Guvenlik: Yikici Kubernetes Islemleri icin Sunucu Tarafi Onay Mekanizmasi Yok
+## [Oncelik: Orta] 26. Guvenlik: Yikici Kubernetes Islemleri icin Sunucu Tarafi Onay Mekanizmasi Yok — TAMAMLANDI
 
 **Kategori:** Guvenlik / Tasarim (A04:2021 Insecure Design)
 **Bulunma kaynagi:** Ayni guvenlik denetimi (2026-07-24), bkz. backlog #21.
@@ -537,9 +537,11 @@ Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagit
 **Sorun:** Yanlis cluster context'inde (bkz. CLAUDE.md'deki coklu-sekme global kubeconfig sinirlamasi) yanlislikla production'da node drain'e tiklamak cok kolay; auth yoksa (backlog #21) kotu niyetli tetikleme de trivial hale gelir (istemci tarafi confirm dialog'u atlanabilir, dogrudan API cagrisi yapilabilir).
 
 **Kabul kriterleri:**
-- [ ] En az node-drain ve generic delete route'lari icin sunucu tarafi bir onay parametresi eklenir (or. istegin body'sinde kaynak adinin tekrar gonderilmesi zorunlu kilinir, sadece istemci dialog'una guvenilmez).
-- [ ] "Production" olarak isaretlenmis/adlandirilmis context'lerde (kullanici tanimli veya isim deseni ile, or. context adinda "prod" gecen) ek bir uyari/onay adimi degerlendirilir (opsiyonel, nice-to-have).
-- [ ] Degisiklik sonrasi mevcut UI akisi (tek tiklamalik onay dialog'u) dogru parametreyi gonderdigi surece calismaya devam eder; API'yi dogrudan cagiranlar icin (onay parametresi olmadan) 400 doner.
+- [x] 14 yikici endpoint'e (node-drain, node-cordon, node-uncordon, generic delete, delete-secret, delete-priority-class, delete-runtime-class, delete-hpa, delete-pdb, delete-replicasets [toplu], restart-pod/deployment/statefulset/daemonset) sunucu tarafi onay parametresi eklendi: istegin body'sinde `confirm_name` (toplu silmede `confirm_names`) alani kaynak adiyla birebir eslesmezse HTTP 400 doner. Dogrulama mantigi tek bir yerde (`src/web/confirmation.py`) merkezilestirildi.
+- [ ] "Production" context uyarisi (opsiyonel, nice-to-have) — uygulanmadi, acik birakildi.
+- [x] Degisiklik sonrasi mevcut UI akisi (tek tiklamalik onay dialog'u) bozulmadan calismaya devam eder (fetch body'lerine `confirm_name` eklendi, dialog'lar degistirilmedi); API'yi dogrudan cagiranlar icin onay parametresi olmadan 400 doner.
+
+**Uygulama notu (2026-08-27):** product-manager -> backend-developer + web-frontend-developer (paralel, dosya cakismasi olmadigi icin worktree izolasyonu gerekmedi) -> bagimsiz qa-engineer zinciriyle tamamlandi. Spec: `docs/specs/20260827-yikici-islemler-onay-mekanizmasi.md` (12 AC: 8 kritik + 2 orta + 2 nice-to-have). Ayni anda repo uzerinde calisan baska bir oturum (backlog #19/#20, `kube-sec-b0`, commit `9488d31`) 4 ortak sablonda (nodes.html, access_control.html, network.html, workloads.html) calisiyordu; git working tree ve INDEX'in paylasilan oldugu (worktree izolasyonu kullanilmadigi icin) fark edilip, kendi degisikliklerim `git show HEAD:<dosya>` + hedefli string degisimi + `git hash-object`/`update-index` ile working tree'ye hic dokunmadan index'e yazildi; diger oturumun `git commit -- <pathspec>` ile scope'lu commit'i bu 4 dosya icin her iki tarafin degisikligini de (calisma agacinda zaten birlikte bulunduklari icin) otomatik olarak commit'e dahil etti, dogrulandi. Kalan 11 dosya (`confirmation.py`, 6 blueprint, 3 sablon, test dosyasi) `d495c77` ile ayrica commit edildi. Bagimsiz QA turunde 12 AC'den 11'i CONFIRMED (110/110 test PASSED, 43'u yeni), 1'i (AC-11, nice-to-have production uyari header'i) FAILED/uygulanmadi olarak isaretlendi.
 
 ---
 

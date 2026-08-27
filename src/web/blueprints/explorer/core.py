@@ -498,18 +498,49 @@ def k8s_explorer_delete():
 # Pod loglarını döndüren endpoint
 @bp_explorer.route('/k8s-explorer/logs')
 def k8s_explorer_logs():
+    """Pod loglarını döndüren endpoint.
+
+    Query parametreleri:
+      - type (str): 'pod' olmalı (zorunlu)
+      - namespace (str): pod namespace'i (zorunlu)
+      - name (str): pod adı (zorunlu)
+      - container (str): okunacak container adı (opsiyonel; verilmezse K8s API
+        tek container'lı pod'larda otomatik seçer, multi-container pod'larda 400 döner)
+
+    Returns:
+      200: text/plain — pod log içeriği
+      400: JSON — geçersiz parametre veya K8s API 400 (örn. multi-container pod'da container belirtilmemiş)
+      404: JSON — pod veya container bulunamadı
+      5xx: JSON — K8s API diğer hataları veya beklenmeyen hata
+    """
     obj_type = request.args.get('type')
     namespace = request.args.get('namespace')
     name = request.args.get('name')
+    # AC-1: container query parametresi okunur; verilmemişse None kalır
+    container = request.args.get('container')
     if obj_type != 'pod' or not namespace or not name:
-        return 'type=pod, namespace ve name zorunlu', 400
+        return jsonify({'error': 'Geçersiz parametre', 'details': 'type=pod, namespace ve name zorunlu'}), 400
     try:
         configure_kube_client()
         core_v1 = client.CoreV1Api()
-        log = core_v1.read_namespaced_pod_log(name=name, namespace=namespace, tail_lines=500)
+        # AC-1: container verilmişse K8s API çağrısına container kwarg olarak iletilir;
+        # verilmemişse tek container'lı pod'larda K8s API otomatik seçer.
+        kwargs = dict(name=name, namespace=namespace, tail_lines=500)
+        if container:
+            kwargs['container'] = container
+        log = core_v1.read_namespaced_pod_log(**kwargs)
         return log, 200, {'Content-Type': 'text/plain; charset=utf-8'}
+    except ApiException as api_exc:
+        # AC-3: ApiException ayrı yakalanır; K8s API'nin status kodu (400, 404 vb.)
+        # HTTP yanıt status kodu olarak kullanılır — tüm K8s hataları 500'e çevrilmez.
+        try:
+            msg = api_exc.body or str(api_exc)
+        except Exception:
+            msg = str(api_exc)
+        return jsonify({'error': 'Kubernetes API error', 'details': msg}), getattr(api_exc, 'status', 500)
     except Exception as e:
-        return str(e), 500
+        # AC-3 (genel): Beklenmeyen hatalarda da plain-text yerine JSON formatında yanıt dönülür.
+        return jsonify({'error': 'Beklenmeyen hata', 'details': str(e)}), 500
 
 
 # Workload stats API for Overview pie charts — cache background.py'de

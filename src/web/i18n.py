@@ -938,6 +938,20 @@ I18N = {
     'workloads.pod_info_created': {'tr': 'Oluşturulma:', 'en': 'Created:'},
     'workloads.pod_info_container_count': {'tr': 'container', 'en': 'container(s)'},
 
+    # ── Pod Log — Multi-container seçimi ve Canlı Takip (spec: 20260827) ─────
+    'workloads.select_container': {'tr': 'Container Seçin', 'en': 'Select Container'},
+    'workloads.select_container_desc': {
+        'tr': 'Bu pod birden fazla container içeriyor. Log görüntülemek için bir container seçin.',
+        'en': 'This pod contains multiple containers. Select a container to view logs.',
+    },
+    'workloads.container_label': {'tr': 'Container:', 'en': 'Container:'},
+    'workloads.btn_live_tail': {'tr': 'Canlı Takip', 'en': 'Live Tail'},
+    'workloads.btn_stop_tail': {'tr': 'Takibi Durdur', 'en': 'Stop Tail'},
+    'workloads.error_container_list': {'tr': 'Container listesi alınamadı:', 'en': 'Could not fetch container list:'},
+    'workloads.error_no_containers': {'tr': 'Bu pod için container bulunamadı.', 'en': 'No containers found for this pod.'},
+    'workloads.search_disabled_while_tailing': {'tr': 'Canlı takip sırasında arama devre dışı', 'en': 'Search disabled during live tail'},
+    'workloads.btn_show_logs': {'tr': 'Logları Göster', 'en': 'Show Logs'},
+
     # ── Kubeconfig çoklu sekme uyarıları (backlog #10) ──────────────────────
     'base.context_switch_warning': {
         'tr': 'Aktif kubeconfig değişti. Bu sayfadaki veriler eski cluster\'a ait olabilir.',

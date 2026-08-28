@@ -1256,6 +1256,13 @@ I18N = {
     'search.result_count':               {'tr': '{count} sonuç bulundu',                               'en': '{count} results found'},
     'search.truncated':                  {'tr': 'Sonuçlar sınırlandırıldı, aramayı daraltmayı deneyin', 'en': 'Results truncated, try narrowing your search'},
     'a11y.global_search_btn':            {'tr': 'Global kaynak arama',                                 'en': 'Global resource search'},
+
+    # ── Auth / Login (login.html — backlog #21) ────────────────────────────
+    'auth.login_title':  {'tr': 'Giriş',                             'en': 'Log In'},
+    'auth.token_label':  {'tr': 'Token veya Parola',                 'en': 'Token or Password'},
+    'auth.login_button': {'tr': 'Giriş Yap',                         'en': 'Log In'},
+    'auth.invalid_token': {'tr': 'Geçersiz token veya parola',       'en': 'Invalid token or password'},
+    'auth.unauthorized': {'tr': 'Yetkisiz erişim',                   'en': 'Unauthorized access'},
 }
 
 

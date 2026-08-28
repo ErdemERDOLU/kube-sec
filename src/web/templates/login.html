@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="{{ lang or 'tr' }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kube-Sec — {{ t('auth.login_title') }}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .login-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    .logo {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    .logo svg {
+      width: 48px;
+      height: 48px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #f1f5f9;
+      margin-bottom: 1.75rem;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      margin-bottom: 0.4rem;
+    }
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 0.65rem 0.85rem;
+      background: #0f172a;
+      border: 1px solid #475569;
+      border-radius: 6px;
+      color: #f1f5f9;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus,
+    input[type="password"]:focus {
+      border-color: #3b82f6;
+    }
+    .error-msg {
+      margin-top: 0.75rem;
+      padding: 0.6rem 0.85rem;
+      background: #450a0a;
+      border: 1px solid #7f1d1d;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      color: #fca5a5;
+    }
+    button[type="submit"] {
+      margin-top: 1.25rem;
+      width: 100%;
+      padding: 0.7rem;
+      background: #3b82f6;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button[type="submit"]:hover {
+      background: #2563eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <div class="logo">
+      <!-- Kube-Sec icon -->
+      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="48" height="48" rx="10" fill="#1d4ed8"/>
+        <path d="M24 8l14 7v10c0 8-6 14.5-14 17C10 39.5 4 33 4 25V15l14-7z" fill="#3b82f6" stroke="#60a5fa" stroke-width="1.5"/>
+        <path d="M18 24l4 4 8-8" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h1>{{ t('auth.login_title') }}</h1>
+    <form method="POST" action="{{ url_for('login') }}">
+      <input type="hidden" name="next" value="{{ next or '/' }}">
+      <label for="token">{{ t('auth.token_label') }}</label>
+      <input
+        type="password"
+        id="token"
+        name="token"
+        autocomplete="current-password"
+        autofocus
+        required
+      >
+      {% if error %}
+      <div class="error-msg">{{ error }}</div>
+      {% endif %}
+      <button type="submit">{{ t('auth.login_button') }}</button>
+    </form>
+  </div>
+</body>
+</html>

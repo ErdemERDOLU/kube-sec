@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify, request, redirect, send_from_directory
+from flask import Flask, render_template, jsonify, request, redirect, send_from_directory, session, url_for
 from flask_cors import CORS
 from flask_wtf.csrf import CSRFProtect, CSRFError
 from flasgger import Swagger
@@ -76,6 +76,78 @@ app.config['SESSION_COOKIE_SECURE'] = (
 )
 
 CORS(app, origins=CORS_ORIGINS, supports_credentials=True)
+
+# ---------------------------------------------------------------------------
+# Auth Katmani — Ag Erisim Kontrolu (Backlog #21)
+# ---------------------------------------------------------------------------
+# KUBESEC_ALLOW_NETWORK_BIND=1 ile ag modunda calistirildiysa, tum isteklerde
+# (beyaz listedeki yollar haric) kimlik dogrulama zorunludur.
+# Localhost modunda (env var yok/pasif): auth hook hicbir kontrol yapmaz.
+# ---------------------------------------------------------------------------
+
+_NETWORK_BIND_ACTIVE = os.environ.get('KUBESEC_ALLOW_NETWORK_BIND', '').lower() in ('1', 'true', 'yes', 'on')
+
+if _NETWORK_BIND_ACTIVE:
+    _env_password = os.environ.get('KUBESEC_ACCESS_PASSWORD')
+    if _env_password:
+        _ACCESS_TOKEN = _env_password
+    else:
+        _ACCESS_TOKEN = secrets.token_urlsafe(24)
+        import logging as _logging
+        _logging.warning(
+            f"KUBESEC_ACCESS_PASSWORD set edilmemis; rastgele erisim token'i uretildi: {_ACCESS_TOKEN}. "
+            "Bu token'i tarayicida login formuna girin veya URL'ye ?token=<TOKEN> olarak ekleyin."
+        )
+        print('=' * 60, flush=True)
+        print(f"  Kube-Sec erisim token'i: {_ACCESS_TOKEN}", flush=True)
+        print("  Bu token'i tarayicida login formuna girin.", flush=True)
+        print(f"  Veya dogrudan erisin: http://0.0.0.0:8080/?token={_ACCESS_TOKEN}", flush=True)
+        print('=' * 60, flush=True)
+else:
+    _ACCESS_TOKEN = None
+
+# Auth beyaz listesi — bu yollara auth kontrolu uygulanmaz
+_AUTH_WHITELIST_EXACT = {'/login', '/favicon.ico', '/k8s-explorer/app-health', '/set-locale'}
+
+
+def _kubesec_auth_check():
+    """Auth before_request hook: yalnizca ag modunda (_NETWORK_BIND_ACTIVE=True) calisir.
+
+    Beyaz listedeki yollar (login, static, favicon, app-health, set-locale) muaftir.
+    URL ?token= query parametresiyle veya session cookie ile auth yapilabilir.
+    HTML isteklerinde /login'e redirect, AJAX/JSON isteklerinde 401 JSON doner.
+    """
+    if not _NETWORK_BIND_ACTIVE:
+        return  # localhost modunda auth yok — hicbir kontrol yapma
+
+    path = request.path
+
+    # Beyaz liste: /login, /static/*, /favicon.ico, /k8s-explorer/app-health, /set-locale
+    if path in _AUTH_WHITELIST_EXACT or path.startswith('/static/'):
+        return
+
+    # URL ?token= parametresiyle auth
+    token_param = request.args.get('token')
+    if token_param and token_param == _ACCESS_TOKEN:
+        session['_kubesec_authenticated'] = True
+        return
+
+    # Session cookie ile auth
+    if session.get('_kubesec_authenticated'):
+        return
+
+    # Auth gerekiyor — AJAX/JSON mi HTML mi?
+    accept = request.headers.get('Accept', '')
+    xhr = request.headers.get('X-Requested-With', '')
+    is_json_request = 'application/json' in accept or xhr == 'XMLHttpRequest'
+    if is_json_request:
+        return jsonify({'error': 'Unauthorized', 'message': 'Kimlik dogrulama gerekiyor.'}), 401
+    next_url = request.url
+    return redirect(url_for('login', next=next_url))
+
+
+# Auth hook'unu CSRF'den ONCE kaydet (R-3 — CSRF hatasi gelmeden once 401/redirect alsinlar)
+app.before_request(_kubesec_auth_check)
 
 # ---------------------------------------------------------------------------
 # CSRF Koruması — Flask-WTF CSRFProtect (Backlog #6)
@@ -255,6 +327,54 @@ def set_locale():
     # 180 days
     resp.set_cookie('lang', lang, max_age=60*60*24*180, httponly=False, samesite='Lax')
     return resp
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Login sayfasi — GET: form goster, POST: token/parola dogrula.
+
+    Yalnizca ag modu (_NETWORK_BIND_ACTIVE=True) anlamlidir; localhost modunda
+    auth hook devredisi oldugu icin bu sayfaya nadiren ulasılır ancak route aktiftir.
+
+    POST parametreleri:
+        token (str): kullanicinin girdigi token veya parola
+        next (str, opsiyonel): basarili giris sonrasi yonlendirilecek URL
+
+    Yanıt:
+        GET  200: login formu (login.html)
+        POST 302: dogru token — / veya next URL'ye redirect
+        POST 200: yanlis token — login.html + hata mesaji
+    """
+    from web.i18n import translate
+    try:
+        lang = request.cookies.get('lang') or 'tr'
+    except Exception:
+        lang = 'tr'
+
+    if request.method == 'POST':
+        token_input = request.form.get('token', '').strip()
+        next_url = request.form.get('next') or '/'
+        if _ACCESS_TOKEN and token_input == _ACCESS_TOKEN:
+            session['_kubesec_authenticated'] = True
+            return redirect(next_url)
+        error_msg = translate('auth.invalid_token', lang)
+        return render_template('login.html', error=error_msg, next=next_url, lang=lang), 200
+
+    next_url = request.args.get('next', '/')
+    return render_template('login.html', error=None, next=next_url, lang=lang), 200
+
+
+@app.route('/logout')
+def logout():
+    """Oturumu kapat ve login sayfasina yonlendir.
+
+    Session'daki auth isaretcisini temizler; kullanici /login'e yonlendirilir.
+
+    Yanit:
+        302: /login
+    """
+    session.pop('_kubesec_authenticated', None)
+    return redirect(url_for('login'))
+
 
 @app.errorhandler(CSRFError)
 def handle_csrf_error(e):

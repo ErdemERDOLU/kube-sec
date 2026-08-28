@@ -94,11 +94,9 @@ if _NETWORK_BIND_ACTIVE:
         _ACCESS_TOKEN = _env_password
     else:
         _ACCESS_TOKEN = secrets.token_urlsafe(24)
-        import logging as _logging
-        _logging.warning(
-            f"KUBESEC_ACCESS_PASSWORD set edilmemis; rastgele erisim token'i uretildi: {_ACCESS_TOKEN}. "
-            "Bu token'i tarayicida login formuna girin veya URL'ye ?token=<TOKEN> olarak ekleyin."
-        )
+        # NOT: token bilerek logging.warning() ile YAZDIRILMIYOR — logging handler'lari
+        # (varsa) uzak log toplayicilara (Sentry, syslog vb.) yonlendirebilir. Yalnizca
+        # stdout'a print edilir; bu, konsolu okuyan kisiyle sinirli kalir.
         print('=' * 60, flush=True)
         print(f"  Kube-Sec erisim token'i: {_ACCESS_TOKEN}", flush=True)
         print("  Bu token'i tarayicida login formuna girin.", flush=True)

@@ -433,7 +433,7 @@ Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagit
 
 ---
 
-## [Oncelik: Kritik] 21. Guvenlik: Kimlik Dogrulama Katmani ve Ag Erisim Kontrolu Eksikligi
+## [Oncelik: Kritik] 21. Guvenlik: Kimlik Dogrulama Katmani ve Ag Erisim Kontrolu Eksikligi — TAMAMLANDI
 
 **Kategori:** Guvenlik (A01:2021 Broken Access Control / A07 Identification & Authentication Failures)
 **Bulunma kaynagi:** `security-engineer` agent tarafindan yapilan kapsamli statik guvenlik denetimi (2026-07-24), OWASP Top 10 cercevesinde ~25 Python dosyasi ve 100+ route tarandi.
@@ -446,10 +446,12 @@ Mimari karar geregi Kube-Sec yalnizca masaustu (PyInstaller) paketleme ile dagit
 **Sorun:** Aym agdaki (ofis Wi-Fi, paylasilan VPN) kimlik dogrulamasi olmayan herhangi biri, `0.0.0.0` modunda calisan bir Kube-Sec ornegine tarayicidan erisip: tum Secret'lari okuyabilir (`/k8s-explorer/secret`, base64 degerleri doner), pod silebilir, node drain edebilir, Secret guncelleyebilir, ClusterRoleBinding silebilir — hepsi tek istekle, geri donusu olmadan. Bu, uygulamanin en kritik bulgusu.
 
 **Kabul kriterleri:**
-- [ ] `src/main.py`'nin varsayilan bind adresi `127.0.0.1` olarak degistirilir; `0.0.0.0` (ag disina acilma) yalnizca bilincli bir env var (or. `KUBESEC_ALLOW_NETWORK_BIND=1`) ile mumkun olur.
-- [ ] Ag disina acik modda (bilincli opt-in ile) calistirildiginda EN AZINDAN basit bir zorunlu erisim katmani (yerel PIN/parola veya token — `before_request` hook'u ile) eklenir; auth'suz istekler 401 doner.
-- [ ] Docker imaji (deprecated olsa da hala repoda) ayni varsayilan `127.0.0.1`/auth gereksinimini yansitir veya acikca "sadece guvenilir/izole ag icin" diye README/CLAUDE.md'de belgelenir.
-- [ ] Degisiklik sonrasi `make run` varsayilan olarak yalnizca localhost'tan erisilebilir; masaustu (frozen) davranisi (zaten 127.0.0.1) bozulmaz.
+- [x] `src/main.py`'nin varsayilan bind adresi `127.0.0.1` olarak degistirildi; `0.0.0.0` yalnizca `KUBESEC_ALLOW_NETWORK_BIND=1` (bilincli opt-in) ile mumkun.
+- [x] Ag modunda (`KUBESEC_ALLOW_NETWORK_BIND=1`) zorunlu bir erisim katmani eklendi: hibrit token/parola mekanizmasi (`KUBESEC_ACCESS_PASSWORD` set edilmisse o kullanilir, edilmemisse `secrets.token_urlsafe(24)` ile rastgele token uretilip konsola yazdirilir), `/login` sayfasi, session tabanli `before_request` auth hook'u (CSRFProtect'ten ONCE kayitli). Auth'suz istekler HTML'de `/login`'e redirect, JSON/AJAX'ta 401 doner. Localhost modunda (varsayilan) auth tamamen devre disi — mevcut kullanici deneyimi bozulmadi.
+- [x] `Dockerfile`'a ag guvenlik uyarisi + `docker run -e KUBESEC_ALLOW_NETWORK_BIND=1 -e KUBESEC_ACCESS_PASSWORD=...` ornegi eklendi; `CLAUDE.md` ortam degiskenleri tablosu guncellendi.
+- [x] `make run` artik varsayilan olarak yalnizca localhost'tan erisilebilir; `launcher.py` (masaustu/frozen davranis) hic degistirilmedi, zaten 127.0.0.1 kullaniyordu.
+  - Spec: `docs/specs/20260828-auth-katmani-ag-erisim-kontrolu.md` (16 AC — 9 kritik + 5 orta + 2 nice-to-have, tamami CONFIRMED, bagimsiz `qa-engineer` + `code-reviewer`). Code-review'da 2 kritik guvenlik bulgusu tespit edilip duzeltildi: (1) login formunda `csrf_token` eksikti — CSRFProtect aktifken form production'da hic calismiyordu; (2) token karsilastirmasi duz `==` ile yapiliyordu (timing-attack riski), `secrets.compare_digest`'e cevrildi. Ayrica open-redirect korumasi (`next` parametresi), `?token=` ile girişte URL temizligi ve session fixation'a karsi `session.clear()` eklendi. 8/8 test (2'si yeni regresyon testi) geciyor, tam suite 152/152.
+  - Not: Build agent'i is bitince yetkisiz sekilde kendiliginden commit atti (surec ihlali, kullaniciya bildirildi) — push edilmeden yakalanip standart QA/code-review akisina geri donuldu.
 
 ---
 

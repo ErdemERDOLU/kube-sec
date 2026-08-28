@@ -4,6 +4,7 @@ from flask_wtf.csrf import CSRFProtect, CSRFError
 from flasgger import Swagger
 import sys, traceback, os, secrets
 from pathlib import Path
+from urllib.parse import urlencode, urlparse
 
 CORS_ORIGINS = ["http://localhost:8080", "http://127.0.0.1:8080"]
 
@@ -101,13 +102,29 @@ if _NETWORK_BIND_ACTIVE:
         print('=' * 60, flush=True)
         print(f"  Kube-Sec erisim token'i: {_ACCESS_TOKEN}", flush=True)
         print("  Bu token'i tarayicida login formuna girin.", flush=True)
-        print(f"  Veya dogrudan erisin: http://0.0.0.0:8080/?token={_ACCESS_TOKEN}", flush=True)
+        print(f"  Veya dogrudan erisin: http://<makine-ip>:8080/?token={_ACCESS_TOKEN}", flush=True)
+        print("  (0.0.0.0 tum arayuzlere bind eder — tarayicida makinenizin gercek", flush=True)
+        print("   ag IP'sini veya localhost:8080'i kullanin.)", flush=True)
         print('=' * 60, flush=True)
 else:
     _ACCESS_TOKEN = None
 
 # Auth beyaz listesi — bu yollara auth kontrolu uygulanmaz
 _AUTH_WHITELIST_EXACT = {'/login', '/favicon.ico', '/k8s-explorer/app-health', '/set-locale'}
+
+
+def _safe_next_url(candidate):
+    """Open-redirect'i onlemek icin yalnizca site-ici (goreli) yollara izin verir.
+
+    `next` parametresi kullanicidan geldigi icin dogrudan redirect'e verilemez —
+    `https://evil.com` gibi mutlak bir URL geçilirse kullanici site disina yonlendirilebilir.
+    """
+    if not candidate:
+        return '/'
+    parsed = urlparse(candidate)
+    if parsed.scheme or parsed.netloc:
+        return '/'
+    return candidate
 
 
 def _kubesec_auth_check():
@@ -128,9 +145,13 @@ def _kubesec_auth_check():
 
     # URL ?token= parametresiyle auth
     token_param = request.args.get('token')
-    if token_param and token_param == _ACCESS_TOKEN:
+    if token_param and _ACCESS_TOKEN and secrets.compare_digest(token_param, _ACCESS_TOKEN):
+        session.clear()
         session['_kubesec_authenticated'] = True
-        return
+        # Token'i URL'den temizle (tarayici gecmisi/bookmark/log sizintisini onlemek icin)
+        clean_qs = urlencode({k: v for k, v in request.args.items() if k != 'token'})
+        clean_url = path + ('?' + clean_qs if clean_qs else '')
+        return redirect(clean_url)
 
     # Session cookie ile auth
     if session.get('_kubesec_authenticated'):
@@ -142,7 +163,8 @@ def _kubesec_auth_check():
     is_json_request = 'application/json' in accept or xhr == 'XMLHttpRequest'
     if is_json_request:
         return jsonify({'error': 'Unauthorized', 'message': 'Kimlik dogrulama gerekiyor.'}), 401
-    next_url = request.url
+    # Goreli yol kullan (request.url degil) — _safe_next_url mutlak URL'leri reddeder
+    next_url = request.full_path if request.query_string else request.path
     return redirect(url_for('login', next=next_url))
 
 
@@ -352,14 +374,15 @@ def login():
 
     if request.method == 'POST':
         token_input = request.form.get('token', '').strip()
-        next_url = request.form.get('next') or '/'
-        if _ACCESS_TOKEN and token_input == _ACCESS_TOKEN:
+        next_url = _safe_next_url(request.form.get('next'))
+        if _ACCESS_TOKEN and secrets.compare_digest(token_input, _ACCESS_TOKEN):
+            session.clear()
             session['_kubesec_authenticated'] = True
             return redirect(next_url)
         error_msg = translate('auth.invalid_token', lang)
         return render_template('login.html', error=error_msg, next=next_url, lang=lang), 200
 
-    next_url = request.args.get('next', '/')
+    next_url = _safe_next_url(request.args.get('next'))
     return render_template('login.html', error=None, next=next_url, lang=lang), 200
 
 

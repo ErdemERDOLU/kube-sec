@@ -7,9 +7,16 @@ Kapsanan kabul kriterleri (AC-14 tablosu):
 - T4: Ag modunda yanlis token ile login basarisiz; auth isaretcisi set edilmez.
 - T5: Ag modunda beyaz listedeki yollar auth'suz erisilebilir.
 - T6: KUBESEC_ACCESS_PASSWORD env var'i ile parola modu calisir.
+
+NOT: CSRF koruması (WTF_CSRF_ENABLED) BILEREK devre disi birakilmiyor — login formunun
+gercek CSRF akisiyla calistigini dogrulamak icin tum POST testleri once GET /login ile
+gercek bir CSRF token'i cekip formda gonderiyor (bkz. _get_csrf_token). Bu, code review'da
+bulunan "login formunda csrf_token eksik, production'da form CSRF hatasiyla calismiyor"
+regresyonuna karsi bir koruma saglar.
 """
 
 import os
+import re
 import sys
 
 import pytest
@@ -21,24 +28,32 @@ import web.app as _web_app
 from web.app import app
 
 
+def _get_csrf_token(client):
+    """GET /login ile render edilen formdan csrf_token gizli alanini ceker."""
+    resp = client.get('/login')
+    match = re.search(
+        r'name="csrf_token"\s+value="([^"]+)"', resp.get_data(as_text=True)
+    )
+    assert match, "login.html formunda csrf_token gizli alani bulunamadi (regresyon!)."
+    return match.group(1)
+
+
 @pytest.fixture
 def network_client(monkeypatch):
     """Ag modunu simule eden Flask test client'i.
 
     _NETWORK_BIND_ACTIVE=True ve _ACCESS_TOKEN='test-token-abc' olarak patch'lenir.
-    CSRF ve TESTING bayraklari da uygun sekilde ayarlanir.
+    CSRF korumasi GERCEK (aktif) birakilir — testler gercek CSRF token'i kullanir.
     """
     monkeypatch.setattr(_web_app, '_NETWORK_BIND_ACTIVE', True)
     monkeypatch.setattr(_web_app, '_ACCESS_TOKEN', 'test-token-abc')
 
     app.config['TESTING'] = True
-    app.config['WTF_CSRF_ENABLED'] = False
 
     with app.test_client() as c:
         yield c
 
     app.config['TESTING'] = False
-    app.config['WTF_CSRF_ENABLED'] = True
 
 
 @pytest.fixture
@@ -51,13 +66,11 @@ def localhost_client(monkeypatch):
     monkeypatch.setattr(_web_app, '_ACCESS_TOKEN', None)
 
     app.config['TESTING'] = True
-    app.config['WTF_CSRF_ENABLED'] = False
 
     with app.test_client() as c:
         yield c
 
     app.config['TESTING'] = False
-    app.config['WTF_CSRF_ENABLED'] = True
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +84,6 @@ def test_localhost_mode_no_auth_required(localhost_client):
     dogrudan yanit donmeli (200 veya baska bir uygulama kodunun donecegi kod).
     """
     resp = localhost_client.get('/k8s-explorer/app-health')
-    # Auth kontrolu olmadigi icin 401 veya /login redirect'i (302) beklenmez
     assert resp.status_code not in (401, 302), (
         f"Localhost modunda auth hook aktif olmamali; ama status={resp.status_code} alindi."
     )
@@ -104,17 +116,19 @@ def test_network_mode_unauthenticated_request_rejected(network_client):
 def test_network_mode_correct_token_login_succeeds(network_client):
     """POST /login ile dogru token girildiginde session auth isaretcisi set edilir.
 
-    Basarili giriste / adresine (veya next'e) redirect beklenir.
+    Gercek CSRF token'iyla gonderilir (regresyon korumasi). Basarili giriste
+    / adresine (veya next'e) redirect beklenir.
     """
+    csrf_token = _get_csrf_token(network_client)
     resp = network_client.post(
         '/login',
-        data={'token': 'test-token-abc', 'next': '/'},
+        data={'token': 'test-token-abc', 'next': '/', 'csrf_token': csrf_token},
         follow_redirects=False
     )
     assert resp.status_code == 302, (
-        f"Dogru token ile login 302 redirect donmeli; ama {resp.status_code} alindi."
+        f"Dogru token ile login 302 redirect donmeli; ama {resp.status_code} alindi. "
+        f"Body: {resp.get_data(as_text=True)[:300]}"
     )
-    # Session'da auth isaretcisi olmali
     with network_client.session_transaction() as sess:
         assert sess.get('_kubesec_authenticated') is True, (
             "Dogru token ile giris sonrasi session['_kubesec_authenticated'] True olmali."
@@ -130,19 +144,32 @@ def test_network_mode_wrong_token_login_fails(network_client):
 
     Login sayfasi hata mesajiyla yeniden gosterilmeli (200).
     """
+    csrf_token = _get_csrf_token(network_client)
     resp = network_client.post(
         '/login',
-        data={'token': 'yanlis-token-xyz', 'next': '/'},
+        data={'token': 'yanlis-token-xyz', 'next': '/', 'csrf_token': csrf_token},
         follow_redirects=False
     )
     assert resp.status_code == 200, (
         f"Yanlis token ile login 200 donmeli (form yeniden gosterilir); ama {resp.status_code} alindi."
     )
-    # Session'da auth isaretcisi olmamali
     with network_client.session_transaction() as sess:
         assert not sess.get('_kubesec_authenticated'), (
             "Yanlis token ile giris sonrasi session['_kubesec_authenticated'] set edilmemeli."
         )
+
+
+def test_login_form_contains_csrf_token(network_client):
+    """Regresyon koruması: login.html formu her zaman bir csrf_token alani icermeli.
+
+    Bu alan eksikse, CSRFProtect global koruması nedeniyle gercek kullanicilar
+    login formunu HICBIR ZAMAN gonderemez (production'da auth tamamen kirilir).
+    """
+    resp = network_client.get('/login')
+    body = resp.get_data(as_text=True)
+    assert 'name="csrf_token"' in body, (
+        "login.html formunda csrf_token gizli alani yok — form CSRF hatasiyla kirilir."
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -152,18 +179,16 @@ def test_network_mode_wrong_token_login_fails(network_client):
 def test_network_mode_whitelist_paths_accessible_without_auth(network_client):
     """Ag modunda auth aktifken beyaz listedeki yollar 401/redirect donmemeli.
 
-    /k8s-explorer/app-health monitoring arac icin auth'suz erisebilir olmali.
-    /static/ yolundan dosya istekleri auth'suz erisilebilir olmali.
+    /k8s-explorer/app-health monitoring arac icin auth'suz erisebilir olmali (200).
+    /static/ yolundan dosya istekleri auth'suz erisilebilir olmali (401/302 olmamali).
     """
-    # Saglik endpoint'i — auth'suz 200 donmeli
     resp = network_client.get('/k8s-explorer/app-health')
-    assert resp.status_code not in (401,), (
-        f"/k8s-explorer/app-health beyaz listede; 401 donmemeli ama {resp.status_code} alindi."
+    assert resp.status_code == 200, (
+        f"/k8s-explorer/app-health beyaz listede; 200 donmeli ama {resp.status_code} alindi."
     )
-    # Statik dosya yolu — auth'suz erisilebilmeli (404 olabilir, dosya olmayabilir; ama 401 olmamali)
     resp_static = network_client.get('/static/common.css')
-    assert resp_static.status_code not in (401,), (
-        f"/static/ yolu beyaz listede; 401 donmemeli ama {resp_static.status_code} alindi."
+    assert resp_static.status_code not in (401, 302), (
+        f"/static/ yolu beyaz listede; 401/302 donmemeli ama {resp_static.status_code} alindi."
     )
 
 
@@ -181,14 +206,13 @@ def test_access_password_env_var_used_as_token(monkeypatch):
     monkeypatch.setattr(_web_app, '_ACCESS_TOKEN', 'gizli-parola-123')
 
     app.config['TESTING'] = True
-    app.config['WTF_CSRF_ENABLED'] = False
 
     try:
         with app.test_client() as c:
-            # Dogru parola ile login
+            csrf_token = _get_csrf_token(c)
             resp = c.post(
                 '/login',
-                data={'token': 'gizli-parola-123', 'next': '/'},
+                data={'token': 'gizli-parola-123', 'next': '/', 'csrf_token': csrf_token},
                 follow_redirects=False
             )
             assert resp.status_code == 302, (
@@ -199,10 +223,11 @@ def test_access_password_env_var_used_as_token(monkeypatch):
                     "KUBESEC_ACCESS_PASSWORD modunda dogru parola ile giris sonrasi auth isaretcisi True olmali."
                 )
 
-            # Yanlis parola reddedilmeli
+            # Yanlis parola reddedilmeli (yeni CSRF token — session yenilendi, eskisi tukenmis olabilir)
+            csrf_token2 = _get_csrf_token(c)
             resp2 = c.post(
                 '/login',
-                data={'token': 'yanlis-parola', 'next': '/'},
+                data={'token': 'yanlis-parola', 'next': '/', 'csrf_token': csrf_token2},
                 follow_redirects=False
             )
             assert resp2.status_code == 200, (
@@ -210,4 +235,29 @@ def test_access_password_env_var_used_as_token(monkeypatch):
             )
     finally:
         app.config['TESTING'] = False
-        app.config['WTF_CSRF_ENABLED'] = True
+
+
+# ---------------------------------------------------------------------------
+# Ek: open-redirect korumasi (next parametresi)
+# ---------------------------------------------------------------------------
+
+def test_login_rejects_absolute_next_url_open_redirect(network_client):
+    """`next` parametresi mutlak bir URL ise (open-redirect denemesi) yok sayilir.
+
+    Basarili login sonrasi kullanici siteden disariya degil, '/'e yonlendirilmeli.
+    """
+    csrf_token = _get_csrf_token(network_client)
+    resp = network_client.post(
+        '/login',
+        data={
+            'token': 'test-token-abc',
+            'next': 'https://evil.example.com/phishing',
+            'csrf_token': csrf_token,
+        },
+        follow_redirects=False,
+    )
+    assert resp.status_code == 302
+    location = resp.headers.get('Location', '')
+    assert 'evil.example.com' not in location, (
+        f"Open-redirect korumasi basarisiz — Location: {location}"
+    )
